@@ -33,10 +33,6 @@ function getSheetDataAsObjects(sheetName) {
     headers.forEach((header, index) => {
       if (header) { 
         let val = row[index];
-        // 日付型（created_at, last_dateなど）のシリアライズ
-        if (val instanceof Date) {
-          val = Utilities.formatDate(val, "JST", "yyyy-MM-dd'T'HH:mm:ss");
-        }
         obj[header] = val;
       }
     });
