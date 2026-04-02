@@ -35,7 +35,7 @@ const Bridge = {
       // UI部品（総件数表示、辞書リスト）を最新状態に更新
       ViewController.updateTotalCount(res.length);
       VocabListUI.update();
-
+VocabListUI.renderCategoryBar()
       // ロード画面（スピナー）を隠し、メインコンテンツを表示
       document.getElementById('loader')?.classList.add('hidden');
       const container = document.getElementById('card-container');
@@ -118,6 +118,7 @@ const Bridge = {
           AppStore.state.allVocab.unshift(res.data);
           ViewController.updateTotalCount(AppStore.state.allVocab.length);
           VocabListUI.update();
+          VocabListUI.renderCategoryBar()
         }
         
         if (input) input.value = ''; 
@@ -214,6 +215,7 @@ const Bridge = {
           StudyEngine.render();
           ViewController.updateTotalCount(updatedAll.length);
           VocabListUI.update();
+          VocabListUI.renderCategoryBar()
         } else {
           ViewController.showToast(res.message, "error");
         }

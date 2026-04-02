@@ -58,7 +58,7 @@ const VocabListUI = {
     // 検索窓の値を優先し、なければ引数を使用。全角スペースを処理して小文字化
     let q = (searchInput && searchInput.value !== undefined) ? searchInput.value : (query || '');
     this.state.currentQuery = q.toLowerCase().trim();
-
+this.renderCategoryBar();
     // 検索のたびに表示リミットをリセットして爆速化
     this.state.displayLimit = 80;
     this.render();
@@ -196,7 +196,46 @@ const VocabListUI = {
 
     this.initObserver();
   },
+/**
+ * カテゴリーボタンの描画（アクティブ状態対応）
+ */
+renderCategoryBar: function() {
+  const container = document.getElementById('category-filter-bar');
+  const currentQ = this.state.currentQuery; // 現在の検索語を取得
 
+  const allVocab = AppStore.state.allVocab || [];
+  const uniqueCats = [...new Set(allVocab.map(v => v.category))].filter(c => c && c !== "未分類");
+  const buttons = ["全件", ...uniqueCats.sort()];
+  
+  container.innerHTML = buttons.map(cat => {
+    // 現在の検索ワードと一致していたら色を変えるクラスを付与
+    const isActive = (cat === "全件" && currentQ === "") || (currentQ === cat.toLowerCase());
+    const activeClass = isActive ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-600 border-gray-200';
+    
+    return `
+      <button class="category-btn ${activeClass}" 
+              onclick="VocabListUI.applyCategoryFilter('${cat}')">
+        ${cat}
+      </button>
+    `;
+  }).join('');
+},
+/**
+ * ボタンを押した時のフィルタリング
+ */
+applyCategoryFilter: function(cat) {
+  const searchInput = document.getElementById('list-search');
+  if (!searchInput) return;
+
+  // 検索窓に品詞をセットして、既存の検索ロジックをキックする
+  searchInput.value = (cat === "全件") ? "" : cat;
+  
+  // 1,300件を瞬時にリフレッシュ
+  this.update(); 
+  
+  // スマホの振動フィードバック（あれば）
+  if (window.navigator.vibrate) window.navigator.vibrate(5);
+},
   /**
    * IntersectionObserverによるスクロール検知の初期化
    */

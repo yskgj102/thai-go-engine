@@ -33,7 +33,8 @@ function getSheetDataAsObjects(sheetName) {
     headers.forEach((header, index) => {
       if (header) { 
         let val = row[index];
-        obj[header] = val;
+        // obj[header] = val;
+        obj[header] = (header === "category") ? normalizeCategory(val) : val;
       }
     });
     return obj;
@@ -92,3 +93,20 @@ function getRawVocabulary() {
 function getRawLogs() {
   return getSheetDataAsObjects('t_learning_logs');
 }
+
+
+/**
+ * カテゴリー文字列を「ボタン用」に綺麗にする
+ * 例：「動詞 (類別詞: なし)」 → 「動詞」
+ */
+function normalizeCategory(raw) {
+  if (!raw || typeof raw !== 'string' || raw.includes("=AI")) return "未分類";
+  
+  // 先頭から一致する品詞を探す
+  const tags = ["名詞", "動詞", "形容詞", "副詞", "接続詞", "前置詞", "助動詞", "代名詞", "文末詞"];
+  for (const tag of tags) {
+    if (raw.indexOf(tag) === 0) return tag;
+  }
+  return "その他";
+}
+

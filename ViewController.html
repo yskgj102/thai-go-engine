@@ -181,29 +181,7 @@ const ViewController = {
     VocabListUI.update();
   },
 
-  /**
-   * ボキャブラリーパネル（辞書リスト）の開閉
-   */
-  toggleVocabPanel: function(e) {
-    if (e) e.stopPropagation();
-    const panel = document.getElementById('vocab-panel');
-    if (panel.classList.contains('hidden')) {
-      panel.classList.remove('hidden'); 
-      requestAnimationFrame(() => {
-          panel.classList.add('is-open');
-          AppStore.state.isVocabPanelOpen = true;
-          VocabListUI.update();
-      });
-      document.body.style.overflow = 'hidden'; // 背面のスクロールを禁止
-    } else {
-      panel.classList.remove('is-open');
-      AppStore.state.isVocabPanelOpen = false;
-      setTimeout(() => {
-        panel.classList.add('hidden');
-        document.body.style.overflow = '';
-      }, 300);
-    }
-  },
+
 
   /**
    * 単語削除のリクエスト（誤操作防止の2段階タップ・安全装置付き）
@@ -277,6 +255,29 @@ const ViewController = {
   },
 
   /**
+   * ボキャブラリーパネル（辞書リスト）の開閉
+   */
+  toggleVocabPanel: function(e) {
+    if (e) e.stopPropagation();
+    const panel = document.getElementById('vocab-panel');
+    if (panel.classList.contains('hidden')) {
+      panel.classList.remove('hidden'); 
+      requestAnimationFrame(() => {
+          panel.classList.add('is-open');
+          AppStore.state.isVocabPanelOpen = true;
+          VocabListUI.update();
+      });
+      document.body.style.overflow = 'hidden'; // 背面のスクロールを禁止
+    } else {
+      panel.classList.remove('is-open');
+      AppStore.state.isVocabPanelOpen = false;
+      setTimeout(() => {
+        panel.classList.add('hidden');
+        document.body.style.overflow = '';
+      }, 300);
+    }
+  },
+  /**
    * クイック検索の起動（パネルを開いてフォーカスを当てる）
    */
   invokeQuickSearch: function(e) {
@@ -293,7 +294,7 @@ const ViewController = {
         searchInput.click(); 
         searchInput.setSelectionRange(0, searchInput.value.length); // 全選択して入力しやすく
       }
-    }, 350);
+    }, 200);
   },
 
   /**
