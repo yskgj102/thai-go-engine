@@ -249,39 +249,40 @@ function cleanupDuplicateVocab() {
   vocabSheet.getRange(1, 1, cleanData.length, headers.length).setValues(cleanData);
 
   console.log(`掃除完了: ${duplicateCount}件の重複を削除しました。現在の総単語数: ${cleanData.length - 1}件`);
-}
-/**
- * ログ容量制限を回避：全ファイルを1つのGoogleドキュメントに出力する
+}/**
+ * プロジェクト内の全コード（.gs / .html）を一括取得してログに出力する
+ * 実行後、表示されるログを全コピーしてAIに渡してください。
  */
-function exportToDoc() {
-  const fileNames = [
-    'AppState', 'AudioSystem', 'Bridge', 'StudyEngine', 
-    'ViewController', 'VocabListUI', 'index', 'css_main',
-    'api_ai', 'core', 'db_access', 'feat_register', 'feat_study', 'マイグレーション'
-  ];
+function exportAllProjectFiles() {
+  const scriptId = ScriptApp.getScriptId();
+  const accessToken = ScriptApp.getOAuthToken();
   
-  // 1. 新しいGoogleドキュメントを作成
-  const doc = DocumentApp.create('Yamaoka_Project_Export_' + new Date().getTime());
-  const body = doc.getBody();
+  // Google Apps Script API を叩いてプロジェクトの内容を取得
+  const url = `https://script.googleapis.com/v1/projects/${scriptId}/content`;
+  const options = {
+    method: "get",
+    headers: { Authorization: "Bearer " + accessToken },
+    muteHttpExceptions: true
+  };
   
-  body.appendParagraph("=== YAMAOKA PROJECT FULL EXPORT ===").setHeading(DocumentApp.ParagraphHeading.HEADING1);
-
-  fileNames.forEach(name => {
-    try {
-      const content = HtmlService.createHtmlOutputFromFile(name).getContent();
-      
-      body.appendParagraph(`FILE: ${name}`).setHeading(DocumentApp.ParagraphHeading.HEADING2);
-      body.appendParagraph(content).setFontFamily('Courier New').setFontSize(9);
-      body.appendPageBreak();
-      
-      console.log(`${name} を書き込みました...`);
-    } catch (e) {
-      body.appendParagraph(`ERROR: ${name} の取得に失敗しました`).setForegroundColor('#FF0000');
-    }
+  const response = UrlFetchApp.fetch(url, options);
+  const data = JSON.parse(response.getContentText());
+  
+  if (!data.files) {
+    Logger.log("ファイルを取得できませんでした。APIの設定を確認してください。");
+    return;
+  }
+  
+  let output = "=== GAS PROJECT EXPORT ===\n\n";
+  
+  data.files.forEach(file => {
+    output += `// --- FILE: ${file.name}.${file.type === 'HTML' ? 'html' : 'gs'} ---\n`;
+    output += file.source + "\n\n";
   });
-
-  // 2. 作成したドキュメントのURLをログに出す
-  const url = doc.getUrl();
-  console.log("✅ 完了しました！以下のURLを開いて、中身を全コピーして私に投げてください。");
-  console.log(url);
+  
+  // ログに出力（表示制限がある場合は、この文字列をGoogleドキュメントに書き出す等も可能）
+  Logger.log(output);
+  
+  // 念のため、実行完了のトーストを表示
+  console.log("Export Complete. Please check the Execution Log.");
 }
