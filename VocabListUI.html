@@ -104,13 +104,20 @@ this.renderCategoryBar();
       const keywords = q.split(/[\s　]+/).filter(k => k.length > 0);
       const normalizedKeywords = keywords.map(kw => this.normalizePhonetic(kw));
       const normalizedJapaneseKeywords = keywords.map(kw => this.normalizeJapanese(kw));
-
+// 【★修正ポイント】ここで qLower を定義します
+      const qLower = q.toLowerCase();
       displayData = allVocab.map(v => {
         let score = 0;
         const th = (v.word_th || "").toLowerCase();
         const rawPh = (v.phonetic || "").toLowerCase();
         const cat = (v.category || "").toLowerCase();
         
+
+        // 【★強化ポイント1】カテゴリー完全一致なら、超高スコアを与えて最上位へ
+  // ボタンで「動詞」を押した時、他の単語をすべて引き離して「動詞」だけを並べる
+  if (cat === qLower || cat.startsWith(qLower)) {
+    score += 10000; // 桁違いのスコアで最優先
+  }
         // データ側の発音記号も正規化エンジンに通して比較
         const normPh = this.normalizePhonetic(rawPh);
         const ja = v.meaning_ja || ""; 
@@ -131,13 +138,14 @@ this.renderCategoryBar();
           if (matchTh) score += 500;
           if (matchJa) score += 600;   // 漢字一致は意図が強いため高め
           if (matchKana) score += 400; 
+          if (matchCat) score += 800; // カテゴリー一致の重みを少しアップ
           
           if (matchPh) {
             if (normPh === nKw) score += 2000;      // 完全一致は最優先
             else if (normPh.startsWith(nKw)) score += 1000; // 前方一致
             else score += 500;
+            
           }
-          
           return (matchTh || matchJa || matchKana || matchPh || matchCat);
         });
 
