@@ -229,19 +229,18 @@ renderCategoryBar: function() {
   }).join('');
 },
 /**
- * ボタンを押した時のフィルタリング
+ * ボタンを押した時のフィルタリング（空白追加版）
  */
 applyCategoryFilter: function(cat) {
   const searchInput = document.getElementById('list-search');
   if (!searchInput) return;
 
-  // 検索窓に品詞をセットして、既存の検索ロジックをキックする
-  searchInput.value = (cat === "全件") ? "" : cat;
+  // 「全件」以外なら、カテゴリー名の後ろに半角スペースを入れる
+  // これにより「動詞 」というクエリになり、1,300件の絞り込みが正確になります
+  searchInput.value = (cat === "全件") ? "" : cat + " ";
   
-  // 1,300件を瞬時にリフレッシュ
   this.update(); 
   
-  // スマホの振動フィードバック（あれば）
   if (window.navigator.vibrate) window.navigator.vibrate(5);
 },
   /**
