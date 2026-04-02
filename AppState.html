@@ -1,0 +1,62 @@
+<script>
+/**
+ * AppStore: 2026年版 ハイブリッド・ステートマネージャー
+ * アプリケーションの全データ、フラグ、ユーザー設定を一元管理する。
+ * 各コンポーネント（StudyEngine, ViewController等）はこのStoreを参照し、
+ * データの一貫性を保ちながら動作する。
+ */
+const AppStore = {
+  /**
+   * 内部状態（State）の定義
+   */
+  state: {
+    // --- データコア ---
+    allVocab: [],         // サーバーから取得した全2万件のマスターデータ
+    queue: [],            // 現在のセッションで出題される単語の動的な並び順
+    currentIndex: 0,      // queue内での現在表示位置（何枚目のカードか）
+    
+    // --- 統計・進捗 ---
+    todayScore: 0,        // 本日のActivity数（正解数）
+    heatmapData: {},      // ヒートマップ描画用の時系列データ
+    
+    // --- カード表示状態 ---
+    revealed: false,      // 現在のカードが「めくられた」状態かどうか
+    isAnswering: false,   // 回答アニメーション実行中の重複操作防止フラグ
+    
+    // --- ユーザー設定（モード設定） ---
+    isTargetThai: true,   // 出題言語モード（true: タイ語から / false: 日本語から）
+    isSmart: true,        // 出題アルゴリズム（true: 忘却曲線重視 / false: ランダム）
+    isSlowMode: false,    // 音声再生速度（true: 0.5x / false: 0.9x）
+    isLightMode: false,   // 視覚テーマ（true: ライトモード / false: ダークモード）
+    
+    // --- UI/UX 制御フラグ ---
+    isProcessing: false,      // 通信中（グローバルロック）の状態管理
+    isVocabPanelOpen: false,  // 辞書リストパネルが開いているかどうか
+    isHeaderSwapped: false    // スクロールによるミニマルヘッダーへの切り替え状態
+  },
+
+  /**
+   * 状態（State）の更新
+   * 値の変更をコンソールにログ出力し、デバッグを容易にする。
+   * @param {string} key - state内のプロパティ名
+   * @param {any} val - 新しい値
+   */
+  update: function(key, val) {
+    if (this.state[key] !== undefined) {
+      this.state[key] = val;
+      // 開発者ツールでデータの流れを追跡可能にする
+      console.log(`[StateUpdate] ${key} :`, val);
+    }
+  },
+
+  /**
+   * 現在出題中の単語オブジェクトを取得
+   * StudyEngine や ViewController から頻繁に呼び出される重要メソッド。
+   * @returns {Object|null} - 現在の単語データ、またはnull
+   */
+  getCurrentItem: function() {
+    return this.state.queue[this.state.currentIndex] || null;
+  }
+
+};
+</script>

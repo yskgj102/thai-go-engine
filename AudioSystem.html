@@ -1,0 +1,33 @@
+<script>
+/**
+ * AudioSystem: ブラウザのSpeechSynthesis（音声合成API）を制御する専門ユニット
+ * 学習エンジンのロジックから切り離され、「テキストを音に変換する」実務のみを担当する。
+ */
+const AudioSystem = {
+  /**
+   * 指定されたテキストを音声で再生する
+   * @param {string} text - 再生するテキスト（タイ語または日本語）
+   * @param {string} lang - 言語コード（th-TH または ja-JP）
+   * @param {number} rate - 再生速度（0.1 〜 2.0 / 標準は1.0）
+   */
+  play: function(text, lang, rate) {
+    // 無効なデータやプレースホルダーの場合は再生をスキップ
+    if (!text || text === '---') return;
+
+    // 1. 既存の再生キューを強制キャンセル
+    // これにより、連打した際や、前の音声が長い場合に音が重なるのを防ぐ
+    window.speechSynthesis.cancel();
+
+    // 2. 発話オブジェクト(Utterance)の生成と設定
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang; // 言語の指定
+    u.rate = rate; // 再生速度（StudyEngine側のスローモード設定が反映される）
+    
+    // 3. ブラウザの音声合成エンジンに再生を依頼
+    window.speechSynthesis.speak(u);
+    
+    // デバッグログ：再生された内容をコンソールで確認可能にする
+    console.log(`[AudioSystem] ${lang}: ${text} (Rate: ${rate})`);
+  }
+};
+</script>

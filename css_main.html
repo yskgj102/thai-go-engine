@@ -1,0 +1,391 @@
+<!-- css_main.html -->
+<style>
+  /* --- 基本設定 & フォント --- */
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
+  :root { --thai-font: 'Sarabun', sans-serif; }
+  .thai-font { font-family: var(--thai-font); line-height: 1.6; }
+    /* 変数定義：ダークモードとライトモードの色管理 */
+    :root {
+      --bg-body: #000000;
+      --bg-card: #0a0a0a;
+      --text-main: #ffffff;
+      --text-sub: #666666;
+      --accent: #3b82f6;
+      --border: #1a1a1a;
+      --header-bg: rgba(0, 0, 0, 0.95);
+    }
+
+    /* ライトモード適用時の色定義 */
+    .light-mode {
+      --bg-body: #f8fafc;
+      --bg-card: #ffffff;
+      --text-main: #0f172a;
+      --text-sub: #475569;
+      --accent: #2563eb;
+      --border: rgba(0, 0, 0, 0.08);
+      --header-bg: rgba(255, 255, 255, 0.95);
+    }
+
+    /* 全体レイアウトとアニメーションの定義 */
+    html,
+    body {
+      background-color: var(--bg-body) !important;
+      margin: 0;
+      padding: 0;
+      transition: background-color 0.3s ease;
+    }
+
+    #app-container {
+      padding-top: env(safe-area-inset-top);
+      /* iPhoneのノッチ対応 */
+      background-color: var(--bg-body);
+      color: var(--text-main);
+    }
+
+    .thai-font {
+      font-family: 'Sarabun', sans-serif;
+    }
+
+    /* ヘッダーのデザイン設定 */
+    header {
+      height: 62px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* 検索・入力欄の特殊なスケーリング設定 */
+    #quick-input {
+      font-size: 16px !important;
+      transform: scale(0.75);
+      transform-origin: left center;
+      width: 130% !important;
+      margin-right: -30%;
+      background: rgba(255, 255, 255, 0.05);
+      border: none;
+      border-bottom: 1px solid var(--border);
+      padding: 4px 8px;
+      color: var(--text-main);
+    }
+
+    .light-mode #quick-input {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    /* ナビゲーション用ミニラベル */
+    .nav-label {
+      font-size: 7px;
+      font-weight: 800;
+      text-transform: uppercase;
+      opacity: 0.5;
+      letter-spacing: 0.05em;
+      margin-bottom: 2px;
+    }
+
+    .logo-text {
+      font-size: 11px;
+      font-weight: 900;
+      font-style: italic;
+      color: #3b82f6;
+    }
+
+    .score-text {
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    /* 単語カードの基本スタイル */
+    .card-style {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-main) !important;
+    }
+
+
+
+    @keyframes action-push {
+      0% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(4px);
+      }
+
+      100% {
+        transform: translateY(0);
+      }
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* 学習統計（ヒートマップ）表示エリア */
+    #stats-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 10px;
+      margin-bottom: 16px;
+    }
+
+    .heatmap-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+
+
+  /* --- ヒートマップ（元の位置：カード上部用） --- */
+  .heatmap-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .chart-container .heatmap-column rect { stroke: #0f172a; stroke-width: 2px; rx: 4px; }
+
+  /* --- めくる挙動の制御 --- */
+  .reveal-target { 
+    display: none !important; 
+    opacity: 0; 
+  }
+  #footer-ui { 
+    transform: translateY(100%); 
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+    pointer-events: none;
+  }
+
+  .is-revealed .reveal-target { 
+    display: block !important; 
+    opacity: 1; 
+    animation: slideUp 0.4s ease forwards; 
+  }
+  .is-revealed #footer-ui { 
+    transform: translateY(0) !important; 
+    pointer-events: auto !important; 
+  }
+
+  @keyframes slideUp { 
+    from { transform: translateY(15px); opacity: 0; } 
+    to { transform: translateY(0); opacity: 1; } 
+  }
+
+  /* --- VOCABULARY ドロワー（右からスライド） --- */
+/* 外枠：背景を暗くする */
+#vocab-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.5);
+  display: none; /* JSで flex に切り替える */
+  justify-content: flex-end; /* 右寄せ */
+  backdrop-filter: blur(2px);
+}
+/* 中身：右からスライドする本体 */
+.panel-content {
+  background: var(--bg-card);
+  width: 85%;
+  max-width: 340px;
+  height: 100%;
+  transform: translateX(100%); /* 最初は右側に隠しておく */
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+}
+
+  /* ドロワーが開いた時 */
+  #vocab-panel.is-open { 
+    display: flex !important; 
+  }
+  #vocab-panel.is-open .panel-content { 
+    transform: translateX(0) !important; 
+  }
+
+  /* --- リスト表示の最適化 --- */
+  #vocab-list-container::-webkit-scrollbar { width: 4px; }
+  #vocab-list-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+  }
+  /* ツールチップの基本スタイル */
+[data-tip] {
+  position: relative;
+}
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: 130%; /* アイコンの下に表示 */
+  left: 50%;
+  transform: translateX(-50%) translateY(-5px);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  z-index: 100;
+  backdrop-blur: 10px;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+/* タッチ・ホバーした時だけ表示 */
+[data-tip]:hover::after, [data-tip]:active::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* スマホの勝手なズーム・寄り対策 */
+#quick-input, 
+#vocab-panel input {
+  font-size: 16px !important; /* ブラウザにズームさせない最低ライン */
+  transform: scale(0.8125);    /* 16px * 0.8125 ≒ 13px (見た目のサイズを維持) */
+  transform-origin: left center;
+  width: 123% !important;      /* スケールダウン分を補填して横幅を合わせる */
+}
+
+/* 検索窓のコンテナに溢れ防止を入れる */
+.relative.w-full.max-w-\[150px\],
+#vocab-panel .search-container {
+  overflow: hidden;
+}
+
+/* スマホの勝手なズーム・寄り対策（ヘッダーとMenu両方） */
+#quick-input, 
+#list-search {
+  font-size: 16px !important; 
+  transform: scale(0.8125);    
+  transform-origin: left center;
+  width: 123% !important;      
+}
+
+/* Menu内の検索窓コンテナに溢れ防止を追加 */
+.p-4.border-b.border-white\/5 {
+  overflow: hidden;
+}
+
+:root {
+  /* 既存の変数... */
+  --input-bg: rgba(255, 255, 255, 0.05);
+  --input-text: #ffffff;
+  --input-border: rgba(255, 255, 255, 0.1);
+}
+
+.light-mode {
+  /* 既存の変数... */
+  --input-bg: rgba(0, 0, 0, 0.05);
+  --input-text: #0f172a; /* 濃い紺色 */
+  --input-border: rgba(0, 0, 0, 0.1);
+}
+
+/* Menu（VOCABULARYパネル）内の検索窓に適用 */
+#list-search {
+  background-color: var(--input-bg) !important;
+  color: var(--input-text) !important;
+  border: 1px solid var(--input-border) !important;
+}
+
+/* プレースホルダー（Search...の文字）の色も調整 */
+#list-search::placeholder {
+  color: var(--text-sub);
+  opacity: 0.5;
+}
+/* ブラウザ標準の「×」ボタンを、背景色に合わせて反転させる */
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  height: 16px;
+  width: 16px;
+  /* SVGアイコンを流し込む */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='currentColor'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 18L18 6M6 6l12 12'/%3E%3C/svg%3E");
+  background-size: contain;
+  /* ★ ここが魔法：親の文字色（白か黒）に合わせてアイコンの色を自動で変える */
+  filter: opacity(0.4);
+  cursor: pointer;
+}
+
+/* ダークモード（背景黒）の時は、アイコンを白く浮かび上がらせる */
+body:not(.light-mode) input[type="search"]::-webkit-search-cancel-button {
+  filter: invert(1) opacity(0.4);
+}
+
+
+/* --- 回答ボタンを柔らかい立体にする --- */
+#footer-ui button {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 
+    4px 4px 8px rgba(0, 0, 0, 0.5), /* 外側の影 */
+    -2px -2px 6px rgba(255, 255, 255, 0.01); /* かすかな光 */
+  transition: all 0.2s ease;
+}
+
+/* ボタンを押した時の「沈み込む」演出 */
+#footer-ui button:active {
+  box-shadow: 
+    inset 2px 2px 5px rgba(0, 0, 0, 0.5), /* 内側の影 */
+    inset -1px -1px 3px rgba(255, 255, 255, 0.01);
+  transform: translateY(1px);
+}
+
+/* --- カード自体の「ホバー・タップ」時の挙動 --- */
+#word-card {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease !important; /* ぷるんとした動き */
+}
+
+/* ホバー時にわずかに浮かせ、影を濃くする */
+#word-card:hover {
+  transform: translateY(-5px) scale(1.01) !important;
+  box-shadow: 0 15px 45px 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+/* --- ✅ これに統一！背景色を変えず、動きだけにする --- */
+.success-flash {
+  animation: action-pushed 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  /* 背景色は現在のテーマのカード色を維持 */
+  background-color: var(--bg-card) !important; 
+  border-color: var(--accent) !important; /* 枠線だけ一瞬アクセントカラー（青）に */
+}
+
+@keyframes action-pushed {
+  0% { transform: scale(1); }
+  30% { transform: scale(0.95); opacity: 0.8; } /* グッと沈む */
+  100% { transform: scale(1); opacity: 1; }
+}
+
+input[type="search"]::-webkit-search-cancel-button:active {
+  filter: invert(1) opacity(1);
+}
+
+/* タイ語の行間を広げて重なりを防止 */
+.thai-font {
+  line-height: 1.6 !important; /* 標準より広めに設定 */
+  padding-top: 0.2em;
+  padding-bottom: 0.2em;
+}
+
+/* メイン単語エリアの調整 */
+#word-th {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  /* 文章が長い場合は少しフォントサイズを自動調整するなら以下（任意） */
+  max-width: 100%;
+}
+
+/* 意味（意味_ja）が長い時に自動で小さくする */
+#meaning {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: clamp(1.2rem, 5vw, 1.875rem); /* 画面幅に合わせて可変 */
+}
+
+/* 解説文の中のタイ語も含めて、フォントを一貫させる */
+#note {
+  white-space: pre-wrap;
+  word-break: break-word; /* 英語やタイ語が枠からはみ出すのを防ぐ */
+}
+
+
+</style>

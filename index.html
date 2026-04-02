@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.4/dist/frappe-charts.min.iife.js"></script>
+  <?!= include('css_main'); ?>
+
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+
+<body class="min-h-screen font-sans antialiased overflow-x-hidden">
+  <div id="app-container" class="max-w-md mx-auto min-h-screen flex flex-col relative border-x border-white/5">
+
+    <header
+      class="sticky top-0 z-50 backdrop-blur-lg px-4 py-3 flex items-center justify-between border-b border-white/5"
+      style="background: var(--header-bg);">
+
+      <div class="flex flex-col gap-0.5 min-w-[70px] cursor-pointer group" onclick="ViewController.toggleStats()" data-tip="Stats">
+        <span class="text-[9px] font-bold tracking-[0.1em] opacity-30 group-hover:opacity-60 transition-opacity uppercase">Activity</span>
+        <div class="flex items-baseline gap-1">
+          <span id="correct-count" class="text-2xl font-mono leading-none font-medium text-blue-500/80">0</span>
+          <span class="text-[9px] opacity-20 font-bold tracking-tighter">WDS</span>
+        </div>
+      </div>
+
+      <div class="flex-1 flex justify-center px-3 relative h-10 overflow-hidden">
+        <div id="header-input-area" class="relative w-full max-w-[150px] transition-all duration-300 ease-out">
+          <input id="quick-input" type="text" placeholder="Add..."
+                 class="w-full bg-white/5 border border-white/5 rounded-xl px-3 py-1.5 text-[12px] focus:outline-none focus:bg-white/10 transition-all">
+          <button id="quick-add-btn" class="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center text-blue-500/60 text-lg transition-all" data-tip="Add">
+            <span class="quick-add-label text-[11px] font-bold">＋</span>
+          </button>
+        </div>
+          <div id="header-word-area" 
+              onclick="event.stopPropagation(); StudyEngine.speak(false);"
+              class="absolute inset-0 flex flex-col items-center justify-center opacity-0 pointer-events-none translate-y-4 transition-all duration-300 ease-out cursor-pointer active:opacity-50">
+              
+              <div id="header-display-th" class="thai-font text-[14px] font-bold leading-none text-blue-500/90 mb-1 whitespace-nowrap"></div>
+              
+              <div class="flex items-center gap-2 max-w-full">
+                  <div id="header-display-ja" class="text-[9px] opacity-40 font-bold whitespace-nowrap overflow-hidden"></div>
+
+                  <button onclick="event.stopPropagation(); StudyEngine.copyText('header-display-th')" 
+                          class="text-[12px] opacity-20 hover:opacity-100 active:scale-125 transition-all shrink-0">
+                    ⧉
+                  </button>
+              </div>
+          </div>
+      </div>
+
+      <div class="flex items-center gap-4 shrink-0 pl-1">
+        <div class="flex items-center gap-3 pr-3 border-r border-white/10">
+          <button onclick="StudyEngine.toggleTargetLanguage()" id="target-toggle-btn" class="text-[17px] opacity-40 hover:opacity-100 transition-all active:scale-125">🇹🇭</button>
+          <button onclick="StudyEngine.toggleMode()" id="mode-btn" class="text-[17px] opacity-30 hover:opacity-100 transition-all active:scale-125">🧠</button>
+                    <button onclick="ViewController.toggleTheme()" id="theme-icon" class="text-[11px] opacity-20 hover:opacity-100 transition-all">🌙</button>
+        </div>
+
+        <button onclick="ViewController.toggleVocabPanel()" class="flex flex-col gap-[4px] items-end opacity-20 hover:opacity-100 transition-all p-1">
+          <span class="h-[1.5px] w-4 bg-current rounded-full"></span>
+          <span class="h-[1.5px] w-2 bg-current rounded-full"></span>
+        </button>
+      </div>
+    </header>
+
+    <main
+      onclick="if(!AppStore.state.isVocabPanelOpen) { if(!AppStore.state.revealed) StudyEngine.revealAll(); }"
+      class="p-4 flex-grow pb-48 cursor-pointer relative">
+
+      <div id="stats-area" class="hidden mb-4" onclick="event.stopPropagation()">
+        <div class="flex justify-between items-center mb-2 px-1">
+          <span class="text-[8px] font-bold opacity-50 uppercase">Activity</span>
+          <button onclick="ViewController.toggleStats()" class="text-[8px] opacity-50">Close ×</button>
+        </div>
+        <div class="heatmap-scroll bg-white/5 rounded-2xl p-4 border border-white/5">
+          <div id="heatmap"></div>
+        </div>
+      </div>
+
+      <div id="vocab-panel" class="hidden" onclick="ViewController.toggleVocabPanel(event)">
+        <div class="panel-content" onclick="event.stopPropagation()">
+          <div class="flex items-center px-6 pt-12 pb-4 border-b border-white/5 shrink-0">
+            <span class="flex-1 text-[11px] font-black uppercase tracking-widest text-blue-500">
+              VOCABULARY <span id="vocab-total-count" class="ml-2 opacity-40 text-[9px] font-mono">0</span>
+            </span>
+            <button onclick="ViewController.toggleVocabPanel()" class="opacity-50 text-xs tracking-tighter">CLOSE ×</button>
+          </div>
+          <div class="p-4 border-b border-white/5">
+            <input id="list-search" type="search" placeholder="Search..."
+                   oninput="VocabListUI.update(this.value)"
+                   class="w-full rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 font-mono bg-white/5 border border-white/5">
+            <button onclick="StudyEngine.openGotThai(document.getElementById('list-search').value)"
+                    class="mt-2 px-3 py-1 bg-blue-500/10 border border-blue-500/30 rounded-xl text-blue-500 text-[10px] font-bold active:scale-95 transition-all">
+              GOTTHAI ↗
+            </button>
+          </div>
+          <div id="vocab-list-container" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
+        </div>
+      </div>
+
+      <div id="main-content">
+        <div id="loader" class="text-center py-20 opacity-20">
+          <div class="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
+        </div>
+
+        <div id="card-container" class="hidden space-y-4">
+          <div id="word-card" onclick="if(AppStore.state.revealed) StudyEngine.speak(false)"
+               class="card-style rounded-[2.5rem] p-8 shadow-2xl relative min-h-[360px] flex flex-col items-center justify-center cursor-pointer">
+            <div class="absolute top-5 right-6 flex items-center gap-4">
+              <button onclick="event.stopPropagation(); StudyEngine.copyText('word-th')" class="text-[14px] opacity-20 hover:opacity-100 active:scale-125 transition-all">⧉</button>
+              <button onclick="event.stopPropagation(); StudyEngine.openGotThai()" class="text-[8px] font-bold opacity-20 hover:opacity-100 uppercase tracking-widest">Gotthai ↗</button>
+            </div>
+            <div class="relative inline-block">
+              <div id="word-th" class="thai-font text-6xl font-bold mb-4 text-center"></div>
+              <button onclick="event.stopPropagation(); StudyEngine.speak(false)" class="absolute -top-2 -left-10 text-[14px] opacity-20 p-2 active:scale-125 transition-transform">🔊</button>
+            </div>
+            <div id="phonetic" class="text-sm italic mb-6" style="color: var(--text-sub)"></div>
+
+            <div id="meaning-area" class="reveal-target hidden w-full pt-6 border-t text-center" style="border-color: var(--border);">
+              <div class="mb-2">
+                <span id="category" class="text-[9px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded border border-blue-500/30 text-blue-500/60">---</span>
+              </div>
+              <div id="meaning" class="text-3xl font-black text-center" style="color: var(--text-main)"></div>
+            </div>
+            <div id="logic-debug" class="absolute bottom-10 right-8 text-[7px] font-mono opacity-20 flex flex-col items-end">
+              <span id="stat-interval"></span><span id="stat-last"></span>
+            </div>
+            <div id="tap-hint" class="absolute bottom-5 left-0 right-0 text-center animate-pulse text-[8px] font-bold uppercase tracking-[0.4em] opacity-20">Tap to flip</div>
+          </div>
+
+          <div id="details-area" class="reveal-target hidden">
+            <div onclick="StudyEngine.speak(true)"
+                 class="p-6 shadow-xl space-y-4 rounded-[1.5rem] border-l-4 border-blue-500 cursor-pointer active:opacity-80 transition-opacity"
+                 style="background-color: var(--bg-card); border: 1px solid var(--border);">
+              <div class="flex justify-between items-center mb-1">
+                <p class="text-[10px] font-black uppercase tracking-widest text-blue-500">Context</p>
+                <button onclick="event.stopPropagation(); StudyEngine.copyText('ex-th')" class="text-[14px] opacity-20 hover:opacity-100 active:scale-125 transition-all">⧉</button>
+              </div>
+              <div class="relative inline-block pr-6">
+                <p id="ex-th" class="thai-font text-xl font-bold leading-relaxed"></p>
+                <button onclick="event.stopPropagation(); StudyEngine.speak(true)" class="absolute top-0 -right-2 text-[12px] opacity-20 p-1 active:scale-125 transition-transform">🔊</button>
+                <p id="ex-phonetic" class="text-[11px] italic mb-1" style="color: var(--text-sub)"></p>
+              </div>
+              <p id="ex-ja" class="text-sm font-bold opacity-70"></p>
+              <div class="pt-4 border-t" style="border-color: var(--border)">
+                <p id="note" class="text-[12px] leading-relaxed whitespace-pre-wrap"></p>
+<div class="flex justify-start gap-3 pt-6">
+  <button id="delete-word-btn" 
+          data-confirm="false"
+          onclick="ViewController.requestDeleteCurrentWord(event)" 
+          class="text-[9px] font-black uppercase tracking-tighter text-red-500/30 border border-current px-3 py-2 rounded-full transition-all duration-300">
+    × Destruct
+  </button>
+
+  <div class="flex-1"></div> <button id="re-gen-btn" 
+          onclick="event.stopPropagation(); Bridge.reGenerate(AppStore.getCurrentItem().id)" 
+          class="text-[9px] font-black uppercase tracking-tighter opacity-30 hover:opacity-100 px-3 py-2 rounded-full border border-current transition-all">
+    AI Re-Generate
+  </button>
+</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+    </main>
+<div onclick="ViewController.invokeQuickSearch(event)" 
+     class="fixed bottom-32 right-5 w-12 h-12 bg-white/5 backdrop-blur-md rounded-full border border-white/10 flex items-center justify-center active:scale-90 active:bg-white/20 transition-all z-[40] cursor-pointer">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+  </svg>
+</div>
+    <footer id="footer-ui"
+      class="p-6 pb-12 border-t flex gap-4 fixed bottom-0 left-0 right-0 max-w-md mx-auto z-50 pointer-events-none translate-y-full backdrop-blur-xl transition-all"
+      style="background: var(--header-bg); border-color: var(--border);">
+      <button onclick="StudyEngine.answer(3)" class="flex-1 bg-transparent text-blue-500 py-5 rounded-2xl font-black text-[10px] border border-blue-500/30 active:scale-95 transition-all">簡単</button>
+      <button onclick="StudyEngine.answer(2)" class="flex-1 bg-transparent text-slate-500 py-5 rounded-2xl font-black text-[10px] border border-slate-500/30 active:scale-95 transition-all">普通</button>
+      <button onclick="StudyEngine.answer(1)" class="flex-1 bg-transparent text-rose-600 py-5 rounded-2xl font-black text-[10px] border border-rose-600/30 active:scale-95 transition-all">難しい</button>
+    </footer>
+  </div>
+
+<?!= include('AppState'); ?>
+  <?!= include('Bridge'); ?>
+  <?!= include('ViewController'); ?>
+  <?!= include('AudioSystem'); ?>
+  <?!= include('VocabListUI'); ?>
+  <?!= include('StudyEngine'); ?>
+
+  <script>
+    window.onload = () => {
+      console.log("[System] Hybrid Engine Active. Data: 2026 / Logic: Legacy.");
+      ViewController.initTheme(); // テーマを先に適用（画面のチラつき防止）
+      // 新 Bridge で初期ロード開始
+      Bridge.initialize();
+
+      // クイック追加などのイベントは新 Bridge へ統合
+      const quickInput = document.getElementById('quick-input');
+      const quickBtn = document.getElementById('quick-add-btn');
+      if (quickBtn) quickBtn.onclick = () => Bridge.executeQuickAdd();
+      if (quickInput) {
+        quickInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') Bridge.executeQuickAdd();
+        });
+      }
+    };
+  </script>
+</body>
+</html>

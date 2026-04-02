@@ -1,0 +1,371 @@
+<script>
+/**
+ * ViewController: UI/UXの状態管理・アニメーション・物理ロックの司令塔
+ * HTML要素の直接操作を一手に引き受け、AppStoreの状態を画面へ視覚的に反映させる。
+ */
+const ViewController = {
+
+  /**
+   * ヘッダーのActivity（本日の習得数）を更新
+   */
+  updateScoreUI: function() {
+    const el = document.getElementById('correct-count');
+    if (el) el.innerText = AppStore.state.todayScore; 
+  },
+
+  /**
+   * カード描画前の物理リセット
+   * 次のカードを表示する直前に、めくり要素(reveal-target)を隠し、フッターを下げる。
+   */
+  resetCardUI: function() {
+    // 全ての「めくり後に表示される要素」を隠す
+    document.querySelectorAll('.reveal-target').forEach(el => el.classList.add('hidden'));
+    document.getElementById('app-container').classList.remove('is-revealed');
+    
+    // フッター（解答ボタン）を隠し、クリックを無効化
+    const footer = document.getElementById('footer-ui');
+    if (footer) {
+      footer.style.pointerEvents = 'none';
+      footer.classList.add('translate-y-full'); 
+    }
+    
+    // 「Tap to flip」のヒントを表示
+    const hint = document.getElementById('tap-hint');
+    if (hint) hint.classList.remove('hidden');
+  },
+
+  /**
+   * 正解時や単語召喚時の視覚的フィードバック（フラッシュ演出）
+   */
+  playSuccessEffect: function() {
+    const card = document.getElementById('word-card');
+    if (card) {
+      card.classList.add('success-flash');
+      setTimeout(() => card.classList.remove('success-flash'), 400);
+    }
+  },
+
+  /**
+   * カードをめくった際のUIアニメーション
+   * @param {boolean} isTargetThai - 現在の出題モードがタイ語メインかどうか
+   */
+  applyRevealUI: function(isTargetThai) {
+    document.getElementById('app-container').classList.add('is-revealed');
+    document.querySelectorAll('.reveal-target').forEach(el => el.classList.remove('hidden'));
+    
+    // 解答フッターをせり上げ、クリックを有効化
+    const footer = document.getElementById('footer-ui');
+    if (footer) {
+      footer.style.pointerEvents = 'auto';
+      footer.classList.remove('translate-y-full');
+    }
+    
+    document.getElementById('tap-hint').classList.add('hidden');
+    
+    // 日本語学習モード時は、めくった瞬間に発音記号(phonetic)を露出させる
+    if (!isTargetThai) {
+      const ph = document.getElementById('phonetic');
+      if (ph) ph.classList.remove('hidden');
+    }
+  },
+
+  /**
+   * スクロール量に応じたヘッダーのトランスフォーム
+   * 単語カードが画面外へ消えるタイミングで、ミニマルなヘッダー表示に切り替える。
+   */
+  handleHeaderTransform: function() {
+    const wordCard = document.getElementById('word-card');
+    if (!wordCard) return;
+    const cardRect = wordCard.getBoundingClientRect();
+    
+    // 境界値(85px)を超えたら表示内容をスワップ
+    const shouldSwap = cardRect.bottom < 85;
+    if (shouldSwap !== AppStore.state.isHeaderSwapped) {
+      AppStore.state.isHeaderSwapped = shouldSwap;
+      this._applyHeaderUI(shouldSwap);
+    }
+  },
+
+  /**
+   * ヘッダーUIの内部的な切り替え処理（不透明度と位置のアニメーション）
+   */
+  _applyHeaderUI: function(isSwapped) {
+    const inputArea = document.getElementById('header-input-area');
+    const wordArea = document.getElementById('header-word-area');
+    if (isSwapped) {
+      // インプットを消し、現在の単語情報を出す
+      inputArea.style.opacity = "0";
+      inputArea.style.transform = "translateY(-16px)";
+      inputArea.style.pointerEvents = "none";
+      wordArea.style.opacity = "1";
+      wordArea.style.transform = "translateY(0)";
+      wordArea.style.pointerEvents = "auto";
+      StudyEngine.syncHeader(); 
+    } else {
+      // 元の状態に戻す
+      inputArea.style.opacity = "1";
+      inputArea.style.transform = "translateY(0)";
+      inputArea.style.pointerEvents = "auto";
+      wordArea.style.opacity = "0";
+      wordArea.style.transform = "translateY(16px)";
+      wordArea.style.pointerEvents = "none";
+    }
+  },
+
+  /**
+   * 画面中央上部に通知を表示
+   * @param {string} message - 表示する文字列
+   * @param {string} type - success, warning, error のいずれか
+   */
+  showToast: function(message, type = "success") {
+    const toast = document.createElement('div');
+    const bgColor = type === "success" ? "bg-blue-500/90" : (type === "warning" ? "bg-amber-500/90" : "bg-rose-500/90");
+    toast.className = `fixed top-24 left-1/2 -translate-x-1/2 ${bgColor} text-white text-[10px] font-black px-6 py-3 rounded-full shadow-2xl z-[100] backdrop-blur-md transition-all duration-500 opacity-0 translate-y-2`;
+    toast.innerText = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => toast.classList.remove('opacity-0', 'translate-y-2'), 10);
+    setTimeout(() => {
+      toast.classList.add('opacity-0');
+      setTimeout(() => toast.remove(), 500);
+    }, 3000);
+  },
+
+  /**
+   * 通信中のグローバルロック
+   * 誤操作防止のため、入力や重要ボタンを無効化。ただし必須操作ボタンのみ例外的に許可する。
+   */
+  applyGlobalLock: function(message, mainBtn) {
+    AppStore.state.isProcessing = true;
+    if (message) this.showToast(message, "success");
+    
+    // 検索窓以外の全入力をリードオンリー＆半透明化
+    document.querySelectorAll('input, textarea').forEach(el => {
+      if (el.id !== 'list-search') {
+        el.readOnly = true;
+        el.style.setProperty('opacity', '0.4', 'important');
+        el.style.setProperty('pointer-events', 'none', 'important');
+      }
+    });
+
+    // ボタンのインテリジェント・ロック
+    document.querySelectorAll('button').forEach(b => {
+      const btnClickAttr = b.getAttribute('onclick') || "";
+      
+      // 学習継続に必要な「コピー」「音声」「UI切り替え」ボタンは無効化しない
+      const isEssential = btnClickAttr.includes('copy') || 
+                          btnClickAttr.includes('speak') || 
+                          btnClickAttr.includes('toggle');
+
+      if (isEssential) {
+        b.style.setProperty('pointer-events', 'auto', 'important');
+        b.style.opacity = ""; 
+      } else {
+        b.style.setProperty('pointer-events', 'none', 'important');
+        b.style.setProperty('opacity', '0.4', 'important');
+      }
+    });
+    VocabListUI.update(); // リスト内の追加ボタンの文字(PROCESSING...)を反映
+  },
+
+  /**
+   * 全ての物理ロックを解除
+   */
+  releaseLocks: function() {
+    AppStore.state.isProcessing = false; 
+    document.querySelectorAll('input, textarea, button').forEach(el => {
+      el.readOnly = false;
+      el.style.opacity = "";
+      el.style.pointerEvents = "";
+    });
+    VocabListUI.update();
+  },
+
+  /**
+   * ボキャブラリーパネル（辞書リスト）の開閉
+   */
+  toggleVocabPanel: function(e) {
+    if (e) e.stopPropagation();
+    const panel = document.getElementById('vocab-panel');
+    if (panel.classList.contains('hidden')) {
+      panel.classList.remove('hidden'); 
+      requestAnimationFrame(() => {
+          panel.classList.add('is-open');
+          AppStore.state.isVocabPanelOpen = true;
+          VocabListUI.update();
+      });
+      document.body.style.overflow = 'hidden'; // 背面のスクロールを禁止
+    } else {
+      panel.classList.remove('is-open');
+      AppStore.state.isVocabPanelOpen = false;
+      setTimeout(() => {
+        panel.classList.add('hidden');
+        document.body.style.overflow = '';
+      }, 300);
+    }
+  },
+
+  /**
+   * 単語削除のリクエスト（誤操作防止の2段階タップ・安全装置付き）
+   */
+  requestDeleteCurrentWord: function(event) {
+    if (event) event.stopPropagation();
+
+    const btn = document.getElementById('delete-word-btn');
+    const currentItem = AppStore.getCurrentItem();
+    if (!currentItem || !btn) return;
+
+    const isConfirming = btn.getAttribute('data-confirm') === 'true';
+
+    if (isConfirming) {
+      // 2回目：実際にBridge経由でサーバーへ削除命令を出す
+      Bridge.deleteWordAndLogs(currentItem.id);
+      
+      // ボタンの状態リセット
+      btn.setAttribute('data-confirm', 'false');
+      btn.innerText = '× Destruct';
+      btn.classList.remove('bg-red-500', 'text-white', 'opacity-100');
+      btn.classList.add('text-red-500/30');
+    } else {
+      // 1回目：警告状態（赤背景）へ移行
+      btn.setAttribute('data-confirm', 'true');
+      btn.innerText = 'CONFIRM DELETE?';
+      btn.classList.remove('text-red-500/30');
+      btn.classList.add('bg-red-500', 'text-white', 'opacity-100', 'scale-110');
+      
+      // 3秒間放置で自動キャンセル
+      setTimeout(() => {
+        if (btn.getAttribute('data-confirm') === 'true') {
+          btn.setAttribute('data-confirm', 'false');
+          btn.innerText = '× Destruct';
+          btn.classList.remove('bg-red-500', 'text-white', 'opacity-100', 'scale-110');
+          btn.classList.add('text-red-500/30');
+        }
+      }, 3000);
+    }
+  },
+
+  /**
+   * テーマ（ダーク/ライト）の動的切り替え
+   */
+  toggleTheme: function() {
+    const isLight = document.body.classList.toggle('light-mode');
+    AppStore.state.isLightMode = isLight;
+    
+    const icon = document.getElementById('theme-icon');
+    if (icon) icon.innerText = isLight ? '☀️' : '🌙';
+    
+    localStorage.setItem('thai-go-theme', isLight ? 'light' : 'dark');
+    
+    // iOS/Androidのブラウザ外枠の色を更新
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) {
+      metaTheme.setAttribute('content', isLight ? '#f8fafc' : '#000000');
+    }
+  },
+
+  /**
+   * 起動時のテーマ初期化
+   */
+  initTheme: function() {
+    if (localStorage.getItem('thai-go-theme') === 'light') {
+      document.body.classList.add('light-mode');
+      AppStore.state.isLightMode = true;
+      const icon = document.getElementById('theme-icon');
+      if (icon) icon.innerText = '☀️';
+    }
+  },
+
+  /**
+   * クイック検索の起動（パネルを開いてフォーカスを当てる）
+   */
+  invokeQuickSearch: function(e) {
+    if (e) e.stopPropagation();
+    
+    if (!AppStore.state.isVocabPanelOpen) {
+      this.toggleVocabPanel();
+    }
+
+    setTimeout(() => {
+      const searchInput = document.getElementById('list-search');
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.click(); 
+        searchInput.setSelectionRange(0, searchInput.value.length); // 全選択して入力しやすく
+      }
+    }, 350);
+  },
+
+  /**
+   * AppStoreから渡された単語情報をHTML各要素に反映
+   */
+  updateText: function(item, isThai) {
+    const mapping = {
+      'word-th': isThai ? (item.word_th || '---') : (item.meaning_ja || '---'),
+      'meaning': isThai ? (item.meaning_ja || '---') : (item.word_th || '---'),
+      'phonetic': item.phonetic || '---',
+      'category': item.category || '---',
+      'ex-th': item.example_th || '---',
+      'ex-phonetic': item.example_phonetic || '---',
+      'ex-ja': item.example_ja || '',
+      'note': item.explanation || ''
+    };
+
+    Object.entries(mapping).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el) el.innerText = val;
+    });
+    
+    const ph = document.getElementById('phonetic');
+    if (ph) isThai ? ph.classList.remove('hidden') : ph.classList.add('hidden');
+  },
+
+  /**
+   * 単語の忘却・学習間隔統計を画面に反映
+   */
+  updateStats: function(item) {
+    const interval = item.interval || 0;
+    const lastDate = (item.last_date && item.last_date !== 'New') 
+      ? String(item.last_date).split(/[ T]/)[0] : 'New';
+
+    document.getElementById('stat-interval').innerText = `Int: ${interval}d`;
+    document.getElementById('stat-last').innerText = `Last: ${lastDate}`;
+  },
+
+  /**
+   * 忘却度に応じたカラーボーダーの適用
+   */
+  updateBorder: function(item) {
+    const card = document.getElementById('word-card');
+    if (!card || !item) return;
+
+    const color = StudyEngine.getColor(item); // StudyEngine側の判定ロジックに依存
+    card.style.borderLeft = card.style.borderRight = `4px solid ${color}`;
+  },
+
+  /**
+   * 全単語数のカウントアップ
+   */
+  updateTotalCount: function(count) {
+    const el = document.getElementById('vocab-total-count');
+    if (el) el.innerText = count || 0;
+  },
+
+  /**
+   * ヒートマップエリアの表示切り替え
+   */
+  toggleStats: function() {
+    const area = document.getElementById('stats-area');
+    if (!area) return;
+    const isOpening = area.classList.toggle('hidden');
+    if (!isOpening) StudyEngine.renderHeatmap();
+  }
+};
+
+/**
+ * グローバルリスナー: スクロールに応じたヘッダーアニメーションを監視
+ */
+window.addEventListener('scroll', () => {
+  window.requestAnimationFrame(() => ViewController.handleHeaderTransform());
+}, { passive: true });
+</script>

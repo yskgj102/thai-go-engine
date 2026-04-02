@@ -1,0 +1,217 @@
+<script>
+/**
+ * VocabListUI: ボキャブラリーリストの表示・高度な検索・無限スクロールを管理
+ * 発音記号の揺れや日本語の読み（ひらがな/カタカナ）を吸収する「山岡流正規化エンジン」を搭載。
+ */
+const VocabListUI = {
+  state: {
+    displayLimit: 80, // 初回表示件数（2万件を一度に出さず、描画負荷を軽減）
+    currentQuery: ""  // 現在の検索文字列
+  },
+
+  /**
+   * 山岡流・発音記号正規化エンジン
+   * タイ語特有の声調記号や特殊母音を、アルファベットのみのプレーンな文字列に変換する。
+   * 1. NFD正規化で「母音」と「声調記号」を分離して記号を消去
+   * 2. 特殊母音 (ɔ, ɛ, ɯ, ə) を標準アルファベットへ置換
+   * 3. 有気音(h)や末尾鼻音(ng)の揺れを吸収し、検索ヒット率を最大化
+   */
+  normalizePhonetic: function(str) {
+    if (!str) return "";
+    return str.toLowerCase()
+              .normalize("NFD")               // 声調記号を分離（á -> a + ´）
+              .replace(/[\u0300-\u036f]/g, "") // 分離した声調記号のみを削除
+              .replace(/ɔ/g, "o")             // ɔ -> o (thɔ́ɔng -> thong)
+              .replace(/ɛ/g, "e")             // ɛ -> e (ka-fɛɛ -> kafee)
+              .replace(/ɯ/g, "u")             // ɯ -> u (mɯɯ -> muu)
+              .replace(/ə/g, "o")             // ə -> o
+              .replace(/[- ]/g, "")           // ハイフン・スペースを完全に除去
+              .replace(/ph/g, "p")            // 有気音の揺れ対策 (ph -> p)
+              .replace(/th/g, "t")            // (th -> t)
+              .replace(/kh/g, "k")            // (kh -> k)
+              .replace(/ng/g, "n")            // 末尾の鼻母音 (ng -> n)
+              .replace(/[’']/g, "")           // アポストロフィを除去
+              .replace(/y$/g, "i");           // 末尾のyをiとみなす
+  },
+
+  /**
+   * 日本語検索用の正規化エンジン
+   * カタカナ、ひらがな、送り仮名の揺れを吸収する。
+   */
+  normalizeJapanese: function(str) {
+    if (!str) return "";
+    return str
+      .replace(/[\u30a1-\u30f6]/g, function(s) {
+        return String.fromCharCode(s.charCodeAt(0) - 0x60); // カタカナをひらがなに統一
+      })
+      .replace(/ー/g, "") // 長音記号を除去（コーヒー/こーひー どちらでもヒットさせる）
+      .replace(/[する|した|したこと]$/, "") // 動詞の語尾変化をカットして語幹でマッチング
+      .trim();
+  },
+
+  /**
+   * 検索クエリの更新と再描画
+   * @param {string} query - 検索入力文字列
+   */
+  update: function(query) {
+    const searchInput = document.getElementById('list-search');
+    // 検索窓の値を優先し、なければ引数を使用。全角スペースを処理して小文字化
+    let q = (searchInput && searchInput.value !== undefined) ? searchInput.value : (query || '');
+    this.state.currentQuery = q.toLowerCase().trim();
+
+    // 検索のたびに表示リミットをリセットして爆速化
+    this.state.displayLimit = 80;
+    this.render();
+  },
+
+  /**
+   * 無限スクロール用：表示件数を拡張
+   */
+  loadMore: function() {
+    this.state.displayLimit += 80;
+    this.render();
+  },
+
+  /**
+   * リストのメインレンダリング（描画）
+   * AppStoreの全データに対し、正規化エンジンを通したスコアリング検索を実行する。
+   */
+  render: function() {
+    const container = document.getElementById('vocab-list-container');
+    const totalCountEl = document.getElementById('vocab-total-count'); 
+    if (!container) return;
+
+    // AppStoreから全2万件のデータを取得
+    const allVocab = AppStore.state.allVocab; 
+    const q = this.state.currentQuery;
+    const isLocked = AppStore.state.isProcessing;
+
+    if (!allVocab || allVocab.length === 0) {
+      container.innerHTML = `<div class="p-12 text-center opacity-40"><div class="animate-spin w-5 h-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div></div>`;
+      return;
+    }
+
+    // 通信ロック中はクリックを無効化
+    const pointerClass = isLocked ? 'pointer-events-none opacity-50' : 'cursor-pointer';
+
+    // --- 検索・スコアリングロジック ---
+    let displayData = [];
+
+    if (q === '') {
+      displayData = allVocab; // クエリが空なら全表示
+    } else {
+      // スペース区切りのAND検索に対応
+      const keywords = q.split(/[\s　]+/).filter(k => k.length > 0);
+      const normalizedKeywords = keywords.map(kw => this.normalizePhonetic(kw));
+      const normalizedJapaneseKeywords = keywords.map(kw => this.normalizeJapanese(kw));
+
+      displayData = allVocab.map(v => {
+        let score = 0;
+        const th = (v.word_th || "").toLowerCase();
+        const rawPh = (v.phonetic || "").toLowerCase();
+        const cat = (v.category || "").toLowerCase();
+        
+        // データ側の発音記号も正規化エンジンに通して比較
+        const normPh = this.normalizePhonetic(rawPh);
+        const ja = v.meaning_ja || ""; 
+        const kana = this.normalizeJapanese(v.meaning_kana || ""); 
+
+        // 全キーワードがどれかのフィールドに部分一致するかチェック
+        const isMatch = keywords.every((kw, i) => {
+          const nKw = normalizedKeywords[i];
+          const kJ = normalizedJapaneseKeywords[i]; 
+          
+          const matchTh = th.includes(kw);
+          const matchJa = ja.includes(kw);       // 漢字へのマッチ
+          const matchKana = kana.includes(kJ);   // ひらがな読みへのマッチ
+          const matchCat = cat.includes(kw);
+          const matchPh = normPh.includes(nKw);  // 正規化発音記号へのマッチ
+
+          // スコアリング：ユーザーの意図に近いものを上位へ
+          if (matchTh) score += 500;
+          if (matchJa) score += 600;   // 漢字一致は意図が強いため高め
+          if (matchKana) score += 400; 
+          
+          if (matchPh) {
+            if (normPh === nKw) score += 2000;      // 完全一致は最優先
+            else if (normPh.startsWith(nKw)) score += 1000; // 前方一致
+            else score += 500;
+          }
+          
+          return (matchTh || matchJa || matchKana || matchPh || matchCat);
+        });
+
+        return { ...v, matchScore: isMatch ? score : 0 };
+      }).filter(v => v.matchScore > 0).sort((a, b) => b.matchScore - a.matchScore);
+    }
+
+    // ヒット件数の表示更新
+    if (totalCountEl) totalCountEl.innerText = `${displayData.length} hits`;
+
+    const limitedData = displayData.slice(0, this.state.displayLimit);
+
+    // --- HTML生成（各単語カードの構築） ---
+    let html = limitedData.map(item => {
+      // 忘却度に応じたカラーバーをStudyEngineから取得
+      const statusColor = StudyEngine.getColor(item); 
+      return `
+        <div onclick="StudyEngine.jumpToWordFromId('${item.id}');ViewController.toggleVocabPanel()" 
+             class="relative flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 active:scale-95 transition-all mb-2 overflow-hidden ${pointerClass}">
+          
+          <div class="absolute left-0 top-0 bottom-0 w-[2px]" style="background-color: ${statusColor}; opacity: 0.8;"></div>
+
+          <div class="min-w-0 flex-1 pl-2">
+            <div class="flex items-baseline gap-2 mb-0.5">
+              <span class="thai-font text-[13px] font-bold text-blue-500/90 truncate">${item.word_th}</span>
+              <span class="text-[8px] font-mono opacity-20">${item.last_date === 'New' ? 'New' : item.last_date.split(' ')[0]}</span>
+            </div>
+            <div class="text-[10px] opacity-40 truncate">${item.meaning_ja}</div>
+            <div class="text-[9px] opacity-20 italic font-mono truncate mt-0.5">${item.phonetic || ''}</div>
+          </div>
+          <div class="text-right ml-2 shrink-0">
+            <div class="text-[8px] font-black uppercase tracking-tighter opacity-20 mb-1">${item.category || ''}</div>
+            <div class="text-[7px] font-mono opacity-10 italic">${item.interval}d</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    // 無限スクロール：最下部まで来たら次の80件をロード
+    if (displayData.length > this.state.displayLimit) {
+      html += `<div id="list-end-marker" class="p-8 text-center opacity-20 text-[9px] tracking-widest">LOADING MORE...</div>`;
+    }
+
+    // クイック追加ボタン：検索結果がない、または少ない場合に候補として表示
+    if (q.length > 0 && displayData.length < 50) {
+      const btnLabel = isLocked ? '... PROCESSING ...' : `+ Add "${q}" to List`;
+      html += `<div class="p-2 pt-4">
+        <button id="list-add-btn" ${isLocked ? 'disabled' : ''} 
+          onclick="Bridge.executeQuickAdd('${q.replace(/'/g, "")}')" 
+          class="w-full p-4 bg-blue-500/10 border border-blue-500/30 rounded-2xl text-blue-500 text-[11px] font-black uppercase tracking-widest active:scale-95 transition-all ${isLocked ? 'opacity-50' : ''}">
+          ${btnLabel}
+        </button></div>`;
+    }
+
+    container.innerHTML = html || `<div class="p-20 text-center opacity-20 text-[10px] tracking-widest">NO RESULTS FOUND</div>`;
+
+    this.initObserver();
+  },
+
+  /**
+   * IntersectionObserverによるスクロール検知の初期化
+   */
+  initObserver: function() {
+    const marker = document.getElementById('list-end-marker');
+    if (!marker) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        observer.disconnect();
+        this.loadMore();
+      }
+    }, { root: document.getElementById('vocab-panel'), threshold: 0.1 });
+
+    observer.observe(marker);
+  }
+};
+</script>

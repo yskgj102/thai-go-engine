@@ -1,0 +1,249 @@
+<script>
+/**
+ * Bridge: サーバー(GAS)とフロントエンド(AppStore)を繋ぐ通信ハブ
+ * データの取得、保存、削除、AI生成のリクエストを一手に引き受け、
+ * サーバー側のレスポンスを AppStore の状態に反映させる。
+ */
+const Bridge = {
+  
+  /**
+   * アプリ起動時の初期データロード
+   * 今日のスコアと全学習データを非同期で取得し、初期描画を開始する。
+   */
+  initialize: function() {
+    console.log("[Bridge] Requesting initial data...");
+    
+    // 1. 本日の学習済み件数（Activity）を取得
+    google.script.run.withSuccessHandler(count => {
+      AppStore.update('todayScore', count);
+      ViewController.updateScoreUI();
+    }).getTodayScore();
+
+    // 2. 学習メインデータ（忘却曲線アルゴリズム適用済みリスト）を取得
+    google.script.run.withSuccessHandler(res => {
+      if (!res) return;
+
+      // 新基盤 (AppStore) に全2万件のマスターデータをセット
+      AppStore.update('allVocab', res);
+
+      // 初期出題キュー（queue）を構築
+      this._refreshQueue(res);
+
+      // 学習画面の初回描画
+      StudyEngine.render();
+
+      // UI部品（総件数表示、辞書リスト）を最新状態に更新
+      ViewController.updateTotalCount(res.length);
+      VocabListUI.update();
+
+      // ロード画面（スピナー）を隠し、メインコンテンツを表示
+      document.getElementById('loader')?.classList.add('hidden');
+      const container = document.getElementById('card-container');
+      if (container) {
+        container.classList.remove('hidden');
+        setTimeout(() => { container.style.opacity = '1'; }, 50);
+      }
+
+      console.log("[Bridge] Sync Complete.");
+    }).getSpacedRepetitionData();
+  },
+
+  /**
+   * 学習結果（自己評価）のサーバー保存
+   * @param {string} id - 単語ID
+   * @param {number} rating - 評価スコア(1-3)
+   */
+  saveLog: function(id, rating) {
+    google.script.run.withSuccessHandler(() => {
+      // 成功時、メモリ上の本日のスコアを+1してUIを即時更新
+      const newScore = AppStore.state.todayScore + 1;
+      AppStore.update('todayScore', newScore);
+      ViewController.updateScoreUI();
+    }).saveLearningLog(id, rating);
+  },
+
+  /**
+   * 内部用：出題キュー（queue）の構築
+   * モード設定（Smart/Classic）に応じて、データの並び順を決定する。
+   */
+  _refreshQueue: function(allData) {
+    let newQueue = [];
+    const isSmart = AppStore.state.isSmart;
+
+    if (isSmart) {
+      // Smartモード：サーバーから届いた忘却優先度順を維持
+      newQueue = [...allData]; 
+    } else {
+      // Classicモード：純粋なランダムシャッフル
+      newQueue = [...allData].sort(() => Math.random() - 0.5);
+    }
+
+    // 更新されたキューを AppStore に反映し、インデックスを先頭に戻す
+    AppStore.update('queue', newQueue);
+    AppStore.update('currentIndex', 0);
+  },
+
+  /**
+   * クイック追加の実行
+   * ヘッダーの入力欄、または検索結果の「Add to List」ボタンからのリクエストを処理。
+   */
+  executeQuickAdd: function(optionalVal) {
+    const input = document.getElementById('quick-input');
+    const btn = document.getElementById('quick-add-btn');
+
+    if (optionalVal && input) {
+      input.value = optionalVal;
+    }
+    const val = optionalVal || (input ? input.value.trim() : "");
+
+    if (!val || AppStore.state.isProcessing) return;
+
+    // UIをロックし、AI解析中であることを通知
+    ViewController.applyGlobalLock("AI is analyzing...", btn);
+
+    google.script.run
+      .withSuccessHandler(res => {
+        // 全体ロックを解除
+        ViewController.releaseLocks();
+        
+        if (res.status === "duplicate") {
+          ViewController.showToast(`Already exists.`, "warning");
+          if (AppStore.state.isVocabPanelOpen) {
+            ViewController.toggleVocabPanel(); 
+          }
+        } else {
+          ViewController.showToast(`Added successfully!`, "success");
+          
+          // メモリ上のマスターデータ(allVocab)の先頭に追加して同期
+          AppStore.state.allVocab.unshift(res.data);
+          ViewController.updateTotalCount(AppStore.state.allVocab.length);
+          VocabListUI.update();
+        }
+        
+        if (input) input.value = ''; 
+        // 追加（または重複確認）した単語を即座にカードとして召喚
+        StudyEngine.jumpToWordFromId(res.data.id);
+      })
+      .withFailureHandler(() => {
+        ViewController.releaseLocks();
+        ViewController.showToast("Network Error.", "error");
+      })
+      .quickAddAutoFill(val);
+  },
+
+  /**
+   * AIによるカード詳細情報の再生成
+   * 既存の単語IDに対して、AIが例文や解説を新しく作り直す。
+   */
+  reGenerate: function(id) {
+    if (!id) return;
+    
+    const btn = document.getElementById('re-gen-btn');
+    const originalText = "AI Re-Generate";
+
+    // 通信ロックを開始し、ボタンテキストを変更
+    ViewController.applyGlobalLock("AI is re-generating content...", btn);
+    btn.innerText = "Thinking..."; 
+
+    google.script.run
+      .withSuccessHandler((newAiData) => {
+        if (newAiData) {
+          // 現在表示中のカードとIDが一致するか確認
+          const currentItem = AppStore.state.queue[AppStore.state.currentIndex];
+          
+          if (currentItem && currentItem.id === id) {
+            // 新しいAIデータを既存のオブジェクトにマージ（破壊的代入）
+            Object.assign(currentItem, newAiData);
+
+            ViewController.showToast("AI Content Refreshed!", "success");
+            
+            // 画面を再描画して新しい内容を反映
+            StudyEngine.render(); 
+            
+            if (btn) {
+              btn.innerText = "Updated!";
+              btn.classList.add('text-green-500');
+            }
+          }
+        } else {
+          ViewController.showToast("AI Quota exceeded.", "warning");
+          btn.innerText = "AI Busy / Limit";
+        }
+
+        ViewController.releaseLocks();
+        // API負荷軽減のため、再生成ボタンを20秒間クールダウンさせる
+        this._startReGenCooldown(btn, originalText);
+      })
+      .withFailureHandler(err => {
+        ViewController.showToast("System error.", "error");
+        ViewController.releaseLocks();
+        btn.disabled = false;
+        btn.innerText = originalText;
+      })
+      .reGenerateCardById(id);
+  },
+
+  /**
+   * 単語データおよび学習ログの完全抹消
+   */
+  deleteWordAndLogs: function(id) {
+    if (!id || AppStore.state.isProcessing) return;
+
+    ViewController.applyGlobalLock("Destructing word data...");
+
+    google.script.run
+      .withSuccessHandler(res => {
+        ViewController.releaseLocks();
+
+        if (res.status === "success") {
+          ViewController.showToast("Master & Logs Cleaned.", "success");
+          
+          // メモリ上の全データおよび現在のキューから対象IDを除去（即時反映）
+          const updatedAll = AppStore.state.allVocab.filter(v => v.id !== id);
+          const updatedQueue = AppStore.state.queue.filter(v => v.id !== id);
+          
+          AppStore.update('allVocab', updatedAll);
+          AppStore.update('queue', updatedQueue);
+          
+          // 表示位置（インデックス）の整合性を調整
+          if (AppStore.state.currentIndex >= updatedQueue.length) {
+            AppStore.update('currentIndex', 0);
+          }
+          
+          // 画面を次のカードへ更新
+          StudyEngine.render();
+          ViewController.updateTotalCount(updatedAll.length);
+          VocabListUI.update();
+        } else {
+          ViewController.showToast(res.message, "error");
+        }
+      })
+      .withFailureHandler(() => {
+        ViewController.releaseLocks();
+        ViewController.showToast("Network Error during deletion.", "error");
+      })
+      .deleteWordAndLogs(id);
+  },
+  
+  /** * 内部用：再生成ボタンのカウントダウン制御 
+   */
+  _startReGenCooldown: function(btn, originalText) {
+    btn.disabled = true;
+    btn.style.opacity = "0.3";
+    let timeLeft = 20;
+    const timer = setInterval(() => {
+      timeLeft--;
+      btn.innerText = `Wait ${timeLeft}s`;
+      
+      if (timeLeft <= 0) {
+        clearInterval(timer);
+        btn.disabled = false;
+        btn.innerText = originalText;
+        btn.classList.remove('text-green-500');
+        btn.style.opacity = "0.3"; 
+        ViewController.showToast("Re-Gen Ready.", "success");
+      }
+    }, 1000);
+  }
+};
+</script>

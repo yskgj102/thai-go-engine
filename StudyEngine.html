@@ -1,0 +1,279 @@
+<script>
+/**
+ * StudyEngine: 学習システムの中枢ロジック
+ * AppStoreのステート（状態）を監視し、描画、音声再生、学習進捗の判定を行う司令塔。
+ */
+const StudyEngine = {
+
+  /**
+   * 学習画面のメインレンダリング（描画）
+   * キューから現在の単語を抽出し、ViewControllerを介して画面上の全てのテキスト・色・統計情報を更新する。
+   */
+  render: function() {
+    const list = AppStore.state.queue;
+    if (!list || list.length === 0) return;
+    
+    // カード描画のたびに「めくり状態」を未読(false)にリセット
+    AppStore.update('revealed', false);
+
+    // 現在のインデックスに該当する単語オブジェクトを取得
+    const item = list[AppStore.state.currentIndex];
+
+    // 1. UIの物理リセット（隠すべき要素を隠し、スクロール位置などを整える）
+    ViewController.resetCardUI();
+
+    // 2. 視覚的情報の更新（忘却曲線に基づくボーダー色、最終学習日などの統計）
+    ViewController.updateBorder(item);
+    ViewController.updateStats(item);
+    
+    // 3. テキストデータの流し込み（現在の出題言語モードに応じてタイ語/日本語を切り替え）
+    ViewController.updateText(item, AppStore.state.isTargetThai);
+
+    // 4. スクロール時に出現するヘッダー情報の同期
+    this.syncHeader();
+  },
+
+  /**
+   * 音声合成エンジンによる再生
+   * @param {boolean} isEx - trueなら例文、falseなら単語単体を再生
+   */
+  speak: function(isEx = false) {
+    const item = AppStore.state.queue[AppStore.state.currentIndex];
+    if (!item) return;
+
+    let text = "";
+    let lang = "th-TH";
+
+    // モード判定：タイ語学習時はタイ語、日本語学習時は日本語（意味）を選択
+    if (AppStore.state.isTargetThai) {
+      text = isEx ? item.example_th : item.word_th;
+      lang = "th-TH";
+    } else {
+      // 日本語学習モード（タイ人向け等）では、意味(meaning_ja)を日本語で読み上げる
+      text = isEx ? item.example_ja : item.meaning_ja;
+      lang = "ja-JP";
+    }
+
+    // 音声再生の実務を AudioSystem モジュールへ委託
+    AudioSystem.play(
+      text, 
+      lang, 
+      AppStore.state.isSlowMode ? 0.5 : 0.9 // スローモードなら0.5倍速
+    );
+  },
+
+  /**
+   * 再生速度（スローモード）のトグル切り替え
+   * UI上のアイコン(🐢/🐌)と再生速度パラメータを同時に更新する。
+   */
+  toggleSlowMode: function() {
+    if (AppStore.state.isProcessing) return;
+
+    AppStore.state.isSlowMode = !AppStore.state.isSlowMode;
+    const btn = document.getElementById('slow-mode-btn');
+    
+    if (btn) {
+      if (AppStore.state.isSlowMode) {
+        btn.classList.add('text-yellow-400', 'scale-110');
+        btn.style.opacity = "1";
+        btn.innerText = "🐢"; 
+      } else {
+        btn.classList.remove('text-yellow-400', 'scale-110');
+        btn.style.opacity = "0.2";
+        btn.innerText = "🐌";
+      }
+    }
+    ViewController.showToast(`Speed: ${AppStore.state.isSlowMode ? '0.5x' : '0.9x'}`, "success");
+  },
+
+  /**
+   * 指定したHTML要素内のテキストをクリップボードにコピー
+   */
+  copyText: function(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const text = el.innerText;
+    if (!text || text === '---') return;
+
+    navigator.clipboard.writeText(text).then(() => {
+      ViewController.showToast(`Copied: ${text}`, "success");
+    });
+  },
+
+  /**
+   * 単語の忘却スコアに基づいてHSLカラーコードを算出
+   * 赤(忘却中) -> 黄(復習期) -> 緑(定着) のグラデーションを定義。
+   */
+  getColor: function(item) {
+    if (!item) return "hsl(0, 0%, 90%)";
+    if (item.last_date === 'New') return "hsl(200, 70%, 60%)";
+
+    const s = parseFloat(item.priority_score) || 0;
+    if (s > 1.2) return "hsl(0, 75%, 60%)";   // 強警告：赤
+    if (s > 0.8) return "hsl(45, 90%, 60%)";  // 警告：黄
+    return "hsl(140, 50%, 70%)";             // 正常：緑
+  },
+
+  /**
+   * カードをめくり、解答情報を表示する
+   * 裏面の表示切り替えと音声の自動再生をトリガーする。
+   */
+  revealAll: function() {
+    if (AppStore.state.revealed) return;
+
+    // 状態を「めくり済み」に変更
+    AppStore.update('revealed', true);
+
+    // UIの切り替え実務を ViewController に委譲（一貫性の確保）
+    ViewController.applyRevealUI(AppStore.state.isTargetThai);
+
+    // 裏面表示と同時に単語を自動読み上げ
+    this.speak(false); 
+  },
+
+  /**
+   * ユーザーの自己評価を記録し、次のカードへ遷移する
+   * @param {number} rating - 1(難), 2(普), 3(易)
+   */
+  answer: function(rating) {
+    // 通信中、未読、連打の防止
+    if (AppStore.state.isProcessing || !AppStore.state.revealed || AppStore.state.isAnswering) return;
+    AppStore.state.isAnswering = true;
+    
+    const list = AppStore.state.queue;
+    const item = list[AppStore.state.currentIndex];
+    
+    // 解答演出とサーバーへのログ保存
+    ViewController.playSuccessEffect(); 
+    Bridge.saveLog(item.id, rating);
+
+    setTimeout(() => {
+      AppStore.state.isAnswering = false;
+      document.getElementById('word-card').classList.remove('success-flash');
+      document.getElementById('footer-ui').classList.add('translate-y-full', 'pointer-events-none');
+      
+      // 次のインデックスを算出（リスト末尾なら最初に戻る）
+      const nextIdx = (AppStore.state.currentIndex + 1) % list.length;
+      AppStore.update('currentIndex', nextIdx);
+      this.render(); // 次のカードを描画
+    }, 150);
+  },
+
+  /**
+   * ミニヘッダー（スクロール時出現）の内容を現在の単語と同期
+   */
+  syncHeader: function() {
+    const item = AppStore.state.queue[AppStore.state.currentIndex];
+    if (!item) return;
+    const th = document.getElementById('header-display-th');
+    const ja = document.getElementById('header-display-ja');
+    
+    if (AppStore.state.isTargetThai) {
+      th.innerText = item.word_th || '---';
+      ja.innerText = item.meaning_ja || '---';
+    } else {
+      th.innerText = item.meaning_ja || '---';
+      ja.innerText = item.word_th || '---';
+    }
+  },
+
+  /**
+   * 特定の単語IDを検索し、出題順（キュー）の先頭に割り込ませて表示する
+   * リストからの直接選択や、追加直後の表示に使用。
+   */
+  jumpToWordFromId: function(id) {
+    if (!id || AppStore.state.isProcessing) return;
+
+    // 1. マスターデータ(allVocab)から対象を検索
+    const realItem = AppStore.state.allVocab.find(v => v.id === id);
+
+    if (realItem) {
+      // 2. 【重複排除】キュー内に同じIDがあれば、先に掃除しておく
+      AppStore.state.queue = AppStore.state.queue.filter(v => v.id !== id);
+
+      // 3. 【先頭挿入】配列の最初に追加
+      AppStore.state.queue.unshift(realItem);
+
+      // 4. 【位置リセット】常に先頭を表示するようにインデックスを強制更新
+      AppStore.update('currentIndex', 0);
+
+      // 5. 画面更新と演出
+      this.render();
+      ViewController.playSuccessEffect();
+    }
+  },
+
+  /**
+   * 学習進捗統計（ヒートマップ）をサーバーから取得し描画
+   */
+  renderHeatmap: function() {
+    google.script.run.withSuccessHandler(d => {
+      new frappe.Chart("#heatmap", { 
+        type: 'heatmap', data: { dataPoints: d }, 
+        colors: ['#1e293b', '#4f46e5', '#6366f1', '#818cf8', '#c7d2fe']
+      });
+      // ヒートマップを最新（右端）へ自動スクロール
+      setTimeout(() => { document.querySelector('.heatmap-scroll').scrollLeft = 9999; }, 100);
+    }).getLearningStatistics();
+  },
+
+  /**
+   * 出題のメイン言語（タイ語からか、日本語からか）を切り替える
+   */
+  toggleTargetLanguage: function() {
+    if (AppStore.state.isProcessing) return;
+    
+    const nextMode = !AppStore.state.isTargetThai;
+    AppStore.update('isTargetThai', nextMode);
+    
+    const btn = document.getElementById('target-toggle-btn');
+    if (btn) btn.innerText = nextMode ? "🇹🇭" : "🇯🇵";
+    
+    this.render(); 
+  },
+
+  /**
+   * 学習アルゴリズム（Smart:忘却曲線重視 / Classic:ランダム）を切り替える
+   */
+  toggleMode: function() {
+    if (AppStore.state.isProcessing) return;
+    
+    AppStore.state.isSmart = !AppStore.state.isSmart; 
+    const btn = document.getElementById('mode-btn');
+    if (btn) btn.innerText = AppStore.state.isSmart ? '🧠' : '✨';
+    
+    // Bridgeのソートロジックを再実行してキューを再構成
+    Bridge._refreshQueue(AppStore.state.allVocab);
+    this.render();
+  },
+
+  /**
+   * 外部タイ語辞書サイト（GotThai）を現在のワードで開く
+   */
+  openGotThai: function(query) {
+    if (AppStore.state.isProcessing) return;
+
+    let word = "";
+    if (query !== undefined && query !== null) {
+      word = query.trim();
+    } else {
+      // 引数がない場合は現在表示中のカードのタイ語を使用
+      const item = AppStore.state.queue[AppStore.state.currentIndex];
+      word = item ? item.word_th : "";
+    }
+
+    if (!word || word === '---' || word === '') {
+      ViewController.showToast("Please enter or select a word.", "warning");
+      return;
+    }
+
+    // GotThai検索用URLの生成
+    const url = "https://www.gotthai.net/search_all?search_form_all%5Bkeyword%5D=" 
+              + encodeURIComponent(word) 
+              + "&search_form_all%5Bforce_type%5D=thai";
+    
+    window.open(url, '_blank');
+    ViewController.showToast(`Searching "${word}" on GotThai...`, "success");
+  }
+};
+</script>
