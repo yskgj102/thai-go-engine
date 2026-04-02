@@ -47,7 +47,6 @@ const prompt = `
 
 
     ## 項目別ルール
-    - category: 品詞に加え、名詞の場合は必ず「類別詞: [単語] ([読み])」の形式で明記。
     - explanation: セクションごとに「改行2回（\\n\\n）」、項目内は「改行1回（\\n）」を使用。Markdown装飾（**等）は使用せず、記号（■、・、1.）で視認性を確保。
 
     ## explanationの記述ルール
@@ -69,7 +68,7 @@ const prompt = `
       "phonetic": "発音記号",
       "meaning_ja": "日本語の意味",
       "meaning_kana": "日本語の意味の読み（ひらがな）",
-      "category": "品詞 ＋ 類別詞",
+      "category": "品詞。次から一つ選べ。動詞, 名詞（類別詞も含める）, 形容詞, 副詞, 接続詞, 前置詞, 助動詞, 代名詞, 文末詞",
       "example_th": "自然で実用的な例文",
       "example_phonetic": "例文の発音記号",
       "example_ja": "例文の日本語訳",
