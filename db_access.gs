@@ -33,8 +33,7 @@ function getSheetDataAsObjects(sheetName) {
     headers.forEach((header, index) => {
       if (header) { 
         let val = row[index];
-        // obj[header] = val;
-        obj[header] = (header === "category") ? normalizeCategory(val) : val;
+        obj[header] = val;
       }
     });
     return obj;
@@ -95,28 +94,4 @@ function getRawLogs() {
 }
 
 
-/**
- * 【★ここを修正】カテゴリー文字列の正規化
- * 文字列のどこかに品詞名が含まれていれば、それを抽出する。
- */
-function normalizeCategory(raw) {
-  // 文字列でない場合やAI生成待ちの場合はスキップ
-  if (!raw || typeof raw !== 'string' || raw.includes("=AI")) return "未分類";
-  
-  // スペースなどを除去して判定しやすくする
-  const cleanRaw = raw.trim();
-  
-  // 判定したい品詞リスト
-  const tags = ["動詞", "名詞", "形容詞", "副詞", "接続詞", "前置詞", "助動詞", "代名詞", "文末詞"];
-  
-  // 【強化ポイント】indexOf(tag) === 0 ではなく includes(tag) を使う
-  // これにより「 動詞」や「動詞 (類別詞...)」など、どこに文字があってもヒットします
-  for (const tag of tags) {
-    if (cleanRaw.includes(tag)) {
-      return tag;
-    }
-  }
-  
-  return "その他";
-}
 

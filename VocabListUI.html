@@ -162,6 +162,7 @@ this.renderCategoryBar();
     let html = limitedData.map(item => {
       // 忘却度に応じたカラーバーをStudyEngineから取得
       const statusColor = StudyEngine.getColor(item); 
+
       return `
         <div onclick="StudyEngine.jumpToWordFromId('${item.id}');ViewController.toggleVocabPanel()" 
              class="relative flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 active:scale-95 transition-all mb-2 overflow-hidden ${pointerClass}">
@@ -177,7 +178,7 @@ this.renderCategoryBar();
             <div class="text-[9px] opacity-20 italic font-mono truncate mt-0.5">${item.phonetic || ''}</div>
           </div>
           <div class="text-right ml-2 shrink-0">
-            <div class="text-[8px] font-black uppercase tracking-tighter opacity-20 mb-1">${item.category || ''}</div>
+            <div class="text-[8px] font-black uppercase tracking-tighter opacity-20 mb-1">${item.category}</div>
             <div class="text-[7px] font-mono opacity-10 italic">${item.interval}d</div>
           </div>
         </div>
@@ -208,20 +209,38 @@ this.renderCategoryBar();
  * カテゴリーボタンの描画（アクティブ状態対応）
  */
 renderCategoryBar: function() {
-  const container = document.getElementById('category-filter-bar');
-  const currentQ = this.state.currentQuery; // 現在の検索語を取得
+const container = document.getElementById('category-filter-bar');
+  if (!container) return;
 
+  const currentQ = this.state.currentQuery;
   const allVocab = AppStore.state.allVocab || [];
-  const uniqueCats = [...new Set(allVocab.map(v => v.category))].filter(c => c && c !== "未分類");
-  const buttons = ["全件", ...uniqueCats.sort()];
+
+  // 1. 純粋な日本語名だけを抽出
+  const uniqueCats = [...new Set(
+    allVocab.map(v => v.category?.replace(/[^\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF].*$/, '') || '')
+  )].filter(c => c && c !== "未分類");
+
+  // 2. 【一般的・高頻度順】の定義
+  const commonOrder = ["名詞", "動詞", "形容詞", "副詞", "助動詞", "前置詞", "接続詞", "代名詞", "文末詞"];
+
+  // 3. 定義した順序でソート（リストにないものは一番後ろへ）
+  const sortedCats = uniqueCats.sort((a, b) => {
+    let indexA = commonOrder.indexOf(a);
+    let indexB = commonOrder.indexOf(b);
+    if (indexA === -1) indexA = 999;
+    if (indexB === -1) indexB = 999;
+    return indexA - indexB;
+  });
+
+  const buttons = ["全件", ...sortedCats];
   
   container.innerHTML = buttons.map(cat => {
-    // 現在の検索ワードと一致していたら色を変えるクラスを付与
+    // ボタンの文字と検索クエリ（小文字・トリム済み）を比較
     const isActive = (cat === "全件" && currentQ === "") || (currentQ === cat.toLowerCase());
-    const activeClass = isActive ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-600 border-gray-200';
+    const activeClass = isActive ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-600 border-gray-200 shadow-sm';
     
     return `
-      <button class="category-btn ${activeClass}" 
+      <button class="category-btn px-4 py-1.5 rounded-full border text-[10px] font-black transition-all active:scale-95 ${activeClass}" 
               onclick="VocabListUI.applyCategoryFilter('${cat}')">
         ${cat}
       </button>
