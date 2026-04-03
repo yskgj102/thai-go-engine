@@ -99,7 +99,7 @@ VocabListUI.renderCategoryBar()
     if (!val || AppStore.state.isProcessing) return;
 
     // UIをロックし、AI解析中であることを通知
-    ViewController.applyGlobalLock("AI is analyzing...", btn);
+    ViewController.applyGlobalLock("Adding word ...", btn);
 
     google.script.run
       .withSuccessHandler(res => {
@@ -246,6 +246,27 @@ VocabListUI.renderCategoryBar()
         ViewController.showToast("Re-Gen Ready.", "success");
       }
     }, 1000);
-  }
+  },
+/**
+   * ブックマークのトグル実行（黄金クラス対応版）
+   */
+  executeToggleBookmark: function(id) {
+    const item = AppStore.state.allVocab.find(v => v.id === id);
+    if (!item) return;
+
+    // 1. データの反転
+    const isBM = (item.is_bookmark === true || String(item.is_bookmark).toLowerCase() === "true");
+    item.is_bookmark = !isBM;
+
+    // 2. 物理的な手応え（微振動）
+    if (window.navigator.vibrate) window.navigator.vibrate(5);
+
+    // 3. 即座に見た目を更新（StudyEngine.render を呼ぶ）
+    // これにより StudyEngine 側の classList.add('is-gold') が走り、星が光ります。
+    StudyEngine.render();
+
+    // 4. GASへ保存（非同期）
+    google.script.run.toggleBookmark(id);
+  },
 };
 </script>

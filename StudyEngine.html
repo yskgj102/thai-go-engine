@@ -28,9 +28,26 @@ const StudyEngine = {
     
     // 3. テキストデータの流し込み（現在の出題言語モードに応じてタイ語/日本語を切り替え）
     ViewController.updateText(item, AppStore.state.isTargetThai);
-
+    
+ // ★ クラスを「追加」するだけで、配置は Tailwind に任せる
+    const btn = document.getElementById('bookmark-btn');
+    const icon = document.getElementById('card-bookmark-icon');
+    
+    if (btn && icon && item) {
+      const isBM = (item.is_bookmark === true || String(item.is_bookmark).toLowerCase() === "true");
+      
+      if (isBM) {
+        icon.innerText = "★";
+        btn.classList.add('is-gold'); // 黄金クラスを追加
+      } else {
+        icon.innerText = "☆";
+        btn.classList.remove('is-gold'); // 黄金クラスを削除
+      }
+    }
     // 4. スクロール時に出現するヘッダー情報の同期
     this.syncHeader();
+
+    
   },
 
   /**

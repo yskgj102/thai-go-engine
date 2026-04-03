@@ -33,6 +33,10 @@ function getSheetDataAsObjects(sheetName) {
     headers.forEach((header, index) => {
       if (header) { 
         let val = row[index];
+        // もし値が Date オブジェクト（日付）なら、フロントが壊れない形式の文字列に強制変換
+        if (val instanceof Date) {
+          val = Utilities.formatDate(val, "JST", "yyyy-MM-dd HH:mm:ss");
+        }
         obj[header] = val;
       }
     });

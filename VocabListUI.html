@@ -6,7 +6,8 @@
 const VocabListUI = {
   state: {
     displayLimit: 80, // 初回表示件数（2万件を一度に出さず、描画負荷を軽減）
-    currentQuery: ""  // 現在の検索文字列
+    currentQuery: "",  // 現在の検索文字列
+    onlyBookmark: false // ★ここを真偽値で持つ
   },
 
   /**
@@ -93,20 +94,25 @@ this.renderCategoryBar();
 
     // 通信ロック中はクリックを無効化
     const pointerClass = isLocked ? 'pointer-events-none opacity-50' : 'cursor-pointer';
+// --- ★ここから検索ロジックの修正 ---
+    let displayData = allVocab;
 
-    // --- 検索・スコアリングロジック ---
-    let displayData = [];
+    // 1. まず「星フィルタ」がONなら絞り込む
+    if (this.state.onlyBookmark) {
+      displayData = displayData.filter(v => 
+        v.is_bookmark === true || String(v.is_bookmark).toLowerCase() === "true"
+      );
+    }
 
-    if (q === '') {
-      displayData = allVocab; // クエリが空なら全表示
-    } else {
+    // 2. その後、検索窓に文字があればスコアリング検索を実行
+    if (q !== '') {
       // スペース区切りのAND検索に対応
       const keywords = q.split(/[\s　]+/).filter(k => k.length > 0);
       const normalizedKeywords = keywords.map(kw => this.normalizePhonetic(kw));
       const normalizedJapaneseKeywords = keywords.map(kw => this.normalizeJapanese(kw));
 // 【★修正ポイント】ここで qLower を定義します
       const qLower = q.toLowerCase();
-      displayData = allVocab.map(v => {
+      displayData = displayData.map(v => {
         let score = 0;
         const th = (v.word_th || "").toLowerCase();
         const rawPh = (v.phonetic || "").toLowerCase();
@@ -159,9 +165,33 @@ this.renderCategoryBar();
     const limitedData = displayData.slice(0, this.state.displayLimit);
 
     // --- HTML生成（各単語カードの構築） ---
-    let html = limitedData.map(item => {
+    let html = "";
+// ★追加：星フィルタがONで、かつデータがある場合にシャッフル学習ボタンを表示
+// ★修正：プロセス中(isLocked)はボタンを無効化する
+    if (this.state.onlyBookmark && displayData.length > 0) {
+      const btnClass = isLocked 
+        ? "opacity-30 pointer-events-none cursor-not-allowed" // ロック時：薄くして触らせない
+        : "opacity-100 active:scale-95 cursor-pointer";    // 通常時：くっきり、押し心地あり
+
+      html += `
+        <div class="p-2 mb-4">
+          <button onclick="VocabListUI.startBookmarkStudy()" 
+                  ${isLocked ? 'disabled' : ''} 
+                  class="w-full p-4 bg-[#FFD700]/10 border border-[#FFD700]/30 rounded-2xl text-[#FFD700] text-[12px] font-black uppercase tracking-[0.2em] shadow-[0_0_15px_rgba(255,215,0,0.1)] transition-all flex items-center justify-center gap-3 ${btnClass}">
+            <span class="text-[14px]">${isLocked ? '⌛' : '🔀'}</span> 
+            ${isLocked ? 'PROCESSING...' : `START STAR SHUFFLE (${displayData.length})`}
+          </button>
+        </div>
+      `;
+    }
+    // --- HTML生成（各単語カードの構築） ---
+// --- HTML生成（各単語カードの構築） ---
+    html += limitedData.map(item => {
       // 忘却度に応じたカラーバーをStudyEngineから取得
       const statusColor = StudyEngine.getColor(item); 
+      
+      // ★ ブックマーク状態の判定（1,370件のデータ揺れを吸収）
+      const isBM = (item.is_bookmark === true || String(item.is_bookmark).toLowerCase() === "true");
 
       return `
         <div onclick="StudyEngine.jumpToWordFromId('${item.id}');ViewController.toggleVocabPanel()" 
@@ -170,9 +200,11 @@ this.renderCategoryBar();
           <div class="absolute left-0 top-0 bottom-0 w-[2px]" style="background-color: ${statusColor}; opacity: 0.8;"></div>
 
           <div class="min-w-0 flex-1 pl-2">
-            <div class="flex items-baseline gap-2 mb-0.5">
+            <div class="flex items-center gap-2 mb-0.5">
+              ${isBM ? '<span class="text-[10px] text-[#FFD700] drop-shadow-[0_0_5px_rgba(255,215,0,0.4)] shrink-0">★</span>' : ''}
+              
               <span class="thai-font text-[13px] font-bold text-blue-500/90 truncate">${item.word_th}</span>
-              <span class="text-[8px] font-mono opacity-20">${item.last_date === 'New' ? 'New' : item.last_date.split(' ')[0]}</span>
+              <span class="text-[8px] font-mono opacity-20 shrink-0">${item.last_date === 'New' ? 'New' : item.last_date.split(' ')[0]}</span>
             </div>
             <div class="text-[10px] opacity-40 truncate">${item.meaning_ja}</div>
             <div class="text-[9px] opacity-20 italic font-mono truncate mt-0.5">${item.phonetic || ''}</div>
@@ -205,6 +237,34 @@ this.renderCategoryBar();
 
     this.initObserver();
   },
+  /**
+   * 星付き単語のみをシャッフルして学習を開始
+   */
+  startBookmarkStudy: function() {
+    // 1. 星付きだけを抽出
+    const stars = AppStore.state.allVocab.filter(v => 
+      v.is_bookmark === true || String(v.is_bookmark).toLowerCase() === "true"
+    );
+
+    if (stars.length === 0) return;
+
+    // 2. シャッフル（Fisher-Yates アルゴリズム）
+    for (let i = stars.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [stars[i], stars[j]] = [stars[j], stars[i]];
+    }
+
+    // 3. AppStore のキューを「星付きシャッフル」に差し替え
+    AppStore.state.queue = stars;
+    AppStore.update('currentIndex', 0);
+
+    // 4. 学習画面へ遷移して描画
+    ViewController.toggleVocabPanel(); // リストを閉じる
+    StudyEngine.render();             // 最初のカードを表示
+    
+    ViewController.showToast(`Started Star Shuffle: ${stars.length} words`, "success");
+    if (window.navigator.vibrate) window.navigator.vibrate([10, 30, 10]);
+  },
 /**
  * カテゴリーボタンの描画（アクティブ状態対応）
  */
@@ -232,13 +292,25 @@ const container = document.getElementById('category-filter-bar');
     return indexA - indexB;
   });
 
-  const buttons = ["全件", ...sortedCats];
-  
-  container.innerHTML = buttons.map(cat => {
-    // ボタンの文字と検索クエリ（小文字・トリム済み）を比較
-    const isActive = (cat === "全件" && currentQ === "") || (currentQ === cat.toLowerCase());
-    const activeClass = isActive ? 'bg-blue-500 text-white border-blue-500' : 'bg-white text-gray-600 border-gray-200 shadow-sm';
+// ★ 2. ボタン配列に星を追加
+    const buttons = ["全件", "⭐", ...sortedCats];
     
+  container.innerHTML = buttons.map(cat => {
+  let isActive = false;
+  
+  if (cat === "⭐") {
+    isActive = this.state.onlyBookmark;
+  } else if (cat === "全件") {
+    // 検索窓が空、かつ、星もOFFの時だけ「全件」を光らせる
+    isActive = (this.state.currentQuery === "" && !this.state.onlyBookmark);
+  } else {
+    // カテゴリボタンの判定
+    isActive = (this.state.currentQuery === cat.toLowerCase());
+  }
+
+  const activeClass = isActive 
+    ? 'bg-blue-600 text-white border-blue-400 shadow-[0_0_10px_rgba(37,99,235,0.5)] scale-105' 
+    : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10';
     return `
       <button class="category-btn px-4 py-1.5 rounded-full border text-[10px] font-black transition-all active:scale-95 ${activeClass}" 
               onclick="VocabListUI.applyCategoryFilter('${cat}')">
@@ -248,17 +320,32 @@ const container = document.getElementById('category-filter-bar');
   }).join('');
 },
 /**
- * ボタンを押した時のフィルタリング（空白追加版）
+ * カテゴリ・星ボタンを押した時の挙動
  */
 applyCategoryFilter: function(cat) {
   const searchInput = document.getElementById('list-search');
-  if (!searchInput) return;
-
-  // 「全件」以外なら、カテゴリー名の後ろに半角スペースを入れる
-  // これにより「動詞 」というクエリになり、1,300件の絞り込みが正確になります
-  searchInput.value = (cat === "全件") ? "" : cat + " ";
   
-  this.update(); 
+  if (cat === "⭐") {
+    // 星ボタンはトグル（ON/OFF）
+    this.state.onlyBookmark = !this.state.onlyBookmark;
+  } else if (cat === "全件") {
+    // 全リセット
+    this.state.currentQuery = "";
+    this.state.onlyBookmark = false;
+    if (searchInput) searchInput.value = "";
+  } else {
+    // カテゴリ絞り込み（星フィルタは維持したままカテゴリだけ変える）
+    const q = cat.toLowerCase();
+    this.state.currentQuery = q;
+    if (searchInput) searchInput.value = cat + " ";
+  }
+
+  // ★重要：ここで「ボタンの色」を即座に塗り替える
+  this.renderCategoryBar();
+  
+  // リストの中身を更新
+  this.state.displayLimit = 80;
+  this.render();
   
   if (window.navigator.vibrate) window.navigator.vibrate(5);
 },

@@ -254,47 +254,44 @@ const ViewController = {
     }
   },
 
-  /**
-   * ボキャブラリーパネル（辞書リスト）の開閉
+/**
+   * ボキャブラリーパネルの開閉（検索フォーカス強制版）
+   * 常にフォーカスを当てることで invokeQuickSearch を不要にする。
    */
   toggleVocabPanel: function(e) {
     if (e) e.stopPropagation();
     const panel = document.getElementById('vocab-panel');
+    const searchInput = document.getElementById('list-search');
+
     if (panel.classList.contains('hidden')) {
+      // --- OPEN ---
       panel.classList.remove('hidden'); 
       requestAnimationFrame(() => {
           panel.classList.add('is-open');
           AppStore.state.isVocabPanelOpen = true;
           VocabListUI.update();
+          
+          // 開く時は常にフォーカス（アニメーション完了を待たずに即準備）
+          if (searchInput) {
+            setTimeout(() => {
+              searchInput.focus();
+              searchInput.click(); 
+              // 既存の文字があれば全選択、なければ即入力可能な状態に
+              searchInput.setSelectionRange(0, searchInput.value.length);
+            }, 300); 
+          }
       });
-      document.body.style.overflow = 'hidden'; // 背面のスクロールを禁止
+      document.body.style.overflow = 'hidden';
     } else {
+      // --- CLOSE ---
       panel.classList.remove('is-open');
       AppStore.state.isVocabPanelOpen = false;
       setTimeout(() => {
         panel.classList.add('hidden');
         document.body.style.overflow = '';
+        if (searchInput) searchInput.blur();
       }, 300);
     }
-  },
-  /**
-   * クイック検索の起動（パネルを開いてフォーカスを当てる）
-   */
-  invokeQuickSearch: function(e) {
-    if (e) e.stopPropagation();
-    
-    if (!AppStore.state.isVocabPanelOpen) {
-      this.toggleVocabPanel();
-    }
-
-    setTimeout(() => {
-      const searchInput = document.getElementById('list-search');
-      if (searchInput) {
-        searchInput.focus();
-        searchInput.click(); 
-        searchInput.setSelectionRange(0, searchInput.value.length); // 全選択して入力しやすく
-      }
-    }, 200);
   },
 
   /**

@@ -427,5 +427,23 @@ body:not(.light-mode) .category-btn {
 
 /* スクロールバー非表示 */
 #category-filter-bar::-webkit-scrollbar { display: none; }
+/* これを css_main.html または <style> タグ内に追加 */
+.bookmark-active {
+  color: #FFD700 !important; /* ゴールド */
+  opacity: 1 !important;
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.7) !important;
+  transform: scale(1.1);
+}
 
+.bookmark-inactive {
+  color: white !important;
+  opacity: 0.1 !important;
+  text-shadow: none !important;
+  transform: scale(1.0);
+}
+.is-gold {
+  color: #FFD700 !important;
+  opacity: 1 !important;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.6) !important;
+}
 </style>

@@ -121,6 +121,67 @@ const prompt = `
 }
 
 /**
+ * クイック追加：JS側の「型」と「階層」に100%適合させる最終形
+ */
+function quickAddAutoFill(inputText) {
+  if (!inputText) return { status: "error" };
+
+  const isThai = /[\u0E00-\u0E7F]/.test(inputText);
+  const word_th = isThai ? inputText : LanguageApp.translate(inputText, 'ja', 'th');
+
+  // 1. 重複チェック
+  if (existsInVocabulary(word_th)) {
+    const all = getRawVocabulary();
+    const duplicate = all.find(v => v.word_th === word_th);
+    return { status: "duplicate", word: word_th, data: duplicate };
+  }
+
+  // 2. AI詳細生成（テスト用 null）
+  const ai = null;
+
+  // 3. ヘッダー解析
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('m_vocabulary');
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+  // 4. マッピング
+  const timestamp = Utilities.formatDate(new Date(), "JST", "yyyyMMddHHmmss");
+  const now = new Date();
+  
+  const dataMap = {
+    "id": "word_" + timestamp,
+    "word_th": word_th,
+    "phonetic": ai ? ai.phonetic : "---",
+    "meaning_ja": ai ? ai.meaning_ja : (isThai ? "---" : inputText),
+    "meaning_kana": ai ? ai.meaning_kana : "---",
+    "category": ai ? ai.category : "---",
+    "example_th": ai ? ai.example_th : "---",
+    "example_phonetic": ai ? ai.example_phonetic : "---",
+    "example_ja": ai ? ai.example_ja : "---",
+    "explanation": ai ? ai.explanation : "クイック追加によりAI詳細未生成。再生成ボタンを押してください。",
+    "last_update": now,
+    "is_bookmark": false
+  };
+
+  const newRow = headers.map(header => {
+    return dataMap[header] !== undefined ? dataMap[header] : "";
+  });
+
+  sheet.appendRow(newRow);
+
+  // 5. 【物理的解決】JS側が Date型で爆発しないよう、文字列にしてから包んで返す
+  return { 
+    status: "success", 
+    word: word_th,
+    data: {
+      ...dataMap,
+      "last_update": Utilities.formatDate(now, "JST", "yyyy-MM-dd HH:mm:ss"),
+      interval: 0,
+      last_date: "New"
+    }
+  };
+}
+
+/**
  * スプレッドシート更新ロジック（情報を落とさず継承）
  */
 function reGenerateCardById(targetId) {
@@ -159,7 +220,8 @@ function reGenerateCardById(targetId) {
       "example_th": ai.example_th,
       "example_phonetic": ai.example_phonetic,
       "example_ja": ai.example_ja,
-      "explanation": ai.explanation
+      "explanation": ai.explanation,
+      "last_update": new Date()
     };
 
     const updatedRow = headers.map((header, index) => {
@@ -215,4 +277,37 @@ function deleteWordAndLogs(vocabId) {
   logSheet.getRange(1, 1, cleanLogs.length, logHeaders.length).setValues(cleanLogs);
 
   return { status: "success", deletedLogs: logData.length - cleanLogs.length };
+}
+
+/**
+ * ブックマークの状態を反転させる
+ */
+function toggleBookmark(targetId) {
+  if (!targetId) return { status: "error" };
+
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('m_vocabulary');
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    
+    const idIdx = headers.indexOf("id");
+    const bmIdx = headers.indexOf("is_bookmark");
+    
+    if (idIdx === -1 || bmIdx === -1) return { status: "error", message: "Column not found" };
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][idIdx] === targetId) {
+        // 現在の値を反転（真偽値として扱う）
+        const currentState = data[i][bmIdx];
+        const newState = !currentState;
+        
+        sheet.getRange(i + 1, bmIdx + 1).setValue(newState);
+        
+        return { status: "success", is_bookmark: newState };
+      }
+    }
+    return { status: "error", message: "ID not found" };
+  } catch (e) {
+    return { status: "error", message: e.message };
+  }
 }
