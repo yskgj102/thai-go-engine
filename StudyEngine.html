@@ -29,20 +29,19 @@ const StudyEngine = {
     // 3. テキストデータの流し込み（現在の出題言語モードに応じてタイ語/日本語を切り替え）
     ViewController.updateText(item, AppStore.state.isTargetThai);
     
- // ★ クラスを「追加」するだけで、配置は Tailwind に任せる
+// --- StudyEngine.render 内 ---
+    
+// ★ render は「今のカードを表示した瞬間」の見た目を整えるだけに留める
     const btn = document.getElementById('bookmark-btn');
     const icon = document.getElementById('card-bookmark-icon');
     
     if (btn && icon && item) {
       const isBM = (item.is_bookmark === true || String(item.is_bookmark).toLowerCase() === "true");
       
-      if (isBM) {
-        icon.innerText = "★";
-        btn.classList.add('is-gold'); // 黄金クラスを追加
-      } else {
-        icon.innerText = "☆";
-        btn.classList.remove('is-gold'); // 黄金クラスを削除
-      }
+      // ここは「初期描画時」に星がついているか判定して色を塗るだけ
+      icon.innerText = isBM ? "★" : "☆";
+      if (isBM) btn.classList.add('is-gold');
+      else btn.classList.remove('is-gold');
     }
     // 4. スクロール時に出現するヘッダー情報の同期
     this.syncHeader();
@@ -154,7 +153,8 @@ const StudyEngine = {
    */
   answer: function(rating) {
     // 通信中、未読、連打の防止
-    if (AppStore.state.isProcessing || !AppStore.state.revealed || AppStore.state.isAnswering) return;
+    if ( !AppStore.state.revealed || AppStore.state.isAnswering) return;
+    // if (AppStore.state.isProcessing || !AppStore.state.revealed || AppStore.state.isAnswering) return;
     AppStore.state.isAnswering = true;
     
     const list = AppStore.state.queue;
@@ -193,33 +193,37 @@ const StudyEngine = {
       ja.innerText = item.word_th || '---';
     }
   },
-
-  /**
-   * 特定の単語IDを検索し、出題順（キュー）の先頭に割り込ませて表示する
-   * リストからの直接選択や、追加直後の表示に使用。
+/**
+   * 特定の単語IDへジャンプ（飛ばしバグ修正版）
    */
   jumpToWordFromId: function(id) {
-    if (!id || AppStore.state.isProcessing) return;
+    const queue = AppStore.state.queue;
+    const targetIdx = queue.findIndex(v => v.id === id);
+    const currentIdx = AppStore.state.currentIndex;
 
-    // 1. マスターデータ(allVocab)から対象を検索
-    const realItem = AppStore.state.allVocab.find(v => v.id === id);
+    if (targetIdx !== -1) {
+      // 1. ターゲットを配列から切り出す
+      const [targetItem] = queue.splice(targetIdx, 1);
+      
+      // 2. 挿入位置（今見ている単語の直前）を計算
+      // ターゲットが現在地より「前」にいた場合、抜いたことで現在地が1つ前にズレているので調整
+      let insertIdx = currentIdx;
+      if (targetIdx < currentIdx) {
+        insertIdx = currentIdx - 1;
+      }
 
-    if (realItem) {
-      // 2. 【重複排除】キュー内に同じIDがあれば、先に掃除しておく
-      AppStore.state.queue = AppStore.state.queue.filter(v => v.id !== id);
-
-      // 3. 【先頭挿入】配列の最初に追加
-      AppStore.state.queue.unshift(realItem);
-
-      // 4. 【位置リセット】常に先頭を表示するようにインデックスを強制更新
-      AppStore.update('currentIndex', 0);
-
-      // 5. 画面更新と演出
-      this.render();
-      ViewController.playSuccessEffect();
+      // 3. 挿入
+      queue.splice(insertIdx, 0, targetItem);
+      
+      // 4. 現在地をその挿入した場所に固定
+      AppStore.update('currentIndex', insertIdx);
+      
+      // 5. 再描画
+      this.render(); 
+      
+      console.log(`[FixedJump] ID: ${id} moved to ${insertIdx}. Queue consistency maintained.`);
     }
   },
-
   /**
    * 学習進捗統計（ヒートマップ）をサーバーから取得し描画
    */

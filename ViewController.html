@@ -130,16 +130,22 @@ const ViewController = {
       setTimeout(() => toast.remove(), 500);
     }, 3000);
   },
-
-  /**
-   * 通信中のグローバルロック
-   * 誤操作防止のため、入力や重要ボタンを無効化。ただし必須操作ボタンのみ例外的に許可する。
-   */
-  applyGlobalLock: function(message, mainBtn) {
+  
+  applyGlobalLock: function(message, isAllowList = false) {
     AppStore.state.isProcessing = true;
     if (message) this.showToast(message, "success");
     
-    // 検索窓以外の全入力をリードオンリー＆半透明化
+    // 1. 【聖域化】bodyにクラスを付与（CSSが発動する）
+    if (isAllowList) {
+      document.body.classList.add('allow-list-active');
+    } else {
+      document.body.classList.remove('allow-list-active');
+    }
+
+    // 2. リスト更新（render内の pointerClass も一応そのまま活かす）
+    VocabListUI.update(null, isAllowList); 
+
+    // 3. 【入力系】ここは完璧。検索窓をスルー。
     document.querySelectorAll('input, textarea').forEach(el => {
       if (el.id !== 'list-search') {
         el.readOnly = true;
@@ -148,24 +154,20 @@ const ViewController = {
       }
     });
 
-    // ボタンのインテリジェント・ロック
+    // 4. 【ボタン系】ここは今の「きいている」ループを維持
     document.querySelectorAll('button').forEach(b => {
-      const btnClickAttr = b.getAttribute('onclick') || "";
+      const onclick = (b.getAttribute('onclick') || "").toLowerCase();
+      const isEssential = onclick.includes('copy') || onclick.includes('speak') || 
+                          onclick.includes('toggle') || onclick.includes('bookmark');
       
-      // 学習継続に必要な「コピー」「音声」「UI切り替え」ボタンは無効化しない
-      const isEssential = btnClickAttr.includes('copy') || 
-                          btnClickAttr.includes('speak') || 
-                          btnClickAttr.includes('toggle');
-
       if (isEssential) {
         b.style.setProperty('pointer-events', 'auto', 'important');
-        b.style.opacity = ""; 
+        b.style.opacity = "1";
       } else {
         b.style.setProperty('pointer-events', 'none', 'important');
         b.style.setProperty('opacity', '0.4', 'important');
       }
     });
-    VocabListUI.update(); // リスト内の追加ボタンの文字(PROCESSING...)を反映
   },
 
   /**

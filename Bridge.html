@@ -89,7 +89,6 @@ VocabListUI.renderCategoryBar()
    */
   executeQuickAdd: function(optionalVal) {
     const input = document.getElementById('quick-input');
-    const btn = document.getElementById('quick-add-btn');
 
     if (optionalVal && input) {
       input.value = optionalVal;
@@ -99,7 +98,7 @@ VocabListUI.renderCategoryBar()
     if (!val || AppStore.state.isProcessing) return;
 
     // UIをロックし、AI解析中であることを通知
-    ViewController.applyGlobalLock("Adding word ...", btn);
+    ViewController.applyGlobalLock("Adding word ...");
 
     google.script.run
       .withSuccessHandler(res => {
@@ -132,35 +131,98 @@ VocabListUI.renderCategoryBar()
       .quickAddAutoFill(val);
   },
 
-  /**
-   * AIによるカード詳細情報の再生成
-   * 既存の単語IDに対して、AIが例文や解説を新しく作り直す。
-   */
-  reGenerate: function(id) {
-    if (!id) return;
+  // /**
+  //  * AIによるカード詳細情報の再生成
+  //  * 既存の単語IDに対して、AIが例文や解説を新しく作り直す。
+  //  */
+  // reGenerate: function(id) {
+  //   if (!id) return;
+    
+  //   const btn = document.getElementById('re-gen-btn');
+  //   const originalText = "AI Re-Generate";
+
+  //   // 通信ロックを開始し、ボタンテキストを変更
+  //   ViewController.applyGlobalLock("AI is re-generating content...", btn);
+  //   btn.innerText = "Thinking..."; 
+
+  //   google.script.run
+  //     .withSuccessHandler((newAiData) => {
+  //       if (newAiData) {
+  //         // 現在表示中のカードとIDが一致するか確認
+  //         const currentItem = AppStore.state.queue[AppStore.state.currentIndex];
+          
+  //         if (currentItem && currentItem.id === id) {
+  //           // 新しいAIデータを既存のオブジェクトにマージ（破壊的代入）
+  //           Object.assign(currentItem, newAiData);
+
+  //           ViewController.showToast("AI Content Refreshed!", "success");
+            
+  //           // 画面を再描画して新しい内容を反映
+  //           StudyEngine.render(); 
+            
+  //           if (btn) {
+  //             btn.innerText = "Updated!";
+  //             btn.classList.add('text-green-500');
+  //           }
+  //         }
+  //       } else {
+  //         ViewController.showToast("AI Quota exceeded.", "warning");
+  //         btn.innerText = "AI Busy / Limit";
+  //       }
+
+  //       ViewController.releaseLocks();
+  //       // API負荷軽減のため、再生成ボタンを20秒間クールダウンさせる
+  //       this._startReGenCooldown(btn, originalText);
+  //     })
+  //     .withFailureHandler(err => {
+  //       ViewController.showToast("System error.", "error");
+  //       ViewController.releaseLocks();
+  //       btn.disabled = false;
+  //       btn.innerText = originalText;
+  //     })
+  //     .reGenerateCardById(id);
+  // },
+reGenerate: function(id) {
+    if (!id || AppStore.state.isProcessing) return;
     
     const btn = document.getElementById('re-gen-btn');
     const originalText = "AI Re-Generate";
 
-    // 通信ロックを開始し、ボタンテキストを変更
-    ViewController.applyGlobalLock("AI is re-generating content...", btn);
+    // 1. ロック開始
+    ViewController.applyGlobalLock("AI is working...", true);
     btn.innerText = "Thinking..."; 
+
+    // 2. 例外解除（Footer & List）
+    const activeTargets = [
+      '#footer-ui button', 
+    // '#vocab-list-container *'
+    ];
+    activeTargets.forEach(selector => {
+      document.querySelectorAll(selector).forEach(el => {
+        el.style.setProperty('pointer-events', 'auto', 'important');
+        el.style.setProperty('opacity', '1', 'important');
+      });
+    });
+
+    // ★ 共通の「帰り道」ロジック：生存確認してJUMP
+    const finalizeAndJump = () => {
+      const masterIdx = AppStore.state.allVocab.findIndex(v => v.id === id);
+      if (masterIdx !== -1) {
+        StudyEngine.jumpToWordFromId(id);
+      }
+    };
 
     google.script.run
       .withSuccessHandler((newAiData) => {
-        if (newAiData) {
-          // 現在表示中のカードとIDが一致するか確認
-          const currentItem = AppStore.state.queue[AppStore.state.currentIndex];
-          
-          if (currentItem && currentItem.id === id) {
-            // 新しいAIデータを既存のオブジェクトにマージ（破壊的代入）
-            Object.assign(currentItem, newAiData);
+        ViewController.releaseLocks();
 
+        if (newAiData) {
+          const masterIdx = AppStore.state.allVocab.findIndex(v => v.id === id);
+          if (masterIdx !== -1) {
+            Object.assign(AppStore.state.allVocab[masterIdx], newAiData);
             ViewController.showToast("AI Content Refreshed!", "success");
-            
-            // 画面を再描画して新しい内容を反映
-            StudyEngine.render(); 
-            
+                    // 成功ルートで戻る
+        finalizeAndJump();
             if (btn) {
               btn.innerText = "Updated!";
               btn.classList.add('text-green-500');
@@ -168,22 +230,26 @@ VocabListUI.renderCategoryBar()
           }
         } else {
           ViewController.showToast("AI Quota exceeded.", "warning");
-          btn.innerText = "AI Busy / Limit";
+          if (btn) btn.innerText = "AI Busy / Limit";
         }
 
-        ViewController.releaseLocks();
-        // API負荷軽減のため、再生成ボタンを20秒間クールダウンさせる
-        this._startReGenCooldown(btn, originalText);
+
+        Bridge._startReGenCooldown(btn, originalText);
       })
       .withFailureHandler(err => {
-        ViewController.showToast("System error.", "error");
         ViewController.releaseLocks();
-        btn.disabled = false;
-        btn.innerText = originalText;
+        ViewController.showToast("System error.", "error");
+        
+        // ★ 失敗ルートでも戻る（生存していれば）
+        // finalizeAndJump();
+        
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = originalText;
+        }
       })
       .reGenerateCardById(id);
   },
-
   /**
    * 単語データおよび学習ログの完全抹消
    */
@@ -248,25 +314,36 @@ VocabListUI.renderCategoryBar()
     }, 1000);
   },
 /**
-   * ブックマークのトグル実行（黄金クラス対応版）
+   * ブックマークのトグル（外科手術方式）
+   * ロック中も即座に反応し、画面全体のリセット(render)を避ける。
    */
   executeToggleBookmark: function(id) {
+    // 1. メモリ上のデータを即座に書き換え
     const item = AppStore.state.allVocab.find(v => v.id === id);
     if (!item) return;
 
-    // 1. データの反転
-    const isBM = (item.is_bookmark === true || String(item.is_bookmark).toLowerCase() === "true");
-    item.is_bookmark = !isBM;
+    const isBM = !(item.is_bookmark === true || String(item.is_bookmark).toLowerCase() === "true");
+    item.is_bookmark = isBM;
 
-    // 2. 物理的な手応え（微振動）
-    if (window.navigator.vibrate) window.navigator.vibrate(5);
+    // 2. 【外科手術】render() を呼ばず、画面上の「星」だけを直接狙い撃ちして書き換える
+    const btn = document.getElementById('bookmark-btn');
+    const icon = document.getElementById('card-bookmark-icon');
+    
+    if (btn && icon) {
+      if (isBM) {
+        icon.innerText = "★";
+        btn.classList.add('is-gold');
+      } else {
+        icon.innerText = "☆";
+        btn.classList.remove('is-gold');
+      }
+    }
 
-    // 3. 即座に見た目を更新（StudyEngine.render を呼ぶ）
-    // これにより StudyEngine 側の classList.add('is-gold') が走り、星が光ります。
-    StudyEngine.render();
-
-    // 4. GASへ保存（非同期）
+    // 3. GASへ送信（これはロック中もキューに入るので問題なし）
     google.script.run.toggleBookmark(id);
+    
+    // 手応えとしての振動
+    if (window.navigator.vibrate) window.navigator.vibrate(5);
   },
 };
 </script>

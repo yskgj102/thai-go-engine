@@ -54,7 +54,7 @@ const VocabListUI = {
    * 検索クエリの更新と再描画
    * @param {string} query - 検索入力文字列
    */
-  update: function(query) {
+  update: function(query,isAllowList = false) {
     const searchInput = document.getElementById('list-search');
     // 検索窓の値を優先し、なければ引数を使用。全角スペースを処理して小文字化
     let q = (searchInput && searchInput.value !== undefined) ? searchInput.value : (query || '');
@@ -62,7 +62,7 @@ const VocabListUI = {
 this.renderCategoryBar();
     // 検索のたびに表示リミットをリセットして爆速化
     this.state.displayLimit = 80;
-    this.render();
+    this.render(isAllowList);
   },
 
   /**
@@ -77,7 +77,7 @@ this.renderCategoryBar();
    * リストのメインレンダリング（描画）
    * AppStoreの全データに対し、正規化エンジンを通したスコアリング検索を実行する。
    */
-  render: function() {
+  render: function(isAllowList = false) {
     const container = document.getElementById('vocab-list-container');
     const totalCountEl = document.getElementById('vocab-total-count'); 
     if (!container) return;
@@ -93,7 +93,10 @@ this.renderCategoryBar();
     }
 
     // 通信ロック中はクリックを無効化
-    const pointerClass = isLocked ? 'pointer-events-none opacity-50' : 'cursor-pointer';
+   // 66行目付近
+// 許可(isAllowList)が true なら、isLocked が true だろうが関係ない。
+    // ロック用の pointer-events-none や opacity-50 を「一切付けない」ルートを通す。
+const pointerClass = (isLocked && !isAllowList) ? 'pointer-events-none opacity-50' : 'cursor-pointer';
 // --- ★ここから検索ロジックの修正 ---
     let displayData = allVocab;
 
@@ -114,9 +117,10 @@ this.renderCategoryBar();
       const qLower = q.toLowerCase();
       displayData = displayData.map(v => {
         let score = 0;
-        const th = (v.word_th || "").toLowerCase();
-        const rawPh = (v.phonetic || "").toLowerCase();
-        const cat = (v.category || "").toLowerCase();
+// ★ ここを修正：String() で囲って、数値でも安全に文字列として扱う
+        const th = String(v.word_th || "").toLowerCase();
+        const rawPh = String(v.phonetic || "").toLowerCase();
+        const cat = String(v.category || "").toLowerCase();
         
 
         // 【★強化ポイント1】カテゴリー完全一致なら、超高スコアを与えて最上位へ
@@ -126,8 +130,8 @@ this.renderCategoryBar();
   }
         // データ側の発音記号も正規化エンジンに通して比較
         const normPh = this.normalizePhonetic(rawPh);
-        const ja = v.meaning_ja || ""; 
-        const kana = this.normalizeJapanese(v.meaning_kana || ""); 
+const ja   = String(v.meaning_ja || ""); 
+        const kana = this.normalizeJapanese(String(v.meaning_kana || ""));
 
         // 全キーワードがどれかのフィールドに部分一致するかチェック
         const isMatch = keywords.every((kw, i) => {

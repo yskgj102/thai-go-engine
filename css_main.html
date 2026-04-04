@@ -446,4 +446,18 @@ body:not(.light-mode) .category-btn {
   opacity: 1 !important;
   text-shadow: 0 0 10px rgba(255, 215, 0, 0.6) !important;
 }
+
+#vocab-panel.is-open * {
+  pointer-events: inherit; /* 親の auto を継承させる */
+}
+
+/* AI生成中(isAllowList=true)に、リスト全体を強制的に「明るく・クリック可能」にする */
+.allow-list-active #vocab-list-container {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+.allow-list-active #vocab-list-container div {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
 </style>
