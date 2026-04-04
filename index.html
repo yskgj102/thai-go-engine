@@ -19,8 +19,8 @@
       class="sticky top-0 z-50 backdrop-blur-lg px-4 py-3 flex items-center justify-between border-b border-white/5"
       style="background: var(--header-bg);">
 
-      <div class="flex flex-col gap-0.5 min-w-[70px] cursor-pointer group" onclick="ViewController.toggleStats()" data-tip="Stats">
-        <span class="text-[9px] font-bold tracking-[0.1em] opacity-30 group-hover:opacity-60 transition-opacity uppercase">Activity</span>
+      <div class="flex flex-col gap-0.5 min-w-[70px] cursor-pointer group" onclick="ViewController.toggleStats()" >
+        <span class="text-[9px] font-bold tracking-[0.1em] opacity-60 group-hover:opacity-60 transition-opacity uppercase">Activity</span>
         <div class="flex items-baseline gap-1">
           <span id="correct-count" class="text-2xl font-mono leading-none font-medium text-blue-500/80">0</span>
           <span class="text-[9px] opacity-20 font-bold tracking-tighter">WDS</span>
@@ -31,7 +31,7 @@
         <div id="header-input-area" class="relative w-full max-w-[150px] transition-all duration-300 ease-out">
           <input id="quick-input" type="text" placeholder="Add..."
                  class="w-full bg-white/5 border border-white/5 rounded-xl px-3 py-1.5 text-[12px] focus:outline-none focus:bg-white/10 transition-all">
-          <button id="quick-add-btn" class="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center text-blue-500/60 text-lg transition-all" data-tip="Add">
+          <button id="quick-add-btn" class="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center text-blue-500/60 text-lg transition-all" >
             <span class="quick-add-label text-[11px] font-bold">＋</span>
           </button>
         </div>
@@ -45,7 +45,7 @@
                   <div id="header-display-ja" class="text-[9px] opacity-40 font-bold whitespace-nowrap overflow-hidden"></div>
 
                   <button onclick="event.stopPropagation(); StudyEngine.copyText('header-display-th')" 
-                          class="text-[12px] opacity-20 hover:opacity-100 active:scale-125 transition-all shrink-0">
+                          class="text-[12px] opacity-100 hover:opacity-100 active:scale-125 transition-all shrink-0">
                     ⧉
                   </button>
               </div>
@@ -54,12 +54,12 @@
 
       <div class="flex items-center gap-4 shrink-0 pl-1">
         <div class="flex items-center gap-3 pr-3 border-r border-white/10">
-          <button onclick="StudyEngine.toggleTargetLanguage()" id="target-toggle-btn" class="text-[17px] opacity-40 hover:opacity-100 transition-all active:scale-125">🇹🇭</button>
-          <button onclick="StudyEngine.toggleMode()" id="mode-btn" class="text-[17px] opacity-30 hover:opacity-100 transition-all active:scale-125">🧠</button>
-                    <button onclick="ViewController.toggleTheme()" id="theme-icon" class="text-[11px] opacity-20 hover:opacity-100 transition-all">🌙</button>
+          <button onclick="StudyEngine.toggleTargetLanguage()" id="target-toggle-btn" class="text-[17px] opacity-100 hover:opacity-100 transition-all active:scale-125">🇹🇭</button>
+          <button onclick="StudyEngine.toggleMode()" id="mode-btn" class="text-[17px] opacity-100 hover:opacity-100 transition-all active:scale-125">🧠</button>
+                    <button onclick="ViewController.toggleTheme()" id="theme-icon" class="text-[11px] opacity-100 hover:opacity-100 transition-all">🌙</button>
         </div>
 
-        <button onclick="ViewController.toggleVocabPanel(event)" class="flex flex-col gap-[4px] items-end opacity-20 hover:opacity-100 transition-all p-1">
+        <button onclick="ViewController.toggleVocabPanel(event)" class="flex flex-col gap-[4px] items-end opacity-100 hover:opacity-100 transition-all p-1">
           <span class="h-[1.5px] w-4 bg-current rounded-full"></span>
           <span class="h-[1.5px] w-2 bg-current rounded-full"></span>
         </button>
@@ -72,8 +72,8 @@
 
       <div id="stats-area" class="hidden mb-4" onclick="event.stopPropagation()">
         <div class="flex justify-between items-center mb-2 px-1">
-          <span class="text-[8px] font-bold opacity-50 uppercase">Activity</span>
-          <button onclick="ViewController.toggleStats()" class="text-[8px] opacity-50">Close ×</button>
+          <span class="text-[8px] font-bold opacity-60 uppercase">Activity</span>
+          <button onclick="ViewController.toggleStats()" class="text-[8px] opacity-100">Close ×</button>
         </div>
         <div class="heatmap-scroll bg-white/5 rounded-2xl p-4 border border-white/5">
           <div id="heatmap"></div>
@@ -84,9 +84,9 @@
         <div class="panel-content" onclick="event.stopPropagation()">
           <div class="flex items-center px-6 pt-12 pb-4 border-b border-white/5 shrink-0">
             <span class="flex-1 text-[11px] font-black uppercase tracking-widest text-blue-500">
-              VOCABULARY <span id="vocab-total-count" class="ml-2 opacity-40 text-[9px] font-mono">0</span>
+              VOCABULARY <span id="vocab-total-count" class="ml-2 opacity-100 text-[9px] font-mono">0</span>
             </span>
-            <button onclick="ViewController.toggleVocabPanel(event)" class="opacity-50 text-xs tracking-tighter">CLOSE ×</button>
+            <button onclick="ViewController.toggleVocabPanel(event)" class="opacity-100 text-xs tracking-tighter">CLOSE ×</button>
           </div>
           <div class="p-4 border-b border-white/5">
             <input id="list-search" type="search" placeholder="Search..."
@@ -115,19 +115,19 @@
                class="card-style rounded-[2.5rem] p-8 shadow-2xl relative min-h-[360px] flex flex-col items-center justify-center cursor-pointer">
             <div class="absolute top-5 right-6 flex items-center gap-4">
             
-              <button onclick="event.stopPropagation(); StudyEngine.openGotThai()" class="text-[8px] font-bold opacity-20 hover:opacity-100 uppercase tracking-widest">Gotthai ↗</button>
+              <button onclick="event.stopPropagation(); StudyEngine.openGotThai()" class="text-[8px] font-bold opacity-100 hover:opacity-100 uppercase tracking-widest">Gotthai ↗</button>
                 </button>
-              <button onclick="event.stopPropagation(); StudyEngine.copyText('word-th')" class="text-[14px] opacity-20 hover:opacity-100 active:scale-125 transition-all">⧉</button>
+              <button onclick="event.stopPropagation(); StudyEngine.copyText('word-th')" class="text-[14px] opacity-100 hover:opacity-100 active:scale-125 transition-all">⧉</button>
               <button id="bookmark-btn" 
         onclick="event.stopPropagation(); Bridge.executeToggleBookmark(AppStore.getCurrentItem().id)"; 
-        class="text-[18px] opacity-20 hover:opacity-100 transition-all active:scale-125 flex items-center justify-center">
+        class="text-[18px] opacity-100 hover:opacity-100 transition-all active:scale-125 flex items-center justify-center">
   <span id="card-bookmark-icon">☆</span>
 </button>
 
             </div>
             <div class="relative inline-block">
               <div id="word-th" class="thai-font text-6xl font-bold mb-4 text-center"></div>
-              <button onclick="event.stopPropagation(); StudyEngine.speak(false)" class="absolute -top-2 -left-10 text-[14px] opacity-20 p-2 active:scale-125 transition-transform">🔊</button>
+              <button onclick="event.stopPropagation(); StudyEngine.speak(false)" class="absolute -top-2 -left-10 text-[14px] opacity-100 p-2 active:scale-125 transition-transform">🔊</button>
             </div>
             <div id="phonetic" class="text-sm italic mb-6" style="color: var(--text-sub)"></div>
 
@@ -137,7 +137,7 @@
               </div>
               <div id="meaning" class="text-3xl font-black text-center" style="color: var(--text-main)"></div>
             </div>
-            <div id="logic-debug" class="absolute bottom-10 right-8 text-[7px] font-mono opacity-20 flex flex-col items-end">
+            <div id="logic-debug" class="absolute bottom-10 right-8 text-[7px] font-mono opacity-40 flex flex-col items-end">
               <span id="stat-interval"></span><span id="stat-last"></span>
             </div>
             <div id="tap-hint" class="absolute bottom-5 left-0 right-0 text-center animate-pulse text-[8px] font-bold uppercase tracking-[0.4em] opacity-20">Tap to flip</div>
@@ -149,11 +149,11 @@
                  style="background-color: var(--bg-card); border: 1px solid var(--border);">
               <div class="flex justify-between items-center mb-1">
                 <p class="text-[10px] font-black uppercase tracking-widest text-blue-500">Context</p>
-                <button onclick="event.stopPropagation(); StudyEngine.copyText('ex-th')" class="text-[14px] opacity-20 hover:opacity-100 active:scale-125 transition-all">⧉</button>
+                <button onclick="event.stopPropagation(); StudyEngine.copyText('ex-th')" class="text-[14px] opacity-100 hover:opacity-100 active:scale-125 transition-all">⧉</button>
               </div>
               <div class="relative inline-block pr-6">
                 <p id="ex-th" class="thai-font text-xl font-bold leading-relaxed"></p>
-                <button onclick="event.stopPropagation(); StudyEngine.speak(true)" class="absolute top-0 -right-2 text-[12px] opacity-20 p-1 active:scale-125 transition-transform">🔊</button>
+                <button onclick="event.stopPropagation(); StudyEngine.speak(true)" class="absolute top-0 -right-2 text-[12px] opacity-100 p-1 active:scale-125 transition-transform">🔊</button>
                 <p id="ex-phonetic" class="text-[11px] italic mb-1" style="color: var(--text-sub)"></p>
               </div>
               <p id="ex-ja" class="text-sm font-bold opacity-70"></p>
