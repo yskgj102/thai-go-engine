@@ -28,6 +28,7 @@ const StudyEngine = {
     
     // 3. テキストデータの流し込み（現在の出題言語モードに応じてタイ語/日本語を切り替え）
     ViewController.updateText(item, AppStore.state.isTargetThai);
+
     this.renderContextLinks(item.example_th, 'ex-th', item.id);
     
     // ★ 解説（日本語/タイ語混じり）にもリンクを貼る
@@ -328,20 +329,24 @@ renderContextLinks: function(rawText, targetElementId, excludeId) {
 
   const map = new Map();
 
-  sortedVocabs.forEach((v, index) => {
-    if (text.includes(v.word_th)) {
-      // 2. 一時的な一意のキー（プレースホルダー）を作成
-      const placeholder = `__VOCAB_${index}__`;
-      const meaning = v.meaning_ja.replace(/"/g, '&quot;');
+sortedVocabs.forEach((v, index) => {
+  if (text.includes(v.word_th)) {
+    const placeholder = `__VOCAB_${index}__`;
+    const meaning = v.meaning_ja.replace(/"/g, '&quot;');
+    
+    // ★ ポイント：onclick を外して、TIPの中に「ジャンプ用ボタン」を仕込む
+    // もしくは、親の onclick を「1回目はTIP表示、2回目でジャンプ」にする
+    const linkHtml = `
+      <span class="context-link" 
+            data-meaning="${meaning}" 
+            onclick="event.stopPropagation(); StudyEngine.handleContextClick(this, '${v.id}')">
+        ${v.word_th}
+      </span>`;
       
-      // 3. リンクHTMLを保存
-      const linkHtml = `<span class="context-link" data-meaning="${meaning}" onclick="event.stopPropagation(); StudyEngine.jumpToWordFromId('${v.id}')">${v.word_th}</span>`;
-      map.set(placeholder, linkHtml);
-
-      // 4. 本文をプレースホルダーに置換（これで「中身」が後続のループで狙われない）
-      text = text.split(v.word_th).join(placeholder);
-    }
-  });
+    map.set(placeholder, linkHtml);
+    text = text.split(v.word_th).join(placeholder);
+  }
+});
 
   // 5. 最後にプレースホルダーを実際のHTMLに戻す
   map.forEach((html, placeholder) => {
@@ -350,5 +355,24 @@ renderContextLinks: function(rawText, targetElementId, excludeId) {
 
   targetEl.innerHTML = text;
 },
+
+/**
+   * コンテキストリンクの制御：1回目でTIP確認、2回目でジャンプ
+   */
+  handleContextClick: function(el, id) {
+    // すでに「確認中」の状態ならジャンプを実行
+    if (el.classList.contains('is-confirming')) {
+      this.jumpToWordFromId(id);
+      el.classList.remove('is-confirming');
+    } else {
+      // 1回目：他のリンクの「確認中」を解除してから、自分を「確認中」にする
+      document.querySelectorAll('.context-link').forEach(l => l.classList.remove('is-confirming'));
+      el.classList.add('is-confirming');
+      
+      // 数秒放置したら「確認中」を自動解除（お好みで）
+      setTimeout(() => el.classList.remove('is-confirming'), 3000);
+    }
+  },
+
 };
 </script>

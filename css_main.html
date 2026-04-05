@@ -524,9 +524,18 @@ body:not(.light-mode) .category-btn {
   border-top-color: rgba(15, 23, 42, 0.95);
   z-index: 9999;
 }
-.context-link:active::after,
-.context-link:active::before {
-  z-index: 10000; /* 確実に最前面へ */
+/* 修正：:active ではなく .is-confirming でTIPを出す */
+.context-link.is-confirming::after,
+.context-link.is-confirming::before {
+  opacity: 1;
+  visibility: visible;
 }
+
+/* ついでに、確認中の時は下線を太くして「もう一回押せば飛ぶよ」感を出す */
+.context-link.is-confirming {
+  border-bottom: 2px solid #3b82f6 !important;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
 
 </style>
