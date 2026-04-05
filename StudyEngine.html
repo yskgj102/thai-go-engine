@@ -315,32 +315,40 @@ renderHeatmap: function() {
     window.open(url, '_blank');
     ViewController.showToast(`Searching "${word}" on GotThai...`, "success");
   },
-/**
-   * 2. 内部リンク生成（この1つだけを残す）
-   */
 renderContextLinks: function(rawText, targetElementId, excludeId) {
-    const targetEl = document.getElementById(targetElementId);
-    if (!rawText || !targetEl) return;
+  const targetEl = document.getElementById(targetElementId);
+  if (!rawText || !targetEl) return;
 
-    let text = rawText;
-    
-    const sortedVocabs = [...AppStore.state.allVocab]
-      .filter(v => 
-        v.word_th && 
-        v.word_th.length > 1 && // ★ 1文字は無視（これでかなり静かになります）
-        v.id !== excludeId
-      )
-      .sort((a, b) => b.word_th.length - a.word_th.length);
+  let text = rawText;
+  
+  // 1. 長い単語から順にソート（重要：長い方を先に確定させる）
+  const sortedVocabs = [...AppStore.state.allVocab]
+    .filter(v => v.word_th && v.word_th.length > 1 && v.id !== excludeId)
+    .sort((a, b) => b.word_th.length - a.word_th.length);
 
-    sortedVocabs.forEach(v => {
-      // 既にリンク化した単語の中に含まれる短い単語を置換しないよう、
-      // 境界（タグの外側）を意識した置換が必要ですが、まずは単純な置換で見た目を整えます
-      if (text.includes(v.word_th)) {
-        text = text.split(v.word_th).join(`<span class="context-link" onclick="event.stopPropagation(); StudyEngine.jumpToWordFromId('${v.id}')">${v.word_th}</span>`);
-      }
-    });
+  const map = new Map();
 
-    targetEl.innerHTML = text;
-  },
+  sortedVocabs.forEach((v, index) => {
+    if (text.includes(v.word_th)) {
+      // 2. 一時的な一意のキー（プレースホルダー）を作成
+      const placeholder = `__VOCAB_${index}__`;
+      const meaning = v.meaning_ja.replace(/"/g, '&quot;');
+      
+      // 3. リンクHTMLを保存
+      const linkHtml = `<span class="context-link" data-meaning="${meaning}" onclick="event.stopPropagation(); StudyEngine.jumpToWordFromId('${v.id}')">${v.word_th}</span>`;
+      map.set(placeholder, linkHtml);
+
+      // 4. 本文をプレースホルダーに置換（これで「中身」が後続のループで狙われない）
+      text = text.split(v.word_th).join(placeholder);
+    }
+  });
+
+  // 5. 最後にプレースホルダーを実際のHTMLに戻す
+  map.forEach((html, placeholder) => {
+    text = text.split(placeholder).join(html);
+  });
+
+  targetEl.innerHTML = text;
+},
 };
 </script>
