@@ -318,24 +318,36 @@ renderHeatmap: function() {
   },
 
 
-
-  renderContextLinks: function(rawText, targetElementId, excludeId) {
+renderContextLinks: function(rawText, targetElementId, excludeId) {
   const targetEl = document.getElementById(targetElementId);
   if (!rawText || !targetEl) return;
 
   let text = rawText;
-  const sortedVocabs = [...AppStore.state.allVocab]
+  const allVocab = AppStore.state.allVocab;
+  const map = new Map();
+
+  // 1. 【自分自身の処理】 
+  // excludeId に一致する「自分」を先に見つけ、特別なクラス 'is-self' を付与
+  const selfVocab = allVocab.find(v => v.id === excludeId);
+  if (selfVocab && text.includes(selfVocab.word_th)) {
+    const placeholder = `__SELF__`;
+    const meaning = selfVocab.meaning_ja.replace(/"/g, '&quot;');
+    // クラスに 'is-self' を追加
+    const linkHtml = `<span class="context-link is-self" data-meaning="${meaning}" onclick="event.stopPropagation(); StudyEngine.handleContextClick(this, '${selfVocab.id}')">${selfVocab.word_th}</span>`;
+    
+    map.set(placeholder, linkHtml);
+    text = text.split(selfVocab.word_th).join(placeholder);
+  }
+
+  // 2. 【自分以外の処理】
+  const sortedOthers = [...allVocab]
     .filter(v => v.word_th && v.word_th.length > 1 && v.id !== excludeId)
     .sort((a, b) => b.word_th.length - a.word_th.length);
 
-  const map = new Map();
-
-  sortedVocabs.forEach((v, index) => {
+  sortedOthers.forEach((v, index) => {
     if (text.includes(v.word_th)) {
       const placeholder = `__VOCAB_${index}__`;
       const meaning = v.meaning_ja.replace(/"/g, '&quot;');
-      
-      // 余計なタグは入れず、onclick のハンドラだけを StudyEngine.handleContextClick に変更
       const linkHtml = `<span class="context-link" data-meaning="${meaning}" onclick="event.stopPropagation(); StudyEngine.handleContextClick(this, '${v.id}')">${v.word_th}</span>`;
       
       map.set(placeholder, linkHtml);
@@ -343,14 +355,13 @@ renderHeatmap: function() {
     }
   });
 
+  // 3. 復元
   map.forEach((html, placeholder) => {
     text = text.split(placeholder).join(html);
   });
 
-  // 改行を維持して流し込む
   targetEl.innerHTML = text;
 },
-
 /**
  * 2クリック遷移のロジック（ここだけ追加）
  */

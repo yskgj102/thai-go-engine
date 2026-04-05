@@ -502,5 +502,16 @@ body:not(.light-mode) .category-btn {
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   pointer-events: none;
 }
+/* 自分自身のリンク：他の単語より少しだけ強調 */
+.context-link.is-self {
+  border-bottom: 1.5px solid rgba(59, 130, 246, 0.8); /* ドットではなく実線 */
+  font-weight: bold; /* 少し太く */
+  color: #3b82f6;   /* 青文字にして「自分」であることを明示 */
+}
 
+/* 自分自身をタップした時のハイライト（さらに濃く） */
+.context-link.is-self.is-confirming {
+  background-color: rgba(59, 130, 246, 0.3) !important;
+  outline: 1px solid rgba(59, 130, 246, 0.5);
+}
 </style>
