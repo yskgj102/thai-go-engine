@@ -460,6 +460,30 @@ body:not(.light-mode) .category-btn {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
+/* StudyEngine用のリンクスタイル（自然な見た目版） */
+.context-link {
+  color: inherit; /* 文字色は周囲に合わせる */
+  text-decoration: none;
+  /* 控えめな点線の下線。細く、少し透明にするのがコツ */
+  border-bottom: 1.5px dotted rgba(96, 165, 250, 0.4); 
+  padding: 0 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline; /* inline-blockをやめて文章に馴染ませる */
+}
+
+/* ホバー・タップ時だけ「あ、これ押せるんだ」と分かればいい */
+.context-link:active, .context-link:hover {
+  background-color: rgba(96, 165, 250, 0.1);
+  border-bottom: 1.5px solid #60a5fa;
+  color: #60a5fa;
+  border-radius: 2px;
+}
+
+/* ライトモード用の微調整 */
+.light-mode .context-link {
+  border-bottom-color: rgba(37, 99, 235, 0.3);
+}
 
 
 </style>

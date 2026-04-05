@@ -28,7 +28,12 @@ const StudyEngine = {
     
     // 3. テキストデータの流し込み（現在の出題言語モードに応じてタイ語/日本語を切り替え）
     ViewController.updateText(item, AppStore.state.isTargetThai);
+    this.renderContextLinks(item.example_th, 'ex-th', item.id);
     
+    // ★ 解説（日本語/タイ語混じり）にもリンクを貼る
+    // 解説文の中にタイ語が含まれていれば、それも自動でチップになります
+    this.renderContextLinks(item.explanation, 'note', item.id);
+    // this.renderContextLinks(item.explanation, 'ex-ja', item.id);
 // --- StudyEngine.render 内 ---
     
 // ★ render は「今のカードを表示した瞬間」の見た目を整えるだけに留める
@@ -227,17 +232,31 @@ const StudyEngine = {
   /**
    * 学習進捗統計（ヒートマップ）をサーバーから取得し描画
    */
-  renderHeatmap: function() {
-    google.script.run.withSuccessHandler(d => {
-      new frappe.Chart("#heatmap", { 
-        type: 'heatmap', data: { dataPoints: d }, 
-        colors: ['#1e293b', '#4f46e5', '#6366f1', '#818cf8', '#c7d2fe']
-      });
-      // ヒートマップを最新（右端）へ自動スクロール
-      setTimeout(() => { document.querySelector('.heatmap-scroll').scrollLeft = 9999; }, 100);
-    }).getLearningStatistics();
-  },
+renderHeatmap: function() {
+  google.script.run.withSuccessHandler(d => {
+    const now = new Date();
+    const start = new Date();
+    // 画面に収まりつつ、少しだけスクロールできる「ちょうどいい」期間（150日）
+    start.setDate(now.getDate() - 150);
 
+    const fmt = (date) => date.toISOString().split('T')[0];
+
+    new frappe.Chart("#heatmap", { 
+      type: 'heatmap', 
+      data: { dataPoints: d }, 
+      start: fmt(start), 
+      end: fmt(now), // ★ これで「今日」が右端の境界線になります
+      countOfWeeks: 20, // ★ 画面幅に収まる「週の数」を明示的に指定（ライブラリの自動計算を防ぐ）
+      colors: ['#1e293b', '#4f46e5', '#6366f1', '#818cf8', '#c7d2fe']
+    });
+
+    // 描画後、少しだけ右に寄せる（念のため）
+    setTimeout(() => {
+      const el = document.querySelector('.heatmap-scroll');
+      if (el) el.scrollLeft = el.scrollWidth;
+    }, 200);
+  }).getLearningStatistics();
+},
   /**
    * 出題のメイン言語（タイ語からか、日本語からか）を切り替える
    */
@@ -295,6 +314,33 @@ const StudyEngine = {
     
     window.open(url, '_blank');
     ViewController.showToast(`Searching "${word}" on GotThai...`, "success");
-  }
+  },
+/**
+   * 2. 内部リンク生成（この1つだけを残す）
+   */
+renderContextLinks: function(rawText, targetElementId, excludeId) {
+    const targetEl = document.getElementById(targetElementId);
+    if (!rawText || !targetEl) return;
+
+    let text = rawText;
+    
+    const sortedVocabs = [...AppStore.state.allVocab]
+      .filter(v => 
+        v.word_th && 
+        v.word_th.length > 1 && // ★ 1文字は無視（これでかなり静かになります）
+        v.id !== excludeId
+      )
+      .sort((a, b) => b.word_th.length - a.word_th.length);
+
+    sortedVocabs.forEach(v => {
+      // 既にリンク化した単語の中に含まれる短い単語を置換しないよう、
+      // 境界（タグの外側）を意識した置換が必要ですが、まずは単純な置換で見た目を整えます
+      if (text.includes(v.word_th)) {
+        text = text.split(v.word_th).join(`<span class="context-link" onclick="event.stopPropagation(); StudyEngine.jumpToWordFromId('${v.id}')">${v.word_th}</span>`);
+      }
+    });
+
+    targetEl.innerHTML = text;
+  },
 };
 </script>

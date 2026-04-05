@@ -146,21 +146,28 @@ function getTodayScore() {
   return todayLogs.length;
 }
 
+
 /**
- * ヒートマップ用統計データの取得
+ * ヒートマップ用統計データの取得（直近120日分を動的に抽出）
  */
 function getLearningStatistics() {
   const logs = getRawLogs() || [];
   const dataPoints = {};
   
+  // 現在の年を取得
+  const currentYear = new Date().getFullYear();
+  
   logs.forEach(function(log) {
     if (!log.created_at) return;
     
     const date = new Date(log.created_at);
-    date.setHours(0, 0, 0, 0);
-    const timestamp = Math.floor(date.getTime() / 1000); 
     
-    dataPoints[timestamp] = (dataPoints[timestamp] || 0) + 1;
+    // 現在の年（2026年）のログだけを集計対象にする
+    if (date.getFullYear() === currentYear) {
+      date.setHours(0, 0, 0, 0);
+      const timestamp = Math.floor(date.getTime() / 1000); 
+      dataPoints[timestamp] = (dataPoints[timestamp] || 0) + 1;
+    }
   });
 
   return dataPoints;
