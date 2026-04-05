@@ -524,4 +524,72 @@ body:not(.light-mode) .category-btn {
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   pointer-events: none;
 }
+
+
+/* 入力欄のコンテナ（右側にスペースを確保） */
+.search-container {
+  position: relative;
+  width: 100%;
+}
+
+/* 入力欄本体：右側にボタンがある分、padding-right を広げる */
+#list-search, #quick-input {
+  padding-right: 40px !important; 
+}
+
+/* ペーストボタン：入力欄の右端に浮かせる */
+.paste-icon-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--text-main);
+  opacity: 1;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.paste-icon-btn:hover { opacity: 0.8; }
+.paste-icon-btn:active { scale: 0.9; }
+
+/* コンテナ（相対配置） */
+#header-input-area {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* 入力欄：右側にボタン2個分（約60px）の余白を空ける */
+#quick-input {
+  padding-right: 64px !important; 
+}
+
+/* 右側のボタン群をまとめるコンテナ */
+.header-action-group {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px; /* ボタン同士の間隔 */
+}
+
+/* 共通のアイコンボタンスタイル */
+.header-icon-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.header-icon-btn:active { scale: 0.9; }
 </style>

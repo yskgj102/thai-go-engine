@@ -413,7 +413,31 @@ refs.forEach(r => {
   html += `</div>`;
   
   refListEl.innerHTML = html;
-}
+},
+/**
+ * クリップボードの内容を指定したIDのinputにペーストする
+ */
+pasteTo: function(elementId) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+
+  // ブラウザのクリップボード読み取り権限を確認して実行
+  navigator.clipboard.readText()
+    .then(text => {
+      if (text) {
+        el.value = text;
+        // リスト検索の場合は、入力イベントを強制発火させてフィルタリングを動かす
+        if (elementId === 'list-search') {
+          VocabListUI.update(text);
+        }
+        ViewController.showToast("Pasted!", "success");
+      }
+    })
+    .catch(err => {
+      console.error('Failed to read clipboard:', err);
+      ViewController.showToast("Clipboard access denied", "warning");
+    });
+},
 
 };
 </script>

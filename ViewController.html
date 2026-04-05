@@ -158,7 +158,7 @@ const ViewController = {
     document.querySelectorAll('button').forEach(b => {
       const onclick = (b.getAttribute('onclick') || "").toLowerCase();
       const isEssential = onclick.includes('copy') || onclick.includes('speak') || 
-                          onclick.includes('toggle') || onclick.includes('bookmark');
+                          onclick.includes('toggle') || onclick.includes('bookmark') || onclick.includes('paste');
       
       if (isEssential) {
         b.style.setProperty('pointer-events', 'auto', 'important');
