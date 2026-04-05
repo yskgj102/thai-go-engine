@@ -97,7 +97,7 @@ VocabListUI.renderCategoryBar()
 
     if (!val || AppStore.state.isProcessing) return;
 
-    // UIをロックし、AI解析中であることを通知
+    // UIをロックし、追加中であることを通知
     ViewController.applyGlobalLock("Adding word ...");
 
     google.script.run
@@ -115,6 +115,7 @@ VocabListUI.renderCategoryBar()
           
           // メモリ上のマスターデータ(allVocab)の先頭に追加して同期
           AppStore.state.allVocab.unshift(res.data);
+          AppStore.state.queue.splice(AppStore.state.currentIndex + 1, 0, res.data);
           ViewController.updateTotalCount(AppStore.state.allVocab.length);
           VocabListUI.update();
           VocabListUI.renderCategoryBar()
