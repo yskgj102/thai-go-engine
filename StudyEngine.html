@@ -1,4 +1,5 @@
 <script>
+
 /**
  * StudyEngine: 学習システムの中枢ロジック
  * AppStoreのステート（状態）を監視し、描画、音声再生、学習進捗の判定を行う司令塔。
@@ -10,6 +11,10 @@ const StudyEngine = {
    * キューから現在の単語を抽出し、ViewControllerを介して画面上の全てのテキスト・色・統計情報を更新する。
    */
   render: function() {
+
+    // カードが変わる際、分析パネルをリセット（非表示）にする
+    const panel = document.getElementById('analysis-panel');
+    if (panel) { panel.classList.add('hidden'); panel.style.display = 'none'; }
     const list = AppStore.state.queue;
     if (!list || list.length === 0) return;
     
@@ -438,6 +443,377 @@ pasteTo: function(elementId) {
       ViewController.showToast("Clipboard access denied", "warning");
     });
 },
+toggleAnalysis: function() {
+        console.log("hello ana"); // 山岡さんのデバッグログも復活
+        const panel = document.getElementById('analysis-panel');
+        if (!panel) return;
+
+        // すでに表示されているなら閉じる（トグル動作）
+        if (!panel.classList.contains('hidden')) {
+            panel.classList.add('hidden');
+            panel.style.display = 'none';
+            return;
+        }
+
+        // 非表示なら、最新の解析を実行して表示する
+        this.renderAnalysis();
+    },
+
+
+
+
+
+
+renderAnalysis: function() {
+    const item = AppStore.getCurrentItem();
+    if (!item || !item.word_th) return;
+    
+    const panel = document.getElementById('analysis-panel');
+    if (!panel) return;
+    panel.innerHTML = '';
+    panel.style.display = 'flex';
+    panel.classList.remove('hidden');
+
+    // ★重要: Parserがすでに「属性伝染」も「声調番号」も計算し終えた状態で返してくる
+    const syllables = ThaiParser.parseSyllables(item.word_th);
+
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = `
+        display: flex; overflow-x: auto; gap: 10px; width: 100%; 
+        padding: 12px 6px 26px 6px; 
+        justify-content: ${syllables.length <= 2 ? 'center' : 'flex-start'};
+        -webkit-overflow-scrolling: touch;
+    `;
+
+    syllables.forEach((syl) => {
+        // --- 1. 表示用の部品を「計算済みのsyl」から取り出す ---
+        const tInfo = ThaiMasterData.toneMap[syl.toneNum] || ThaiMasterData.toneMap[0];
+        const cColor = ThaiMasterData.classColors[syl.finalClass] || 'text-white/40';
+        
+        // コンソナント情報は名前を表示するためにMasterから引き直す
+        const cObj = ThaiMasterData.consonants[syl.mainC[0]] || { name: '不明', sound: '?' };
+        const termSound = syl.lastC ? (ThaiMasterData.consonants[syl.lastC]?.sound || '?') : '-';
+
+        // --- 2. タイ文字の着色（頭子音を強調） ---
+        const coloredText = Array.from(syl.full).map(c => 
+            syl.mainC.includes(c) ? `<span class="${cColor}">${c}</span>` : `<span class="opacity-40">${c}</span>`
+        ).join('');
+
+        // --- 3. チップの生成（sylの中に全部答えが入っている） ---
+        wrapper.insertAdjacentHTML('beforeend', `
+            <div class="analysis-chip p-3.5 bg-slate-900 border border-slate-700 rounded-3xl w-[126px] text-center flex-shrink-0 shadow-2xl relative overflow-hidden">
+                <div class="mb-2 pb-2 border-b border-white/5">
+                    <div class="${tInfo.color} text-3xl leading-none font-black drop-shadow-md">${tInfo.mark || 'ー'}</div>
+                    <div class="${tInfo.color} text-[9px] font-black tracking-tighter uppercase">${tInfo.label}</div>
+                </div>
+
+                <div class="text-4xl font-bold mb-3 thai-font drop-shadow-lg">${coloredText}</div>
+
+                <div class="text-[10px] text-left space-y-1.5 font-mono">
+                    <div class="flex justify-between items-center">
+                        <span class="text-white/30 text-[8px]">CLASS:</span>
+                        <span class="${cColor} font-bold">${syl.finalClass}${syl.isOverridden ? '*' : ''}</span>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-white/30 text-[7px] leading-none mb-0.5">NAME:</span>
+                        <span class="text-white/80 text-[9px] truncate leading-tight">${cObj.name}</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-1 border-t border-white/5">
+                        <span class="text-white/30 text-[8px]">SOUND:</span>
+                        <span class="text-blue-400 font-bold">${cObj.sound}/${termSound}</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-white/30 text-[8px]">VOWEL:</span>
+                        <span class="text-yellow-500 font-bold">${syl.vSound || '?'} <small class="text-[7px] opacity-60">${(syl.vLen || 's')[0]}</small></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-white/30 text-[8px]">TYPE:</span>
+                        <span class="text-purple-400 font-bold">${(syl.sType || 'D')[0]} <small class="text-[7px] opacity-60">(${syl.ruleLabel || '標準'})</small></span>
+                    </div>
+                </div>
+            </div>`);
+    });
+    
+    panel.appendChild(wrapper);
+// GSのデバッグログとフォーマットを完全に一致させる
+    const debugText = syllables.map(syl => {
+        const tInfo = ThaiMasterData.toneMap[syl.toneNum] || { label: '不明' };
+        // 例: [สนุก] -> [ส: a/H/d -> 低] | [นุก: u/L/D -> 高] 形式
+        return `[${syl.full}: ${syl.vSound || '?'}/${syl.finalClass[0]}/${(syl.sType || 'D')[0]} -> ${tInfo.label[0]}]`;
+    }).join(' | ');
+
+    panel.insertAdjacentHTML('beforeend', `
+        <div class="w-full mt-2 px-3 py-2 bg-slate-950/80 rounded-xl text-[10px] font-mono text-blue-300/60 flex flex-col gap-1 border border-blue-500/20 shadow-inner">
+            <div class="flex justify-between border-b border-white/5 pb-1 mb-1">
+                <span class="text-white/40">FINAL_LOG: ${item.word_th}</span>
+                <span class="text-blue-500/40 font-bold tracking-widest">v6.2_LOGIC_SYNC</span>
+            </div>
+            <div class="leading-relaxed break-all">
+                ${debugText}
+            </div>
+        </div>
+    `);
+
+}
+
 
 };
+
+
+
+
+
+/**
+ * GS_Parser: 音節構造解析エンジン (Final Fixed Version)
+ */
+const ThaiParser = {
+  parseSyllables: function(text) {
+    if (!text) return [];
+    const vMarks = "ะาิีึืุูัำ";
+    const leadingV = "เแโใไ";
+    const toneMarks = "่้๊๋์";
+    const chars = Array.from(text);
+    const syllables = [];
+    let i = 0;
+
+    while (i < chars.length) {
+      let syl = { full: '', leadingV: '', mainC: '', marks: [], lastC: '', isRoHan: false };
+
+      // 1. 前置母音 (เแโใไ) - 最初に見つけたら保持
+      if (i < chars.length && leadingV.indexOf(chars[i]) !== -1) {
+        syl.leadingV = chars[i]; syl.full += chars[i]; i++;
+      }
+// 2. 核子音 (Cluster & ฤ / 記号なし核子音の強化)
+      if (i < chars.length) {
+        syl.mainC = chars[i]; syl.full += chars[i]; i++;
+        
+        // ฤ (Rue) が核子音として現れた場合の処理
+        if (syl.mainC === 'ฤ') {
+          // ฤ 自体が母音の性質を持つので、そのまま Step 4 へ
+        } else if (i < chars.length) {
+          const c2 = chars[i];
+          const nextMark = chars[i+1];
+          const isHo = syl.mainC === 'ห' && "งญนมรลวยว".indexOf(c2) !== -1;
+          const isCluster = "กขคตปผพจสซ".indexOf(syl.mainC) !== -1 && "รลว".indexOf(c2) !== -1;
+          
+          if (isHo || isCluster) {
+            // ★真犯人逮捕：c2が 'ร' で、次も 'ร' なら Ro Han のためクラスタ化しない！
+            if (c2 === 'ร' && nextMark === 'ร') {
+               // 何もしない（Step 3 の Ro Han 検知に任せる）
+            } else if (!(vMarks.indexOf(c2) !== -1 || toneMarks.indexOf(c2) !== -1)) {
+               syl.mainC += c2; syl.full += c2; i++;
+            }
+          }
+        }
+      }
+
+      // 3. Ro Han (รร) 検知
+      if (i + 1 < chars.length && chars[i] === 'ร' && chars[i+1] === 'ร') {
+        const next = chars[i+2];
+        if (!next || (vMarks.indexOf(next) === -1 && leadingV.indexOf(next) === -1)) {
+          syl.isRoHan = true; syl.marks.push('รร'); syl.full += 'รร'; i += 2;
+        }
+      }
+
+// 4. すべての記号 (上下・声調・黙字記号) および母音構成要素 (ย, ว, อ) の回収
+      while (i < chars.length) {
+        const c = chars[i];
+        const next = chars[i+1];
+        
+        // 黙字記号 ์ が次にある文字は、末子音として扱うため Step 5 へ
+        if (next === '์') break;
+
+        // A. 基本の母音記号・声調記号なら回収
+        if (vMarks.indexOf(c) !== -1 || toneMarks.indexOf(c) !== -1 || c === '์') {
+          syl.marks.push(c); syl.full += c; i++;
+          continue;
+        }
+
+        // B. ★重要★ 母音の一部として機能する子音 (ย, ว, อ) の判定
+        // 前に特定の母音がある場合、これらは末子音ではなく「母音記号」として marks に入れる
+        const currentBase = (syl.leadingV || '') + syl.marks.join('');
+        const isVowelPart = 
+          (c === 'ย' && currentBase.indexOf('เ') !== -1 && currentBase.indexOf('ี') !== -1) || // เ-ีย
+          (c === 'อ' && (currentBase.indexOf('เ') !== -1 || currentBase.indexOf('ื') !== -1)) || // เ-อ, -ือ
+          (c === 'ว' && currentBase.indexOf('ั') !== -1); // -ัว (末子音ありの形)
+
+        if (isVowelPart) {
+          syl.marks.push(c); syl.full += c; i++;
+          continue;
+        }
+        
+        break;
+      }
+
+      // 5. 末子音回収 (Greedy Loop)
+      while (i < chars.length) {
+        const c = chars[i];
+        const next = chars[i+1];
+
+        // 次が前置母音なら、今の文字は次音節の開始
+        if (leadingV.indexOf(c) !== -1) break;
+
+        // 次に母音記号（์ 以外）があるなら、今の文字は次音節の核子音
+        if (next && (vMarks.indexOf(next) !== -1 || toneMarks.indexOf(next) !== -1) && next !== '์') break;
+
+        // 吸い込み
+        syl.lastC = c; syl.full += c; i++;
+
+        // 直後に ์ や母音記号(ุ ิ 等)があるなら、それらもセットで回収（黙字道連れ）
+        while (i < chars.length && (vMarks.indexOf(chars[i]) !== -1 || toneMarks.indexOf(chars[i]) !== -1 || chars[i] === '์')) {
+          syl.marks.push(chars[i]); syl.full += chars[i]; i++;
+        }
+
+        // 基本1文字（または黙字セット）で終了
+        break;
+      }
+      syllables.push(syl);
+    }
+
+
+// 最後に、切り出した音節リストをロジック関数に渡して完成させる
+    return this.resolveLogic(syllables);
+  },
+
+
+
+  resolveLogic: function(syllables) {
+    
+// --- 解析の最後に全音節をスキャン (Logicの集約) ---
+    const lowSingles = "งนมยรลวยญณฬ";
+    syllables.forEach((syl, i) => {
+        const headChar = syl.mainC[0];
+        const cObj = ThaiMasterData.consonants[headChar] || { class: '不明' };
+        
+        syl.finalClass = cObj.class;
+        syl.isOverridden = false;
+        syl.ruleLabel = "標準";
+
+        // 1. 属性伝染・引導子音の判定
+        if (syl.mainC.startsWith('ห') && syl.mainC.length > 1) {
+            syl.finalClass = 'High'; syl.isOverridden = true; syl.ruleLabel = "ห引導";
+        } else if (i > 0) {
+            const prev = syllables[i-1];
+            // ★重要: Ro Han (รร) も属性を後ろに流すフラグを強制的に立てる
+            const isPrevOpenA = (!prev.lastC && !prev.leadingV && prev.marks.length === 0) || prev.isRoHan;
+
+            if ((prev.finalClass === 'High' || prev.finalClass === 'Mid') && 
+                isPrevOpenA && 
+                syl.finalClass === 'Low' && 
+                lowSingles.indexOf(headChar) !== -1) {
+                syl.finalClass = prev.finalClass;
+                syl.isOverridden = true;
+                syl.ruleLabel = "属性伝染";
+            }
+        }
+
+        // 2. 母音と声調の確定
+        const vRule = ThaiValidator.resolveVowel(syl);
+        const tMark = syl.marks.find(m => /[\u0E48-\u0E4B]/.test(m));
+        
+        // 基本のタイプ
+        let sType = syl.lastC ? (ThaiMasterData.terminalGroups[syl.lastC] || 'Dead') : vRule.type;
+        
+        // ★最重要: Ro Han (รร) の死音化ロジック
+        // 次の音節が存在するなら、この Ro Han は促音(Dead)扱い。これで [สรร] が低声になる。
+        if (syl.isRoHan && i + 1 < syllables.length) {
+            sType = 'Dead';
+            syl.ruleLabel = "RoHan(閉)";
+        }
+
+        // 3. 最終的な声調番号を確定
+        syl.toneNum = ThaiValidator.getToneNumber(syl.finalClass, tMark, sType, vRule.length);
+        
+        // ログ表示用にデータを同期
+        syl.sType = sType;
+        syl.vSound = syl.isRoHan ? 'a' : vRule.sound;
+        syl.vLen = vRule.length;
+    });
+    return syllables;
+}
+};
+
+/**
+ * GS_Validator: 判定ロジック
+ */
+const ThaiValidator = {
+resolveVowel: function(syl) {
+  console.log(`DEBUG: [${syl.full}] base: "${(syl.leadingV || '') + syl.marks.filter(m => !/[่้๊๋์]/.test(m)).join('')}" lastC: "${syl.lastC}"`);
+const isRoHanChar = syl.full.indexOf('รร') !== -1;
+
+  if (isRoHanChar) {
+    return { 
+      sound: 'a', 
+      length: 'short', 
+      // syl.sType が 'Dead' (resolveLogicで設定済み) なら dead を返す
+      type: (syl.sType === 'Dead') ? 'dead' : 'live' 
+    };
+  }
+    // 1. 声調記号と黙字記号を徹底除去してベースを作る
+    const pure = syl.marks.filter(m => !/[่้๊๋์]/.test(m)).join('');
+    const base = (syl.leadingV || '') + pure;
+    
+    // 2. マスタ側の symbols からもハイフンなどを除去して比較する
+    // symbols: 'เ-ีย' と base: 'เีย' を一致させるため
+    const normalize = (str) => str.replace(/[-\s]/g, '');
+
+    // 3. マスタ照合（3段構え）
+    // A: 記号 + 末子音 (เดี๋ยว のように 'ย' を含むマスタ用)
+    // B: 記号のみ
+    const withLast = base + (syl.lastC || '');
+    let rule = ThaiMasterData.vowelRules.find(r => normalize(r.symbols) === withLast) ||
+               ThaiMasterData.vowelRules.find(r => normalize(r.symbols) === base);
+
+    if (rule) {
+      // 母音の一部として 'ย' や 'ว' が食われた場合、末子音フラグを消す
+      if (normalize(rule.symbols).endsWith(syl.lastC)) {
+        syl.isVowelPart = true; 
+      }
+      return rule;
+    }
+
+    // 4. 最終フォールバック
+    if (syl.lastC && !syl.isVowelPart) {
+      return { sound: 'o', length: 'short', type: 'live' };
+    }
+    return { sound: 'a', length: 'short', type: 'dead' };
+  },
+getToneNumber: function(charClass, tMark, sType, vLength) {
+    const vLen = (vLength || 'short').toLowerCase();
+    
+    // 1. 声調記号がある場合（最優先：ここは完璧）
+    if (tMark) {
+        if (tMark === '่') return (charClass === 'Low') ? 2 : 1;
+        if (tMark === '้') return (charClass === 'Low') ? 3 : 2;
+        if (tMark === '๊') return 3;
+        if (tMark === '๋') return 4;
+    }
+
+    // 2. 無記号・生音 (Live Sound) ★ここを厳格に
+    // 母音が am, ai, ao 等、または末子音がある Live なら、何があってもここ
+    if (sType.toLowerCase() === 'live') {
+        return (charClass === 'High') ? 4 : 0; // 高級なら上声(4)、それ以外は平声(0)
+    }
+
+    // 3. 無記号・死音 (Dead Sound)
+    // 中・高級子音は一律で 低声(1)
+    if (charClass === 'High' || charClass === 'Mid') {
+        return 1;
+    }
+
+    // 4. 低級子音(Low) かつ 死音(Dead) の場合のみ、長短で分岐
+    // 短母音なら 高声(3)、長母音なら 下声(2)
+    return (vLen === 'short') ? 3 : 2;
+}
+};
+
+
+
+
+
+
+
+
+
+
 </script>

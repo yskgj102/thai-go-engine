@@ -144,10 +144,14 @@
 </button>
 
             </div>
-            <div class="relative inline-block">
-              <div id="word-th" class="thai-font text-6xl font-bold mb-4 text-center"></div>
+            <div class="relative inline-block" style="z-index: 60;"> <div id="word-th" 
+     onclick="event.stopPropagation(); StudyEngine.toggleAnalysis();" 
+     class="thai-font text-6xl font-bold mb-4 text-center cursor-pointer relative z-50">
+</div>
               <button onclick="event.stopPropagation(); StudyEngine.speak(false)" class="absolute -top-2 -left-10 text-[14px] opacity-100 p-2 active:scale-125 transition-transform">🔊</button>
             </div>
+            <div id="analysis-panel" class="hidden w-full mt-4 flex flex-wrap justify-center gap-2 px-4 select-none animate-in fade-in slide-in-from-top-2 duration-300">
+  </div>
             <div id="phonetic" class="text-sm italic mb-6" style="color: var(--text-sub)"></div>
 
             <div id="meaning-area" class="reveal-target hidden w-full pt-6 border-t text-center" style="border-color: var(--border);">
@@ -175,6 +179,7 @@
                 <button onclick="event.stopPropagation(); StudyEngine.speak(true)" class="absolute top-0 -right-2 text-[12px] opacity-100 p-1 active:scale-125 transition-transform">🔊</button>
                 <p id="ex-phonetic" class="text-[11px] italic mb-1" style="color: var(--text-sub)"></p>
               </div>
+
               <p id="ex-ja" class="text-sm font-bold opacity-70"></p>
               <div class="pt-4 border-t" style="border-color: var(--border)">
                 <p id="note" class="text-[12px] leading-relaxed whitespace-pre-wrap"></p>
@@ -215,7 +220,7 @@
       <button onclick="StudyEngine.answer(1)" class="flex-1 bg-transparent text-rose-600 py-5 rounded-2xl font-black text-[10px] border border-rose-600/30 active:scale-95 transition-all">難しい</button>
     </footer>
   </div>
-
+<?!= include('ThaiData'); ?>
 <?!= include('AppState'); ?>
   <?!= include('Bridge'); ?>
   <?!= include('ViewController'); ?>

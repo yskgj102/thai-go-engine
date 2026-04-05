@@ -1,0 +1,115 @@
+<script>
+const ThaiMasterData = {
+  consonants: {
+    'ก': { class: 'Mid', name: 'Ko Kai', sound: 'k' },
+    'ข': { class: 'High', name: 'Kho Khai', sound: 'kh' },
+    'ฃ': { class: 'High', name: 'Kho Khuat', sound: 'kh' },
+    'ค': { class: 'Low', name: 'Kho Khway', sound: 'kh' },
+    'ฅ': { class: 'Low', name: 'Kho Khon', sound: 'kh' },
+    'ฆ': { class: 'Low', name: 'Kho Rakhang', sound: 'kh' },
+    'ง': { class: 'Low', name: 'Ngo Nguu', sound: 'ng' },
+    'จ': { class: 'Mid', name: 'Cho Chan', sound: 'ch' },
+    'ฉ': { class: 'High', name: 'Cho Ching', sound: 'ch' },
+    'ช': { class: 'Low', name: 'Cho Chaang', sound: 'ch' },
+    'ซ': { class: 'Low', name: 'So Soo', sound: 's' },
+    'ฌ': { class: 'Low', name: 'Cho Choe', sound: 'ch' },
+    'ญ': { class: 'Low', name: 'Yo Ying', sound: 'y' },
+    'ฎ': { class: 'Mid', name: 'Do Chada', sound: 'd' },
+    'ฏ': { class: 'Mid', name: 'To Patak', sound: 't' },
+    'ฐ': { class: 'High', name: 'Tho Than', sound: 'th' },
+    'ฑ': { class: 'Low', name: 'Tho Montho', sound: 'th' },
+    'ฒ': { class: 'Low', name: 'Tho Phuthao', sound: 'th' },
+    'ณ': { class: 'Low', name: 'No Nen', sound: 'n' },
+    'ด': { class: 'Mid', name: 'Do Dek', sound: 'd' },
+    'ต': { class: 'Mid', name: 'To Tao', sound: 't' },
+    'ถ': { class: 'High', name: 'Tho Thung', sound: 'th' },
+    'ท': { class: 'Low', name: 'Tho Thahaan', sound: 'th' },
+    'ธ': { class: 'Low', name: 'Tho Thong', sound: 'th' },
+    'น': { class: 'Low', name: 'No Nuu', sound: 'n' },
+    'บ': { class: 'Mid', name: 'Bo Baimai', sound: 'b' },
+    'ป': { class: 'Mid', name: 'Po Plaa', sound: 'p' },
+    'ผ': { class: 'High', name: 'Pho Phueng', sound: 'ph' },
+    'ฝ': { class: 'High', name: 'Fo Faa', sound: 'f' },
+    'พ': { class: 'Low', name: 'Pho Phan', sound: 'ph' },
+    'ฟ': { class: 'Low', name: 'Fo Fan', sound: 'f' },
+    'ภ': { class: 'Low', name: 'Pho Samphao', sound: 'ph' },
+    'ม': { class: 'Low', name: 'Mo Maa', sound: 'm' },
+    'ย': { class: 'Low', name: 'Yo Yak', sound: 'y' },
+    'ร': { class: 'Low', name: 'Ro Ruea', sound: 'r' },
+    'ล': { class: 'Low', name: 'Lo Ling', sound: 'l' },
+    'ว': { class: 'Low', name: 'Wo Waen', sound: 'w' },
+    'ศ': { class: 'High', name: 'So Sala', sound: 's' },
+    'ษ': { class: 'High', name: 'So Ruesi', sound: 's' },
+    'ส': { class: 'High', name: 'So Suea', sound: 's' },
+    'ห': { class: 'High', name: 'Ho Hip', sound: 'h' },
+    'ฬ': { class: 'Low', name: 'Lo Chula', sound: 'l' },
+    'อ': { class: 'Mid', name: 'O Ang', sound: '-' },
+    'ฮ': { class: 'Low', name: 'Ho Nok-huk', sound: 'h' },
+    'ฤ': { class: 'Low', name: 'Rue', sound: 'rɯ' },
+  },
+
+  // vowelRules に追加・上書き（最長一致のため、記号が多い順に並べること）
+  vowelRules: [
+    // vowelRules の最初に追加
+{ symbols: 'เีย', sound: 'ia', length: 'long', type: 'live' },
+{ symbols: 'เือ', sound: 'ɯa', length: 'long', type: 'live' },
+{ symbols: 'ัว',  sound: 'ua', length: 'long', type: 'live' },
+    // --- 3文字セット ---
+    { symbols: 'เีย', sound: 'ia', length: 'long', type: 'live' }, // diaw (เดี๋ยว) 等
+    { symbols: 'เือ', sound: 'ɯa', length: 'long', type: 'live' }, // muean (เหมือน) 等
+    
+    // --- 2文字セット ---
+    { symbols: 'เาะ', sound: 'ɔ',  length: 'short', type: 'dead' },
+    { symbols: 'เิ',  sound: 'əə', length: 'long', type: 'live' },
+    { symbols: 'เะ',  sound: 'e',   length: 'short', type: 'dead' },
+    { symbols: 'แะ',  sound: 'ɛ',   length: 'short', type: 'dead' },
+    { symbols: 'โะ',  sound: 'o',   length: 'short', type: 'dead' },
+    { symbols: 'ัว',  sound: 'ua', length: 'long', type: 'live' }, // 末子音がない時の ua
+    { symbols: 'เา',  sound: 'ao', length: 'long', type: 'live' },
+    
+    // --- 特殊母音（末子音ありで形が変わるもの） ---
+    
+    { symbols: 'ั',   sound: 'a',   length: 'short', type: 'dead' }, // c-a-c
+    { symbols: 'ิ',   sound: 'i',   length: 'short', type: 'dead' },
+    { symbols: 'ึ',   sound: 'ɯ',   length: 'short', type: 'dead' },
+    { symbols: 'ุ',   sound: 'u',   length: 'short', type: 'dead' },
+    { symbols: '็',   sound: 'e',   length: 'short', type: 'dead' }, // 短母音化記号 (เ-็)
+    { symbols: 'ี',   sound: 'ii',  length: 'long',  type: 'live' },
+    { symbols: 'ื',   sound: 'ɯɯ',  length: 'long',  type: 'live' },
+    { symbols: 'ู',   sound: 'uu',  length: 'long',  type: 'live' },
+    { symbols: 'เ',   sound: 'ee',  length: 'long',  type: 'live' },
+    { symbols: 'แ',   sound: 'ɛɛ',  length: 'long',  type: 'live' },
+    { symbols: 'โ',   sound: 'oo',  length: 'long',  type: 'live' },
+    { symbols: 'อ',   sound: 'ɔɔ',  length: 'long',  type: 'live' },
+    { symbols: 'า',   sound: 'aa',  length: 'long',  type: 'live' },
+    { symbols: 'ำ',   sound: 'am',  length: 'short', type: 'live' },
+    { symbols: 'ใ',   sound: 'ai',  length: 'short', type: 'live' },
+    { symbols: 'ไ',   sound: 'ai',  length: 'short', type: 'live' },
+    { symbols: 'ะ',   sound: 'a',   length: 'short', type: 'dead' }
+  ],
+
+  terminalGroups: {
+    'ก': 'Dead', 'ข': 'Dead', 'ค': 'Dead', 'ฆ': 'Dead',
+    'ง': 'Live', 'น': 'Live', 'ณ': 'Live', 'ญ': 'Live', 'ร': 'Live', 'ล': 'Live', 'ฬ': 'Live',
+    'บ': 'Dead', 'ป': 'Dead', 'พ': 'Dead', 'ฟ': 'Dead', 'ภ': 'Dead',
+    'ม': 'Live', 'ย': 'Live', 'ว': 'Live',
+    'ด': 'Dead', 'ต': 'Dead', 'ถ': 'Dead', 'ท': 'Dead', 'ธ': 'Dead', 'ส': 'Dead', 'ศ': 'Dead', 'ษ': 'Dead'
+  },
+
+  toneMap: {
+    0: { mark: '', label: '平声 (Mid)', color: 'text-white/40' },
+    1: { mark: '̀', label: '低声 (Low)', color: 'text-rose-300' },
+    2: { mark: '̂', label: '下声 (Falling)', color: 'text-orange-300' },
+    3: { mark: '́', label: '高声 (High)', color: 'text-cyan-300' },
+    4: { mark: '̌', label: '上声 (Rising)', color: 'text-yellow-300' }
+  },
+
+  classColors: {
+    'Low': 'text-blue-400',
+    'Mid': 'text-green-400',
+    'High': 'text-red-400',
+    '不明': 'text-white/30'
+  }
+};
+
+</script>
