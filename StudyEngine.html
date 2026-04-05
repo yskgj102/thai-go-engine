@@ -316,63 +316,58 @@ renderHeatmap: function() {
     window.open(url, '_blank');
     ViewController.showToast(`Searching "${word}" on GotThai...`, "success");
   },
-renderContextLinks: function(rawText, targetElementId, excludeId) {
+
+
+
+  renderContextLinks: function(rawText, targetElementId, excludeId) {
   const targetEl = document.getElementById(targetElementId);
   if (!rawText || !targetEl) return;
 
   let text = rawText;
-  
-  // 1. 長い単語から順にソート（重要：長い方を先に確定させる）
   const sortedVocabs = [...AppStore.state.allVocab]
     .filter(v => v.word_th && v.word_th.length > 1 && v.id !== excludeId)
     .sort((a, b) => b.word_th.length - a.word_th.length);
 
   const map = new Map();
 
-sortedVocabs.forEach((v, index) => {
-  if (text.includes(v.word_th)) {
-    const placeholder = `__VOCAB_${index}__`;
-    const meaning = v.meaning_ja.replace(/"/g, '&quot;');
-    
-    // ★ ポイント：onclick を外して、TIPの中に「ジャンプ用ボタン」を仕込む
-    // もしくは、親の onclick を「1回目はTIP表示、2回目でジャンプ」にする
-    const linkHtml = `
-      <span class="context-link" 
-            data-meaning="${meaning}" 
-            onclick="event.stopPropagation(); StudyEngine.handleContextClick(this, '${v.id}')">
-        ${v.word_th}
-      </span>`;
+  sortedVocabs.forEach((v, index) => {
+    if (text.includes(v.word_th)) {
+      const placeholder = `__VOCAB_${index}__`;
+      const meaning = v.meaning_ja.replace(/"/g, '&quot;');
       
-    map.set(placeholder, linkHtml);
-    text = text.split(v.word_th).join(placeholder);
-  }
-});
+      // 余計なタグは入れず、onclick のハンドラだけを StudyEngine.handleContextClick に変更
+      const linkHtml = `<span class="context-link" data-meaning="${meaning}" onclick="event.stopPropagation(); StudyEngine.handleContextClick(this, '${v.id}')">${v.word_th}</span>`;
+      
+      map.set(placeholder, linkHtml);
+      text = text.split(v.word_th).join(placeholder);
+    }
+  });
 
-  // 5. 最後にプレースホルダーを実際のHTMLに戻す
   map.forEach((html, placeholder) => {
     text = text.split(placeholder).join(html);
   });
 
+  // 改行を維持して流し込む
   targetEl.innerHTML = text;
 },
 
 /**
-   * コンテキストリンクの制御：1回目でTIP確認、2回目でジャンプ
-   */
-  handleContextClick: function(el, id) {
-    // すでに「確認中」の状態ならジャンプを実行
-    if (el.classList.contains('is-confirming')) {
-      this.jumpToWordFromId(id);
-      el.classList.remove('is-confirming');
-    } else {
-      // 1回目：他のリンクの「確認中」を解除してから、自分を「確認中」にする
-      document.querySelectorAll('.context-link').forEach(l => l.classList.remove('is-confirming'));
-      el.classList.add('is-confirming');
-      
-      // 数秒放置したら「確認中」を自動解除（お好みで）
-      setTimeout(() => el.classList.remove('is-confirming'), 3000);
-    }
-  },
+ * 2クリック遷移のロジック（ここだけ追加）
+ */
+handleContextClick: function(el, id) {
+  if (el.classList.contains('is-confirming')) {
+    // 2回目：ジャンプ
+    this.jumpToWordFromId(id);
+    el.classList.remove('is-confirming');
+  } else {
+    // 1回目：他を消して自分を「確認中」にする（これでCSSのTIPが出る）
+    document.querySelectorAll('.context-link').forEach(l => l.classList.remove('is-confirming'));
+    el.classList.add('is-confirming');
+    
+    // 3秒後に自動解除
+    setTimeout(() => el.classList.remove('is-confirming'), 3000);
+  }
+}
 
 };
 </script>
