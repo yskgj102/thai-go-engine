@@ -35,7 +35,10 @@ const StudyEngine = {
     // 解説文の中にタイ語が含まれていれば、それも自動でチップになります
     this.renderContextLinks(item.explanation, 'note', item.id);
     // this.renderContextLinks(item.explanation, 'ex-ja', item.id);
-// --- StudyEngine.render 内 ---
+
+    // ★ 追加：逆引き（この単語を引用している他のカード）を表示
+    // 第一引数に「今のタイ語単語」、第二引数に「今のID（自分を除外するため）」を渡す
+    this.renderReferences(item.word_th, item.id);
     
 // ★ render は「今のカードを表示した瞬間」の見た目を整えるだけに留める
     const btn = document.getElementById('bookmark-btn');
@@ -378,6 +381,35 @@ handleContextClick: function(el, id) {
     // 3秒後に自動解除
     setTimeout(() => el.classList.remove('is-confirming'), 3000);
   }
+},
+/**
+ * この単語を「解説」や「例文」に含んでいる他の単語を抽出する
+ */
+renderReferences: function(currentWordTh, currentId) {
+  const refListEl = document.getElementById('reference-list');
+  if (!refListEl) return;
+
+  // 全単語の中から、解説文(explanation)に今の単語が含まれているものを探す
+  const refs = AppStore.state.allVocab.filter(v => 
+    v.id !== currentId && 
+    (v.explanation.includes(currentWordTh) || v.example_th.includes(currentWordTh))
+  );
+
+  if (refs.length === 0) {
+    refListEl.innerHTML = ""; // なければ非表示
+    return;
+  }
+
+  // 小さなチップ（またはリスト）として表示
+  let html = `<div class="text-xs text-gray-500 mt-4 mb-2">この単語が登場する他のカード:</div>`;
+  html += `<div class="flex flex-wrap gap-2">`;
+  refs.forEach(r => {
+    html += `<span class="px-2 py-1 bg-gray-100 rounded-full text-xs cursor-pointer hover:bg-blue-100" 
+              onclick="StudyEngine.jumpToWordFromId('${r.id}')">${r.word_th}</span>`;
+  });
+  html += `</div>`;
+  
+  refListEl.innerHTML = html;
 }
 
 };
