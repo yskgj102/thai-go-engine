@@ -461,31 +461,53 @@ body:not(.light-mode) .category-btn {
   opacity: 1 !important;
   pointer-events: auto !important;
 }
-
-
-
-/* リンクの基本（コピー可能、自然な見た目） */
+/* --- コンテキストリンク：基本（下線を極限まで薄く） --- */
 .context-link {
   position: relative;
   display: inline; 
   color: inherit;
   text-decoration: none;
-  border-bottom: 1px dotted rgba(96, 165, 250, 0.4);
+  /* 下線はドットで非常に薄くしておき、文字の邪魔をしない */
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.1); 
   cursor: pointer;
-  /* コピーを許可するため user-select は設定しない（または auto） */
-  -webkit-user-select: auto;
-  user-select: auto;
+  transition: all 0.2s ease;
 }
 
-/* 1回クリックした時（確認中）：青いハイライトとTIP */
+.light-mode .context-link {
+  border-bottom: 1px dotted rgba(0, 0, 0, 0.1);
+}
+
+/* --- 【自分自身】のスタイル：文字自体を青くする --- */
+.context-link.is-self {
+  border-bottom: none !important; /* 下線は消す */
+  color: #60a5fa !important;     /* 文字を直接青く */
+  font-weight: 800 !important;
+  text-shadow: 0 0 8px rgba(96, 165, 250, 0.3); /* ほんのり発光 */
+}
+
+/* --- 【通常リンク】タップ時のハイライト：背景を塗る --- */
 .context-link.is-confirming {
-  background-color: rgba(59, 130, 246, 0.2) !important; /* さっきの加工のような青背景 */
-  color: #3b82f6 !important;
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  color: #60a5fa !important;
   border-radius: 4px;
-  border-bottom: 1.5px solid #3b82f6;
 }
 
-/* TIPの表示（以前の正常なスタイル） */
+/* --- 【自分自身】タップ時のハイライト：文字をさらに鮮やかに --- */
+.context-link.is-self.is-confirming {
+  background-color: rgba(59, 130, 246, 0.25) !important;
+  color: #ffffff !important; /* 文字を白抜きにして「選択」を強調 */
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); /* 発光を強める */
+}
+
+/* ライトモード時の調整 */
+.light-mode .context-link.is-self {
+  color: #2563eb !important; /* 少し濃い青 */
+  text-shadow: none;
+}
+.light-mode .context-link.is-self.is-confirming {
+  color: #ffffff !important;
+}
+/* --- TIPの表示（デザイン維持） --- */
 .context-link.is-confirming::after {
   content: attr(data-meaning);
   position: absolute;
@@ -501,16 +523,5 @@ body:not(.light-mode) .category-btn {
   z-index: 10000;
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   pointer-events: none;
-}
-/* 自分自身のリンク：他の単語より少しだけ強調 */
-.context-link.is-self {
-  font-weight: bold; /* 少し太く */
-  color: #3b82f6;   /* 青文字にして「自分」であることを明示 */
-}
-
-/* 自分自身をタップした時のハイライト（さらに濃く） */
-.context-link.is-self.is-confirming {
-  background-color: rgba(59, 130, 246, 0.3) !important;
-  outline: 1px solid rgba(59, 130, 246, 0.5);
 }
 </style>
