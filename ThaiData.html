@@ -67,7 +67,12 @@ const ThaiMasterData = {
 },
   // vowelRules に追加・上書き（最長一致のため、記号が多い順に並べること）
   vowelRules: [
-
+    { symbols: 'าญจน์', sound: 'aa', length: 'long', type: 'live' }, // กาญจน์ 用
+    { symbols: 'าสตร์', sound: 'aa', length: 'long', type: 'live' }, // ศาสตร์ (科学) 用
+    { symbols: '์',      sound: '',   length: '',     type: ''     }, // 単独の黙字記号（念のため）
+{ symbols: 'าย',  sound: 'aai', length: 'long', type: 'live' }, // 'อาย' 用
+    { symbols: 'าว',  sound: 'aao', length: 'long', type: 'live' }, // 'หิว' などの対抗
+    { symbols: 'เียว', sound: 'iao', length: 'long', type: 'live' }, // 'เดียว' 用
     { symbols: 'เ็',  sound: 'e',   length: 'short', type: 'dead' },
 { symbols: 'แ็',  sound: 'ɛ',   length: 'short', type: 'dead' },
 { symbols: 'เิ',  sound: 'əə',  length: 'long',  type: 'live' },
@@ -110,6 +115,8 @@ const ThaiMasterData = {
   ],
 
   terminalGroups: {
+    'จน์': 'Live', // 黙字を含んだ末子音（音は出さないが、ญ の Live 判定を邪魔させない）
+    'น์': 'Live',
     'ก': 'Dead', 'ข': 'Dead', 'ค': 'Dead', 'ฆ': 'Dead',
     'ง': 'Live', 'น': 'Live', 'ณ': 'Live', 'ญ': 'Live', 'ร': 'Live', 'ล': 'Live', 'ฬ': 'Live',
     'บ': 'Dead', 'ป': 'Dead', 'พ': 'Dead', 'ฟ': 'Dead', 'ภ': 'Dead',

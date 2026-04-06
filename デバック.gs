@@ -463,33 +463,32 @@ if (syl.isRoHan) {
 }
         syl.vLen = vRule.length;
 
-        // --- 🔊 【ロジック層での発音記号導出】 ---
 // --- 🔊 【ロジック層での発音記号導出】 ---
-        const tObj = ThaiMasterData.toneMap[syl.toneNum] || { mark: "" };
+// 1. まず必要なパーツをすべて定義する
+// --- 🔊 【発音記号の導出と組み立て】 ---
         
-        let baseSound = "";
-        const headStr = syl.mainC;
+        // 1. パーツの定義（すべて揃える）
+        const displayToneObj = ThaiMasterData.toneMap[syl.toneNum] || { mark: "" };
+        const toneDisplayMark = displayToneObj.mark || ""; // 声調記号
 
-        // 1. マスタ(clusters)を最優先で引く（'ตร' -> 'tr'）
-        if (ThaiMasterData.clusters[headStr]) {
-            baseSound = ThaiMasterData.clusters[headStr].sound;
-        } 
-        // 2. 引導子音(ห/อ)の場合は2文字目を採用 (既存ロジック)
-        else if (headStr.length > 1 && (headStr[0] === 'ห' || headStr[0] === 'อ')) {
-            baseSound = ThaiMasterData.consonants[headStr[1]]?.sound || "";
-        } 
-        // 3. 通常の単独子音
-        else {
-            baseSound = ThaiMasterData.consonants[headStr[0]]?.sound || "";
+        const pInitial = (syl.pInitial || "").toLowerCase(); // 頭子音
+        const pVowelSound = (syl.vSound || "").toLowerCase(); // 母音
+
+        // ★ ReferenceError の原因：この定義が syl.derived より上に必要
+        const pFinalClean = (syl.lastC) 
+            ? (ThaiMasterData.consonants[syl.lastC]?.final || "").toLowerCase() 
+            : "";
+
+        // 2. 母音の1文字目に声調記号を差し込む (sɔɔ -> sɔ́ɔ)
+        let vWithTone = "";
+        if (pVowelSound.length > 0) {
+            vWithTone = pVowelSound[0] + toneDisplayMark + pVowelSound.substring(1);
+        } else {
+            vWithTone = toneDisplayMark; 
         }
 
-        syl.pInitial = baseSound.toLowerCase();
-
-        // 4. 全体発音の組み立て（母音の直後に声調記号を置く [ sà-nùk ] 形式）
-        const pVowel = (syl.vSound || "").toLowerCase();
-        const pFinalClean = (syl.lastC) ? (ThaiMasterData.consonants[syl.lastC]?.final || "").toLowerCase() : "";
-        
-        syl.derived = syl.pInitial + pVowel + tObj.mark + pFinalClean;
+        // 3. 最終的な組み立て（ここで全ての変数が揃っている状態）
+        syl.derived = pInitial + vWithTone + pFinalClean;
         
     });
 
@@ -768,7 +767,9 @@ const ThaiMasterData = {
 },
   // vowelRules に追加・上書き（最長一致のため、記号が多い順に並べること）
   vowelRules: [
-
+{ symbols: 'าย',  sound: 'aai', length: 'long', type: 'live' }, // 'อาย' 用
+    { symbols: 'าว',  sound: 'aao', length: 'long', type: 'live' }, // 'หิว' などの対抗
+    { symbols: 'เียว', sound: 'iao', length: 'long', type: 'live' }, // 'เดียว' 用
     { symbols: 'เ็',  sound: 'e',   length: 'short', type: 'dead' },
 { symbols: 'แ็',  sound: 'ɛ',   length: 'short', type: 'dead' },
 { symbols: 'เิ',  sound: 'əə',  length: 'long',  type: 'live' },

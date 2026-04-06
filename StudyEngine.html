@@ -969,10 +969,29 @@ if (syl.isRoHan) {
         syl.pInitial = baseSound.toLowerCase();
 
         // 4. 全体発音の組み立て（母音の直後に声調記号を置く [ sà-nùk ] 形式）
-        const pVowel = (syl.vSound || "").toLowerCase();
-        const pFinalClean = (syl.lastC) ? (ThaiMasterData.consonants[syl.lastC]?.final || "").toLowerCase() : "";
-        
-        syl.derived = syl.pInitial + pVowel + tObj.mark + pFinalClean;
+// --- 🔊 【ロジック層での発音記号導出】 ---
+        // 1. パーツの定義（すべて揃える）
+        const displayToneObj = ThaiMasterData.toneMap[syl.toneNum] || { mark: "" };
+        const toneDisplayMark = displayToneObj.mark || ""; // 声調記号
+
+        const pInitial = (syl.pInitial || "").toLowerCase(); // 頭子音
+        const pVowelSound = (syl.vSound || "").toLowerCase(); // 母音
+
+        // ★ ReferenceError の原因：この定義が syl.derived より上に必要
+        const pFinalClean = (syl.lastC) 
+            ? (ThaiMasterData.consonants[syl.lastC]?.final || "").toLowerCase() 
+            : "";
+
+        // 2. 母音の1文字目に声調記号を差し込む (sɔɔ -> sɔ́ɔ)
+        let vWithTone = "";
+        if (pVowelSound.length > 0) {
+            vWithTone = pVowelSound[0] + toneDisplayMark + pVowelSound.substring(1);
+        } else {
+            vWithTone = toneDisplayMark; 
+        }
+
+        // 3. 最終的な組み立て（ここで全ての変数が揃っている状態）
+        syl.derived = pInitial + vWithTone + pFinalClean;
         
     });
 
@@ -1052,7 +1071,19 @@ syllables.forEach((syl, i) => {
                 const pHead = (prev.mainC.length > 1 && (prev.mainC[0] === 'ห' || prev.mainC[0] === 'อ')) ? prev.mainC[1] : prev.mainC[0];
                 const pInit = (ThaiMasterData.consonants[pHead]?.sound || "").toLowerCase();
                 const pFinal = (ThaiMasterData.consonants[prev.lastC]?.final || "").toLowerCase();
-                prev.derived = pInit + (recV.sound || "").toLowerCase() + tObj.mark + pFinal;
+                // ★ここから修正
+const pVowel = (recV.sound || "").toLowerCase();
+const toneMark = tObj.mark || "";
+
+let vWithTone = "";
+if (pVowel.length > 0) {
+    // 1文字目に声調記号を差し込む
+    vWithTone = pVowel[0] + toneMark + pVowel.substring(1);
+} else {
+    vWithTone = toneMark;
+}
+
+prev.derived = pInit + vWithTone + pFinal;
                 // 4. 履歴を記録して削除
                 history.push(`[${beforeStr} → ${prev.full}]`);
                 syllables.splice(j, 1);
@@ -1070,6 +1101,8 @@ syllables.forEach((syl, i) => {
                 }
             });
 
+
+
             // メタデータの更新
             syllables.meta.isReliable = false; // 依然として「100%確実」ではないので false を維持
             syllables.meta.warnings = [
@@ -1080,7 +1113,69 @@ syllables.forEach((syl, i) => {
         }
 
     }
+// --- 🕵️ 最終診断：属性伝染・暗黙o の地雷原をチェック ---
+// --- 🕵️ 最終診断：属性伝染・暗黙o の地雷原をチェック ---
+for (let i = 0; i < syllables.length - 1; i++) {
+    const current = syllables[i];
+    const next = syllables[i + 1];
 
+    // ガード：チップが存在しない、またはメイン文字がない場合はスキップ
+    if (!current?.mainC?.[0] || !next?.full) continue;
+
+    // ① 前のチップの開始文字のクラスを確認
+    const firstChar = current.mainC[0];
+    const charData = ThaiMasterData.consonants[firstChar];
+    
+    // マスタに存在しない文字（記号など）はスキップ
+    if (!charData) continue;
+
+    const charClass = charData.class;
+    const isHighOrMid = (charClass === 'High' || charClass === 'Mid');
+
+    // ② 次のチップが「母音記号なし」かつ「2文字以上（จน์ や นก など）」かチェック
+    // next.marks が存在しない、または空配列であることを確認
+    const hasNoMarks = !next.marks || next.marks.length === 0;
+    
+    // 暗黙の o (子音2つ並び) の判定
+    // current が高/中級で、next が母音記号なしの2文字以上なら「地雷」
+    const isImplicitO = hasNoMarks && next.full.length >= 2;
+
+// 【追加：3連続子音の地雷原チェック】
+    // 例：[ถ][นน] のように分かれるべきが [ถน][น] になっているケース
+    const totalChars = current.full.length + next.full.length;
+    const hasAnyMark = current.marks.length > 0 || next.marks.length > 0;
+    const hasAnyLeadingV = current.leadingV || next.leadingV;
+
+    // 母音記号が一切なく、合計3文字以上の子音が並んでいる場合
+    if (totalChars >= 3 && !hasAnyMark && !hasAnyLeadingV) {
+        current.confidence = "LOW";
+        next.confidence = "LOW";
+        next.ruleLabel = "3連子音/分割注意";
+        
+        if (syllables.meta && syllables.meta.warnings) {
+            syllables.meta.warnings.push(`⚠️ [${current.full}${next.full}]: 暗黙の母音(a/o)の境界が不明瞭です。`);
+        }
+    }
+    if (isHighOrMid && isImplicitO) {
+        // 判定の上書き：分割ミスの可能性が極めて高い（例：กาญ-จน์）
+        next.confidence = "LOW"; 
+        next.ruleLabel = "属性伝染/分割疑い";
+        
+        // 前のチップも注意喚起のために黄色（MID）へ
+        if (current.confidence !== "LOW") {
+            current.confidence = "MID";
+        }
+        
+        // メタデータの警告リストに通知を追加
+        if (syllables.meta && syllables.meta.warnings) {
+            const warnMsg = `⚠️ [${current.full}${next.full}]: 分割ミス（属性伝染/暗黙o）の可能性があります`;
+            if (!syllables.meta.warnings.includes(warnMsg)) {
+                syllables.meta.warnings.push(warnMsg);
+            }
+            syllables.meta.isReliable = false;
+        }
+    }
+}
     return syllables;
   }
 };
