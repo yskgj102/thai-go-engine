@@ -303,11 +303,11 @@ const ViewController = {
     const mapping = {
       'word-th': isThai ? (item.word_th || '---') : (item.meaning_ja || '---'),
       'meaning': isThai ? (item.meaning_ja || '---') : (item.word_th || '---'),
-      'phonetic': isThai ? (item.phonetic || '---'):(item.word_kana || '---'),
+      'phonetic': isThai ? (item.phonetic || '---'):(item.meaning_kana || '---'),
       'category': item.category || '---',
-      'ex-th': isThai ? (item.example_th || '---'):(item.example_ja || '---'),
-      'ex-phonetic': isThai ? (item.example_phonetic || '---'): '',
-      'ex-ja':  isThai ? (item.example_ja || '---'):(item.example_th || '---'),
+      'ex-th': item.example_th || '---',
+      'ex-phonetic': item.example_phonetic || '---',
+      'ex-ja':  item.example_ja || '---',
       'note': item.explanation || ''
     };
 
