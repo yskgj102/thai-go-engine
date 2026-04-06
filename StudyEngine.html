@@ -532,7 +532,18 @@ if (meta.isDict) {
     </div>`;
 }
 
-panel.insertAdjacentHTML('beforeend', statusHTML);;
+// ★最重要：ステータスバーのすぐ下に「隠し入力欄」を配置
+const editorPanel = `
+<div id="editor-${item.id}" class="hidden w-full mb-3 p-2 bg-slate-100 dark:bg-slate-800/50 rounded-lg border border-blue-500/30 flex gap-2 items-center animate-in fade-in slide-in-from-top-1">
+    <input type="text" id="input-${item.id}" 
+           class="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 p-2 rounded text-slate-900 dark:text-white thai-font text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+           placeholder="スペース区切りで入力 (例: รัด ถะ บาน)"
+           onkeydown="if(event.key==='Enter') saveSplit('${item.id}')">
+    <button onclick="saveSplit('${item.id}')" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-[11px] font-bold shadow-lg shadow-blue-900/20">保存</button>
+</div>
+`;
+
+panel.insertAdjacentHTML('beforeend', statusHTML + editorPanel);
 
     const wrapper = document.createElement('div');
     // 構造は変えず、paddingとgapを微調整してスキャンしやすく
@@ -601,8 +612,6 @@ const finalSound = finalChar ? (ThaiMasterData.consonants[finalChar]?.final || T
 
 
 };
-
-
 
 
 /**
