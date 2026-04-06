@@ -303,9 +303,9 @@ const ViewController = {
     const mapping = {
       'word-th': isThai ? (item.word_th || '---') : (item.meaning_ja || '---'),
       'meaning': isThai ? (item.meaning_ja || '---') : (item.word_th || '---'),
-      'phonetic': item.phonetic || '---',
+      'phonetic': isThai ? (item.phonetic || '---'):(item.word_kana || '---')
       'category': item.category || '---',
-      'ex-th': item.example_th || '---',
+      'ex-th': isThai ?  isThai ? (item.example_th || '---'):(item.example_ja || '---')
       'ex-phonetic': item.example_phonetic || '---',
       'ex-ja': item.example_ja || '',
       'note': item.explanation || ''
