@@ -346,28 +346,58 @@ reGenerate: function(id) {
     // 手応えとしての振動
     if (window.navigator.vibrate) window.navigator.vibrate(5);
   },
+executeSaveSplit: function(id) {
+    const input = document.getElementById(`input-${id}`);
+    if (!input) return;
 
+    // スペース区切りを掃除
+    const rawVal = input.value.replace(/　/g, ' ').replace(/\s+/g, ' ').trim();
+    
+    let jsonStr = null;
+    let splitArray = null;
 
-  /**
- * スプレッドシートの custom_split 列を特定IDで更新する
- */
-updateCustomSplitInSheet: function(id, jsonValue) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName("シート1"); // シート名は適宜変更
-  const data = sheet.getDataRange().getValues();
-  const header = data[0];
-  
-  const idColIdx = header.indexOf("id");
-  const splitColIdx = header.indexOf("custom_split");
-
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][idColIdx] === id) {
-      // ピンポイントでセルを更新
-      sheet.getRange(i + 1, splitColIdx + 1).setValue(jsonValue);
-      return { status: "success" };
+    if (rawVal === "") {
+        // 【重要】空入力なら削除（null）として扱う
+        jsonStr = null; 
+        splitArray = null;
+    } else {
+        // 入力があれば通常通り配列化
+        splitArray = rawVal.split(' ');
+        jsonStr = JSON.stringify(splitArray);
     }
-  }
-  return { status: "error", message: "ID not found" };
-},
+
+    ViewController.applyGlobalLock("Updating Dictionary...", true);
+
+    google.script.run
+      .withSuccessHandler(res => {
+        ViewController.releaseLocks();
+        if (res && res.status === "success") {
+          // 1. メモリ上のデータを更新
+          const item = AppStore.state.allVocab.find(v => String(v.id) === String(id));
+          if (item) {
+            // custom_split を新データ（またはnull）で上書き
+            item.custom_split = splitArray; 
+            
+            // 現在のアイテムも同期
+            if (String(AppStore.state.currentItemId) === String(id)) {
+              AppStore.state.currentItem = item;
+            }
+
+            // 2. 再描画（これで、nullなら「緑色/正常」、値ありなら「青色/辞書」に切り替わる）
+            StudyEngine.renderAnalysis(); 
+            
+            const msg = splitArray ? "Updated successfully!" : "Custom split deleted.";
+            ViewController.showToast(msg, "success");
+          }
+        } else {
+          ViewController.showToast("Save failed.", "error");
+        }
+      })
+      .withFailureHandler(err => {
+        ViewController.releaseLocks();
+        ViewController.showToast("Network Error.", "error");
+      })
+      .updateCustomSplit(id, jsonStr); 
+  },
 };
 </script>

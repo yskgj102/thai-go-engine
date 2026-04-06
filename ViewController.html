@@ -359,7 +359,22 @@ const ViewController = {
     if (!area) return;
     const isOpening = area.classList.toggle('hidden');
     if (!isOpening) StudyEngine.renderHeatmap();
-  }
+  },
+
+  /**
+   * カスタム分割エディタの表示切り替え
+   */
+  toggleSplitEditor: function(id) {
+    const el = document.getElementById(`editor-${id}`);
+    if (el) {
+      const isHidden = el.classList.toggle('hidden');
+      if (!isHidden) {
+        const input = document.getElementById(`input-${id}`);
+        // 現在の解析がエラーなら、ヒントとして現在の単語を適当に割って入れるなどの処理も可能
+        if (input) input.focus();
+      }
+    }
+  },
 };
 
 /**

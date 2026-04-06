@@ -226,3 +226,41 @@ function scanDbForWarnings() {
 
   console.log("🏁 === SCAN COMPLETE ===");
 }
+/**
+ * カスタム分割データをスプレッドシートに保存する
+ * @param {string} id - 単語のID
+ * @param {string} splitArrayJson - JSON文字列化した分割配列 (例: '["รัด","ถะ","บาน"]')
+ */
+function updateCustomSplit(id, splitArrayJson) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName("m_vocabulary"); // ★実際のシート名が 'words' か確認してください
+    const data = sheet.getDataRange().getValues();
+    const header = data[0];
+    
+    // ID列と custom_split列のインデックスを探す
+    const idColIdx = header.indexOf("id");
+    const splitColIdx = header.indexOf("custom_split");
+
+    if (idColIdx === -1 || splitColIdx === -1) {
+      throw new Error("ID列またはcustom_split列が見つかりません。シートのヘッダーを確認してください。");
+    }
+
+    // IDが一致する行を特定して書き込み
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][idColIdx].toString() === id.toString()) {
+        // スプレッドシートの Range は 1始まりなので +1
+        sheet.getRange(i + 1, splitColIdx + 1).setValue(splitArrayJson);
+        
+        return { 
+          status: "success", 
+          message: "Saved to row " + (i + 1) 
+        };
+      }
+    }
+    return { status: "error", message: "ID not found: " + id };
+  } catch (e) {
+    console.error("updateCustomSplit Error:", e.toString());
+    return { status: "error", message: e.toString() };
+  }
+}
