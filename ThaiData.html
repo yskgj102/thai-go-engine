@@ -1,62 +1,73 @@
 <script>
 const ThaiMasterData = {
-  consonants: {
-    'ก': { class: 'Mid', name: 'Ko Kai', sound: 'k' },
-    'ข': { class: 'High', name: 'Kho Khai', sound: 'kh' },
-    'ฃ': { class: 'High', name: 'Kho Khuat', sound: 'kh' },
-    'ค': { class: 'Low', name: 'Kho Khway', sound: 'kh' },
-    'ฅ': { class: 'Low', name: 'Kho Khon', sound: 'kh' },
-    'ฆ': { class: 'Low', name: 'Kho Rakhang', sound: 'kh' },
-    'ง': { class: 'Low', name: 'Ngo Nguu', sound: 'ng' },
-    'จ': { class: 'Mid', name: 'Cho Chan', sound: 'ch' },
-    'ฉ': { class: 'High', name: 'Cho Ching', sound: 'ch' },
-    'ช': { class: 'Low', name: 'Cho Chaang', sound: 'ch' },
-    'ซ': { class: 'Low', name: 'So Soo', sound: 's' },
-    'ฌ': { class: 'Low', name: 'Cho Choe', sound: 'ch' },
-    'ญ': { class: 'Low', name: 'Yo Ying', sound: 'y' },
-    'ฎ': { class: 'Mid', name: 'Do Chada', sound: 'd' },
-    'ฏ': { class: 'Mid', name: 'To Patak', sound: 't' },
-    'ฐ': { class: 'High', name: 'Tho Than', sound: 'th' },
-    'ฑ': { class: 'Low', name: 'Tho Montho', sound: 'th' },
-    'ฒ': { class: 'Low', name: 'Tho Phuthao', sound: 'th' },
-    'ณ': { class: 'Low', name: 'No Nen', sound: 'n' },
-    'ด': { class: 'Mid', name: 'Do Dek', sound: 'd' },
-    'ต': { class: 'Mid', name: 'To Tao', sound: 't' },
-    'ถ': { class: 'High', name: 'Tho Thung', sound: 'th' },
-    'ท': { class: 'Low', name: 'Tho Thahaan', sound: 'th' },
-    'ธ': { class: 'Low', name: 'Tho Thong', sound: 'th' },
-    'น': { class: 'Low', name: 'No Nuu', sound: 'n' },
-    'บ': { class: 'Mid', name: 'Bo Baimai', sound: 'b' },
-    'ป': { class: 'Mid', name: 'Po Plaa', sound: 'p' },
-    'ผ': { class: 'High', name: 'Pho Phueng', sound: 'ph' },
-    'ฝ': { class: 'High', name: 'Fo Faa', sound: 'f' },
-    'พ': { class: 'Low', name: 'Pho Phan', sound: 'ph' },
-    'ฟ': { class: 'Low', name: 'Fo Fan', sound: 'f' },
-    'ภ': { class: 'Low', name: 'Pho Samphao', sound: 'ph' },
-    'ม': { class: 'Low', name: 'Mo Maa', sound: 'm' },
-    'ย': { class: 'Low', name: 'Yo Yak', sound: 'y' },
-    'ร': { class: 'Low', name: 'Ro Ruea', sound: 'r' },
-    'ล': { class: 'Low', name: 'Lo Ling', sound: 'l' },
-    'ว': { class: 'Low', name: 'Wo Waen', sound: 'w' },
-    'ศ': { class: 'High', name: 'So Sala', sound: 's' },
-    'ษ': { class: 'High', name: 'So Ruesi', sound: 's' },
-    'ส': { class: 'High', name: 'So Suea', sound: 's' },
-    'ห': { class: 'High', name: 'Ho Hip', sound: 'h' },
-    'ฬ': { class: 'Low', name: 'Lo Chula', sound: 'l' },
-    'อ': { class: 'Mid', name: 'O Ang', sound: '-' },
-    'ฮ': { class: 'Low', name: 'Ho Nok-huk', sound: 'h' },
-    'ฤ': { class: 'Low', name: 'Rue', sound: 'rɯ' },
-  },
+ consonants: {
+    // --- K-group (末尾だと 'k' になるグループ) ---
+    'ก': { class: 'Mid',  name: 'Ko Kai',      sound: 'k',  final: 'k' },
+    'ข': { class: 'High', name: 'Kho Khai',    sound: 'kh', final: 'k' },
+    'ฃ': { class: 'High', name: 'Kho Khuat',   sound: 'kh', final: 'k' }, // 現在は使われない
+    'ค': { class: 'Low',  name: 'Kho Khwai',   sound: 'kh', final: 'k' },
+    'ฅ': { class: 'Low',  name: 'Kho Khon',    sound: 'kh', final: 'k' }, // 現在は使われない
+    'ฆ': { class: 'Low',  name: 'Kho Rakhang', sound: 'kh', final: 'k' },
 
+    // --- T-group (末尾だと 't' になるグループ) ---
+    'จ': { class: 'Mid',  name: 'Cho Chan',     sound: 'ch', final: 't' },
+    'ฉ': { class: 'High', name: 'Cho Ching',    sound: 'ch', final: 't' },
+    'ช': { class: 'Low',  name: 'Cho Chang',    sound: 'ch', final: 't' },
+    'ซ': { class: 'Low',  name: 'So So',        sound: 's',  final: 't' },
+    'ฌ': { class: 'Low',  name: 'Cho Choe',     sound: 'ch', final: 't' },
+    'ฎ': { class: 'Mid',  name: 'Do Chada',     sound: 'd',  final: 't' },
+    'ฏ': { class: 'Mid',  name: 'To Patak',     sound: 't',  final: 't' },
+    'ฐ': { class: 'High', name: 'Tho Than',     sound: 'th', final: 't' },
+    'ฑ': { class: 'Low',  name: 'Tho Montho',   sound: 'th', final: 't' },
+    'ฒ': { class: 'Low',  name: 'Tho Phuthao',  sound: 'th', final: 't' },
+    'ด': { class: 'Mid',  name: 'Do Dek',       sound: 'd',  final: 't' },
+    'ต': { class: 'Mid',  name: 'To Tao',       sound: 't',  final: 't' },
+    'ถ': { class: 'High', name: 'Tho Thung',    sound: 'th', final: 't' },
+    'ท': { class: 'Low',  name: 'Tho Thahaan',  sound: 'th', final: 't' },
+    'ธ': { class: 'Low',  name: 'Tho Thong',    sound: 'th', final: 't' },
+    'ศ': { class: 'High', name: 'So Sala',      sound: 's',  final: 't' },
+    'ษ': { class: 'High', name: 'So Ruesi',     sound: 's',  final: 't' },
+    'ส': { class: 'High', name: 'So Suea',      sound: 's',  final: 't' },
+
+    // --- P-group (末尾だと 'p' になるグループ) ---
+    'บ': { class: 'Mid',  name: 'Bo Baimai',    sound: 'b',  final: 'p' },
+    'ป': { class: 'Mid',  name: 'Po Plaa',      sound: 'p',  final: 'p' },
+    'ผ': { class: 'High', name: 'Pho Phueng',   sound: 'ph', final: 'p' },
+    'ฝ': { class: 'High', name: 'Fo Fa',        sound: 'f',  final: 'p' },
+    'พ': { class: 'Low',  name: 'Pho Phan',     sound: 'ph', final: 'p' },
+    'ฟ': { class: 'Low',  name: 'Fo Fan',       sound: 'f',  final: 'p' },
+    'ภ': { class: 'Low',  name: 'Pho Samphao',  sound: 'ph', final: 'p' },
+
+    // --- N-group (末尾だと 'n' になるグループ) ---
+    'ญ': { class: 'Low',  name: 'Yo Ying',      sound: 'y',  final: 'n' },
+    'ณ': { class: 'Low',  name: 'No Nen',       sound: 'n',  final: 'n' },
+    'น': { class: 'Low',  name: 'No Nuu',       sound: 'n',  final: 'n' },
+    'ร': { class: 'Low',  name: 'Ro Ruea',      sound: 'r',  final: 'n' },
+    'ล': { class: 'Low',  name: 'Lo Ling',      sound: 'l',  final: 'n' },
+    'ฬ': { class: 'Low',  name: 'Lo Chula',     sound: 'l',  final: 'n' },
+
+    // --- Nasal / Semi-vowel (末尾もそのまま) ---
+    'ง': { class: 'Low',  name: 'Ngo Nguu',     sound: 'ng', final: 'ng' },
+    'ม': { class: 'Low',  name: 'Mo Maa',       sound: 'm',  final: 'm' },
+    'ย': { class: 'Low',  name: 'Yo Yak',       sound: 'y',  final: 'y' },
+    'ว': { class: 'Low',  name: 'Wo Waen',      sound: 'w',  final: 'w' },
+
+    // --- その他（末尾にはならない文字） ---
+    'ห': { class: 'High', name: 'Ho Hip',       sound: 'h',  final: '-' },
+    'อ': { class: 'Mid',  name: 'O Ang',        sound: '-',  final: '-' },
+    'ฮ': { class: 'Low',  name: 'Ho Nok-huk',   sound: 'h',  final: '-' },
+    'ฤ': { class: 'Low',  name: 'Rue',          sound: 'rue', final: '-' },
+
+},
   // vowelRules に追加・上書き（最長一致のため、記号が多い順に並べること）
   vowelRules: [
     // vowelRules の最初に追加
+    { symbols: 'เื',  sound: 'ɯa', length: 'long', type: 'live' },
 { symbols: 'เีย', sound: 'ia', length: 'long', type: 'live' },
 { symbols: 'เือ', sound: 'ɯa', length: 'long', type: 'live' },
 { symbols: 'ัว',  sound: 'ua', length: 'long', type: 'live' },
     // --- 3文字セット ---
     { symbols: 'เีย', sound: 'ia', length: 'long', type: 'live' }, // diaw (เดี๋ยว) 等
-    { symbols: 'เือ', sound: 'ɯa', length: 'long', type: 'live' }, // muean (เหมือน) 等
     
     // --- 2文字セット ---
     { symbols: 'เาะ', sound: 'ɔ',  length: 'short', type: 'dead' },
@@ -110,6 +121,7 @@ const ThaiMasterData = {
     'High': 'text-red-400',
     '不明': 'text-white/30'
   }
+
 };
 
 </script>

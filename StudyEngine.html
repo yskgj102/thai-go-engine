@@ -464,8 +464,13 @@ toggleAnalysis: function() {
 
 
 
+
+
+
+
+
 renderAnalysis: function() {
-    const item = AppStore.getCurrentItem();
+const item = AppStore.getCurrentItem();
     if (!item || !item.word_th) return;
     
     const panel = document.getElementById('analysis-panel');
@@ -474,91 +479,147 @@ renderAnalysis: function() {
     panel.style.display = 'flex';
     panel.classList.remove('hidden');
 
-    // ★重要: Parserがすでに「属性伝染」も「声調番号」も計算し終えた状態で返してくる
-    const syllables = ThaiParser.parseSyllables(item.word_th);
+    const syllables = ThaiParser.parseSyllables(item.word_th, item);
+    const meta = syllables.meta || { isReliable: true, warnings: [], isDict: false };
+
+    // --- 🔊 エンジンによる「論理的な発音記号」の生成 ---
+    // 声調記号の定義： [平, 低, 下, 高, 上]
+// --- 🔊 エンジンによる「論理的な発音記号」の生成 ---
+// --- 🔊 改良版：論理的な発音記号の生成 ---
+// --- 🔊 改良版：理想的な発音記号 [ sà-nùk ] の生成 ---
+ // --- 📊 解析ステータスバー ---
+// Parserが算出した phonetic 文字列を取得（リカバリー適用済みの値）
+// --- 📊 解析ステータスバー（ Parserの正直な警告を反映） ---
+const derivedStr = meta.derivedPhonetic ? `[ ${meta.derivedPhonetic} ]` : "";
+let statusHTML = '';
+const statusBaseClass = "w-full mb-3 px-3 py-1.5 border rounded-lg text-[10px] font-bold flex items-center justify-between";
+
+// Parserからの警告があるかチェック
+const hasWarnings = meta.warnings && meta.warnings.length > 0;
+
+if (meta.isDict) {
+    // 📖 辞書：青
+    statusHTML = `<div class="${statusBaseClass} bg-blue-600/20 border-blue-500/50 text-blue-500 dark:text-blue-400">
+        <div class="flex items-center gap-2"><span class="animate-pulse">📖</span> 辞書データ適用済み</div>
+        <div class="font-mono opacity-80 lowercase tracking-widest">${derivedStr}</div>
+    </div>`;
+} else if (!meta.isReliable || hasWarnings) {
+    // ★ここを強化！ ParserがReliableと言っていても、warningsがあれば警告（赤）にする
+    const isRecovered = meta.warnings && meta.warnings.some(w => w.includes("🛠️"));
+    const icon = isRecovered ? "🛠️" : "⚠️";
+    const label = isRecovered ? "自動リカバリー済（要確認）" : "解析エラーの疑い";
+    const message = meta.warnings && meta.warnings[0] ? meta.warnings[0] : "信頼度が低いです";
+
+    statusHTML = `<div class="${statusBaseClass} bg-rose-600/20 border-rose-500/50 text-rose-600 dark:text-rose-400">
+        <div class="flex items-center gap-2"><span class="${isRecovered ? '' : 'animate-bounce'}">${icon}</span> ${label}</div>
+        <div class="font-mono opacity-80 lowercase tracking-widest">${derivedStr}</div>
+    </div>
+    <div class="text-[9px] text-rose-400/80 px-2 mb-2 italic font-mono truncate">${message}</div>`;
+} else {
+    // ✅ 正常：緑
+    statusHTML = `<div class="${statusBaseClass} bg-emerald-600/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-500">
+        <div class="flex items-center gap-2"><span>✅</span> システム解析：正常</div>
+        <div class="font-mono opacity-80 lowercase tracking-widest">${derivedStr}</div>
+    </div>`;
+}
+
+panel.insertAdjacentHTML('beforeend', statusHTML);;
 
     const wrapper = document.createElement('div');
+    // 構造は変えず、paddingとgapを微調整してスキャンしやすく
     wrapper.style.cssText = `
-        display: flex; overflow-x: auto; gap: 10px; width: 100%; 
-        padding: 12px 6px 26px 6px; 
+        display: flex; overflow-x: auto; gap: 12px; width: 100%; 
+        padding: 8px 6px 24px 6px; 
         justify-content: ${syllables.length <= 2 ? 'center' : 'flex-start'};
         -webkit-overflow-scrolling: touch;
     `;
 
     syllables.forEach((syl) => {
-        // --- 1. 表示用の部品を「計算済みのsyl」から取り出す ---
         const tInfo = ThaiMasterData.toneMap[syl.toneNum] || ThaiMasterData.toneMap[0];
-        const cColor = ThaiMasterData.classColors[syl.finalClass] || 'text-white/40';
-        
-        // コンソナント情報は名前を表示するためにMasterから引き直す
-        const cObj = ThaiMasterData.consonants[syl.mainC[0]] || { name: '不明', sound: '?' };
-        const termSound = syl.lastC ? (ThaiMasterData.consonants[syl.lastC]?.sound || '?') : '-';
+        const cColor = ThaiMasterData.classColors[syl.finalClass] || 'text-slate-500';
+        // --- 修正後：引導子音(ห/อ)をスキップして「音の核」の名前を取得 ---
+const phoneticHeadChar = (syl.mainC.length > 1 && (syl.mainC[0] === 'ห' || syl.mainC[0] === 'อ')) 
+                         ? syl.mainC[1] : syl.mainC[0];
 
-        // --- 2. タイ文字の着色（頭子音を強調） ---
+const cObj = ThaiMasterData.consonants[phoneticHeadChar] || { name: '不明', sound: '?' };
+        const termSound = syl.lastC ? (ThaiMasterData.consonants[syl.lastC]?.sound || '?') : '-';
+const finalChar = syl.lastC || "";
+const finalSound = finalChar ? (ThaiMasterData.consonants[finalChar]?.final || ThaiMasterData.consonants[finalChar]?.sound || "?") : "-";
+        // チップの背景色を「両モードで浮き上がる」濃いグレーに固定
+        const chipBorderClass = syl.confidence === "LOW" ? "border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.3)]" : "border-slate-300 dark:border-slate-700";
+
         const coloredText = Array.from(syl.full).map(c => 
-            syl.mainC.includes(c) ? `<span class="${cColor}">${c}</span>` : `<span class="opacity-40">${c}</span>`
+            syl.mainC.includes(c) ? `<span class="${cColor}">${c}</span>` : `<span class="text-slate-400 dark:text-white/40">${c}</span>`
         ).join('');
 
-        // --- 3. チップの生成（sylの中に全部答えが入っている） ---
         wrapper.insertAdjacentHTML('beforeend', `
-            <div class="analysis-chip p-3.5 bg-slate-900 border border-slate-700 rounded-3xl w-[126px] text-center flex-shrink-0 shadow-2xl relative overflow-hidden">
-                <div class="mb-2 pb-2 border-b border-white/5">
-                    <div class="${tInfo.color} text-3xl leading-none font-black drop-shadow-md">${tInfo.mark || 'ー'}</div>
-                    <div class="${tInfo.color} text-[9px] font-black tracking-tighter uppercase">${tInfo.label}</div>
+            <div class="analysis-chip p-4 bg-white dark:bg-slate-900 border ${chipBorderClass} rounded-3xl w-[130px] text-center flex-shrink-0 shadow-lg relative overflow-hidden">
+                <div class="mb-3 pb-2 border-b border-slate-100 dark:border-white/5">
+                    <div class="${tInfo.color} text-4xl leading-none font-black">${tInfo.mark || 'ー'}</div>
+                    <div class="${tInfo.color} text-[10px] font-black tracking-tighter uppercase">${tInfo.label}</div>
                 </div>
 
-                <div class="text-4xl font-bold mb-3 thai-font drop-shadow-lg">${coloredText}</div>
+                <div class="text-4xl font-bold mb-4 thai-font text-slate-900 dark:text-white">${coloredText}</div>
 
-                <div class="text-[10px] text-left space-y-1.5 font-mono">
+                <div class="text-[10px] text-left space-y-2 font-mono">
                     <div class="flex justify-between items-center">
-                        <span class="text-white/30 text-[8px]">CLASS:</span>
-                        <span class="${cColor} font-bold">${syl.finalClass}${syl.isOverridden ? '*' : ''}</span>
+                        <span class="text-slate-400 dark:text-white/30 text-[8px]">クラス:</span>
+                        <span class="${cColor} font-bold text-[10px]">${syl.finalClass}${syl.isOverridden ? '*' : ''}</span>
                     </div>
-                    <div class="flex flex-col">
-                        <span class="text-white/30 text-[7px] leading-none mb-0.5">NAME:</span>
-                        <span class="text-white/80 text-[9px] truncate leading-tight">${cObj.name}</span>
+                    <div class="flex flex-col pt-1">
+                        <span class="text-slate-400 dark:text-white/30 text-[7px] leading-none mb-1">子音名称:</span>
+                        <span class="text-slate-700 dark:text-white/80 text-[10px] truncate leading-tight">${cObj.name}</span>
                     </div>
-                    <div class="flex justify-between items-center pt-1 border-t border-white/5">
-                        <span class="text-white/30 text-[8px]">SOUND:</span>
-                        <span class="text-blue-400 font-bold">${cObj.sound}/${termSound}</span>
-                    </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-white/30 text-[8px]">VOWEL:</span>
-                        <span class="text-yellow-500 font-bold">${syl.vSound || '?'} <small class="text-[7px] opacity-60">${(syl.vLen || 's')[0]}</small></span>
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-white/5">
+                        <span class="text-slate-400 dark:text-white/30 text-[8px]">発音(頭/末):</span>
+                        <span class="text-blue-600 dark:text-blue-400 font-bold">${syl.pInitial} / ${finalSound}</span>
                     </div>
                     <div class="flex justify-between items-center">
-                        <span class="text-white/30 text-[8px]">TYPE:</span>
-                        <span class="text-purple-400 font-bold">${(syl.sType || 'D')[0]} <small class="text-[7px] opacity-60">(${syl.ruleLabel || '標準'})</small></span>
+                        <span class="text-slate-400 dark:text-white/30 text-[8px]">母音:</span>
+                        <span class="text-amber-600 dark:text-yellow-500 font-bold">${syl.vSound || '?'} <small class="text-[7px] opacity-70">${(syl.vLen || 's')[0] === 'l' ? '長' : '短'}</small></span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-400 dark:text-white/30 text-[8px]">タイプ:</span>
+                        <span class="text-purple-600 dark:text-purple-400 font-bold">${syl.sType === 'Live' ? '生音' : '死音'} <small class="text-[7px] opacity-70">(${syl.ruleLabel || '標'})</small></span>
                     </div>
                 </div>
             </div>`);
     });
     
     panel.appendChild(wrapper);
-// GSのデバッグログとフォーマットを完全に一致させる
+
+    // --- 警告パネル（背景を不透明に近づけて可読性アップ） ---
+    if (!meta.isReliable && meta.warnings.length > 0) {
+        panel.insertAdjacentHTML('beforeend', `
+            <div class="w-full mt-2 px-4 py-3 bg-rose-50 dark:bg-rose-950/40 rounded-xl border border-rose-200 dark:border-rose-500/30 mb-4">
+                <div class="text-[9px] text-rose-600 dark:text-rose-400 font-bold mb-1 tracking-widest uppercase">解析診断レポート:</div>
+                ${meta.warnings.map(w => `<div class="text-[10px] text-rose-700 dark:text-rose-300/70 font-mono leading-tight">└ ${w}</div>`).join('')}
+            </div>
+        `);
+    }
+
+    // --- ログエリア（コントラスト重視） ---
     const debugText = syllables.map(syl => {
         const tInfo = ThaiMasterData.toneMap[syl.toneNum] || { label: '不明' };
-        // 例: [สนุก] -> [ส: a/H/d -> 低] | [นุก: u/L/D -> 高] 形式
-        return `[${syl.full}: ${syl.vSound || '?'}/${syl.finalClass[0]}/${(syl.sType || 'D')[0]} -> ${tInfo.label[0]}]`;
+        return `[${syl.full}:${tInfo.label[0]}]`;
     }).join(' | ');
 
     panel.insertAdjacentHTML('beforeend', `
-        <div class="w-full mt-2 px-3 py-2 bg-slate-950/80 rounded-xl text-[10px] font-mono text-blue-300/60 flex flex-col gap-1 border border-blue-500/20 shadow-inner">
-            <div class="flex justify-between border-b border-white/5 pb-1 mb-1">
-                <span class="text-white/40">FINAL_LOG: ${item.word_th}</span>
-                <span class="text-blue-500/40 font-bold tracking-widest">v6.2_LOGIC_SYNC</span>
+        <div class="w-full mt-2 px-3 py-2 bg-slate-100 dark:bg-slate-950/80 rounded-xl text-[10px] font-mono text-slate-500 dark:text-blue-300/60 flex flex-col gap-1 border border-slate-200 dark:border-blue-500/20">
+            <div class="flex justify-between border-b border-slate-200 dark:border-white/5 pb-1 mb-1">
+                <span class="text-slate-400 dark:text-white/40 uppercase text-[8px]">Final Log: ${item.word_th}</span>
+                <span class="text-slate-400 dark:text-blue-500/40 font-bold text-[8px]">V6.3_HYBRID</span>
             </div>
-            <div class="leading-relaxed break-all">
+            <div class="leading-relaxed break-all italic opacity-80">
                 ${debugText}
             </div>
         </div>
     `);
-
 }
 
 
-};
 
+};
 
 
 
@@ -567,9 +628,70 @@ renderAnalysis: function() {
  * GS_Parser: 音節構造解析エンジン (Final Fixed Version)
  */
 const ThaiParser = {
-  parseSyllables: function(text) {
+
+  // --- ★新機能1：例外オーバーライド辞書 ---
+  // ルールベース(Greedy Loop)では構造上どうしても誤分割される単語
+  // （例：二重機能子音/Overlap）を強制的に正しい音節配列に切り分ける。
+
+  // --- メインルーター（外部から呼ばれるのはここだけ） ---
+/**
+   * メインルーター：DBエントリを優先的にチェックする
+   * @param {string} text - 解析するタイ語
+   * @param {Object} dbEntry - スプレッドシートから取得した1行分のデータ(任意)
+   */
+parseSyllables: function(text, dbEntry = null) {
     if (!text) return [];
-    const vMarks = "ะาิีึืุูัำ";
+
+    // 1. DB(シート)に custom_split があればそれを使う
+    if (dbEntry && dbEntry.custom_split) {
+      try {
+        const chunks = typeof dbEntry.custom_split === 'string' 
+                       ? JSON.parse(dbEntry.custom_split) 
+                       : dbEntry.custom_split;
+        
+        let combinedSyllables = [];
+        chunks.forEach(chunk => {
+           // ★ 修正：パーツを解析するが、必ず1つの音節に強制マージする
+           const parsed = this._parseCore(chunk);
+           if (parsed.length > 0) {
+             const atomicSyllable = parsed[0];
+             
+             // もしエンジンが勝手に複数に分けた場合、1つに統合する
+             if (parsed.length > 1) {
+               atomicSyllable.full = chunk; // 表示を元のチャンクに戻す
+               
+               // 最後のパーツから末子音（lastC）の情報を継承
+               const lastPart = parsed[parsed.length - 1];
+               atomicSyllable.lastC = lastPart.lastC || lastPart.mainC;
+               
+               // バラバラにされた記号や文字をすべて marks に統合（声調計算用）
+               for(let k = 1; k < parsed.length; k++) {
+                 atomicSyllable.marks = atomicSyllable.marks.concat(
+                    Array.from(parsed[k].mainC), 
+                    parsed[k].marks
+                 );
+               }
+             }
+             combinedSyllables.push(atomicSyllable);
+           }
+        });
+        
+        // 辞書適用時は強制的に「信頼(Reliable)」フラグを立て、警告を封じる
+        combinedSyllables.meta = { isDict: true, isReliable: true, warnings: [] };
+        return this.resolveLogic(combinedSyllables);
+      } catch (e) {
+        console.error("Custom split process error:", e);
+      }
+    }
+
+    // 2. なければ自動解析
+    const syllables = this._parseCore(text);
+    return this.resolveLogic(syllables);
+  },
+
+  // --- コア解析エンジン（文字を左から舐めて吸い込む） ---
+  _parseCore: function(text) {
+    const vMarks = "ะาิีึืุูัำ็"; // ★ '็' を追加
     const leadingV = "เแโใไ";
     const toneMarks = "่้๊๋์";
     const chars = Array.from(text);
@@ -579,17 +701,26 @@ const ThaiParser = {
     while (i < chars.length) {
       let syl = { full: '', leadingV: '', mainC: '', marks: [], lastC: '', isRoHan: false };
 
-      // 1. 前置母音 (เแโใไ) - 最初に見つけたら保持
+// ★追加：逆転パターンの先読み (例: แมลง -> [ม] + [แลง])
+      // 1文字目が子音で、2文字目が前置母音(เแโใไ)の場合、1文字目を独立させる
+      if (i + 1 < chars.length && 
+          leadingV.indexOf(chars[i]) === -1 && 
+          leadingV.indexOf(chars[i+1]) !== -1) {
+        syl.mainC = chars[i]; syl.full = chars[i]; i++;
+        syllables.push(syl);
+        continue; // 次のループ（前置母音の処理）へ
+      }
+      // Step 1. 前置母音 (เแโใไ) の回収
       if (i < chars.length && leadingV.indexOf(chars[i]) !== -1) {
         syl.leadingV = chars[i]; syl.full += chars[i]; i++;
       }
-// 2. 核子音 (Cluster & ฤ / 記号なし核子音の強化)
+
+      // Step 2. 核子音の回収 (クラスタ、ห引導、ฤ の処理)
       if (i < chars.length) {
         syl.mainC = chars[i]; syl.full += chars[i]; i++;
         
-        // ฤ (Rue) が核子音として現れた場合の処理
         if (syl.mainC === 'ฤ') {
-          // ฤ 自体が母音の性質を持つので、そのまま Step 4 へ
+          // ฤ (Rue) は母音の性質を持つため、そのまま次へ
         } else if (i < chars.length) {
           const c2 = chars[i];
           const nextMark = chars[i+1];
@@ -597,9 +728,9 @@ const ThaiParser = {
           const isCluster = "กขคตปผพจสซ".indexOf(syl.mainC) !== -1 && "รลว".indexOf(c2) !== -1;
           
           if (isHo || isCluster) {
-            // ★真犯人逮捕：c2が 'ร' で、次も 'ร' なら Ro Han のためクラスタ化しない！
+            // ★重要: c2が 'ร' で、次も 'ร' なら Ro Han のためクラスタ化をキャンセル！
             if (c2 === 'ร' && nextMark === 'ร') {
-               // 何もしない（Step 3 の Ro Han 検知に任せる）
+               // 何もしない（Step 3 に任せる）
             } else if (!(vMarks.indexOf(c2) !== -1 || toneMarks.indexOf(c2) !== -1)) {
                syl.mainC += c2; syl.full += c2; i++;
             }
@@ -607,80 +738,89 @@ const ThaiParser = {
         }
       }
 
-      // 3. Ro Han (รร) 検知
+      // Step 3. Ro Han (รร) の物理検知
       if (i + 1 < chars.length && chars[i] === 'ร' && chars[i+1] === 'ร') {
         const next = chars[i+2];
+        // 次の文字が母音記号でない場合のみ Ro Han として扱う
         if (!next || (vMarks.indexOf(next) === -1 && leadingV.indexOf(next) === -1)) {
           syl.isRoHan = true; syl.marks.push('รร'); syl.full += 'รร'; i += 2;
         }
       }
 
-// 4. すべての記号 (上下・声調・黙字記号) および母音構成要素 (ย, ว, อ) の回収
+// Step 4. 母音記号と「母音として機能する子音」の回収
       while (i < chars.length) {
         const c = chars[i];
         const next = chars[i+1];
         
-        // 黙字記号 ์ が次にある文字は、末子音として扱うため Step 5 へ
         if (next === '์') break;
 
-        // A. 基本の母音記号・声調記号なら回収
+        // A. 明らかな記号類
         if (vMarks.indexOf(c) !== -1 || toneMarks.indexOf(c) !== -1 || c === '์') {
           syl.marks.push(c); syl.full += c; i++;
           continue;
         }
 
-        // B. ★重要★ 母音の一部として機能する子音 (ย, ว, อ) の判定
-        // 前に特定の母音がある場合、これらは末子音ではなく「母音記号」として marks に入れる
-        const currentBase = (syl.leadingV || '') + syl.marks.join('');
+        // B. 子音兼母音 (ย, ว, อ) の判定強化
+        // 前置母音がない場合でも、これらが「核」になるケースを救済
+        const hasMainVowel = syl.marks.some(m => vMarks.indexOf(m) !== -1);
         const isVowelPart = 
-          (c === 'ย' && currentBase.indexOf('เ') !== -1 && currentBase.indexOf('ี') !== -1) || // เ-ีย
-          (c === 'อ' && (currentBase.indexOf('เ') !== -1 || currentBase.indexOf('ื') !== -1)) || // เ-อ, -ือ
-          (c === 'ว' && currentBase.indexOf('ั') !== -1); // -ัว (末子音ありの形)
+          (c === 'ย' && (syl.leadingV === 'เ' || hasMainVowel)) || 
+          (c === 'ว' && (syl.marks.includes('ั') || !hasMainVowel)) || // -ัว または 単独の ว
+          (c === 'อ' && !hasMainVowel); // 単独の อ (ของ 等)
 
         if (isVowelPart) {
           syl.marks.push(c); syl.full += c; i++;
           continue;
         }
-        
         break;
       }
 
-      // 5. 末子音回収 (Greedy Loop)
+      // Step 5. 末子音と、それに連なる黙字(์)セットの回収
+// --- Step 5. 末子音の回収（先読みロジック搭載） ---
       while (i < chars.length) {
         const c = chars[i];
         const next = chars[i+1];
+        const afterNext = chars[i+2]; // ★一歩先を見る
 
-        // 次が前置母音なら、今の文字は次音節の開始
+        // A. 次が前置母音なら、今の文字は確実に次音節の頭子音
         if (leadingV.indexOf(c) !== -1) break;
 
-        // 次に母音記号（์ 以外）があるなら、今の文字は次音節の核子音
-        if (next && (vMarks.indexOf(next) !== -1 || toneMarks.indexOf(next) !== -1) && next !== '์') break;
-
-        // 吸い込み
-        syl.lastC = c; syl.full += c; i++;
-
-        // 直後に ์ や母音記号(ุ ิ 等)があるなら、それらもセットで回収（黙字道連れ）
-        while (i < chars.length && (vMarks.indexOf(chars[i]) !== -1 || toneMarks.indexOf(chars[i]) !== -1 || chars[i] === '์')) {
-          syl.marks.push(chars[i]); syl.full += chars[i]; i++;
+        // B. 【重要】先読みブレーキ
+        // 今の文字(c)を末子音として飲み込む前に、次(next)が「母音を伴った頭文字」かチェック
+        if (next) {
+          const nextHasVowel = (vMarks.indexOf(next) !== -1 || toneMarks.indexOf(next) !== -1 || leadingV.indexOf(next) !== -1);
+          const afterNextHasVowel = afterNext && (vMarks.indexOf(afterNext) !== -1 || toneMarks.indexOf(afterNext) !== -1);
+          
+          // 次の文字が母音を持っている、あるいは「次＋その次」が「子音＋母音」のセットなら
+          // 今の文字(c)は末子音ではなく、次音節の頭文字（またはその一部）である可能性が高い
+          if (nextHasVowel && next !== '์') break; 
+          if (afterNextHasVowel) break; // これで ช-นะ (cha-na) を守る
         }
 
-        // 基本1文字（または黙字セット）で終了
-        break;
+        // C. 条件をクリアした文字を末子音(lastC)として吸い込む
+        syl.lastC = c; 
+        syl.full += c; 
+        i++;
+
+        // 直後の ์ (黙字) 等の付随記号を回収
+        while (i < chars.length && (vMarks.indexOf(chars[i]) !== -1 || toneMarks.indexOf(chars[i]) !== -1 || chars[i] === '์')) {
+          syl.marks.push(chars[i]); 
+          syl.full += chars[i]; 
+          i++;
+        }
+        break; // 末子音は1つまで
       }
+      
       syllables.push(syl);
     }
-
-
-// 最後に、切り出した音節リストをロジック関数に渡して完成させる
-    return this.resolveLogic(syllables);
+    return syllables;
   },
 
-
-
+  // --- 解析結果を元に、声調や属性を確定させるロジック ---
   resolveLogic: function(syllables) {
-    
-// --- 解析の最後に全音節をスキャン (Logicの集約) ---
     const lowSingles = "งนมยรลวยญณฬ";
+    
+    // パス1: クラス判定と声調計算
     syllables.forEach((syl, i) => {
         const headChar = syl.mainC[0];
         const cObj = ThaiMasterData.consonants[headChar] || { class: '不明' };
@@ -689,12 +829,11 @@ const ThaiParser = {
         syl.isOverridden = false;
         syl.ruleLabel = "標準";
 
-        // 1. 属性伝染・引導子音の判定
+        // 属性伝染・引導子音(ห/อ)の判定
         if (syl.mainC.startsWith('ห') && syl.mainC.length > 1) {
             syl.finalClass = 'High'; syl.isOverridden = true; syl.ruleLabel = "ห引導";
         } else if (i > 0) {
             const prev = syllables[i-1];
-            // ★重要: Ro Han (รร) も属性を後ろに流すフラグを強制的に立てる
             const isPrevOpenA = (!prev.lastC && !prev.leadingV && prev.marks.length === 0) || prev.isRoHan;
 
             if ((prev.finalClass === 'High' || prev.finalClass === 'Mid') && 
@@ -707,109 +846,248 @@ const ThaiParser = {
             }
         }
 
-        // 2. 母音と声調の確定
+        // Validatorを呼んで母音と基本タイプを取得
         const vRule = ThaiValidator.resolveVowel(syl);
         const tMark = syl.marks.find(m => /[\u0E48-\u0E4B]/.test(m));
-        
-        // 基本のタイプ
         let sType = syl.lastC ? (ThaiMasterData.terminalGroups[syl.lastC] || 'Dead') : vRule.type;
         
-        // ★最重要: Ro Han (รร) の死音化ロジック
-        // 次の音節が存在するなら、この Ro Han は促音(Dead)扱い。これで [สรร] が低声になる。
+        // ★ Ro Han (รร) の死音化ロジック
+        // Parserで配列として後ろに要素(音節)が存在する場合、促音(Dead)扱いにする
         if (syl.isRoHan && i + 1 < syllables.length) {
             sType = 'Dead';
             syl.ruleLabel = "RoHan(閉)";
         }
 
-        // 3. 最終的な声調番号を確定
-        syl.toneNum = ThaiValidator.getToneNumber(syl.finalClass, tMark, sType, vRule.length);
-        
-        // ログ表示用にデータを同期
+syl.toneNum = ThaiValidator.getToneNumber(syl.finalClass, tMark, sType, vRule.length);
         syl.sType = sType;
-        syl.vSound = syl.isRoHan ? 'a' : vRule.sound;
-        syl.vLen = vRule.length;
-    });
-    return syllables;
+        syl.vSound = vRule.sound; 
+if (syl.isRoHan) {
+    syl.vSound = 'a';
 }
+        syl.vLen = vRule.length;
+
+        // --- 🔊 【ロジック層での発音記号導出】 ---
+const tObj = ThaiMasterData.toneMap[syl.toneNum] || { mark: "" };
+        
+        // A. 頭音の確定（引導子音スキップ）
+        const phoneticHead = (syl.mainC.length > 1 && (syl.mainC[0] === 'ห' || syl.mainC[0] === 'อ'))
+                             ? syl.mainC[1] : syl.mainC[0];
+        syl.pInitial = (ThaiMasterData.consonants[phoneticHead]?.sound || "").toLowerCase();
+
+        // B. 末音の確定（★ここがポイント：.final を参照）
+        syl.pFinal = syl.lastC ? (ThaiMasterData.consonants[syl.lastC]?.final || "").toLowerCase() : "-";
+
+        // C. 全体発音の組み立て（末子が "-" の場合は含めない）
+        const pVowel = (syl.vSound || "").toLowerCase();
+        const pFinalClean = (syl.pFinal === "-") ? "" : syl.pFinal;
+        syl.derived = syl.pInitial + pVowel + tObj.mark + pFinalClean;
+
+        
+    });
+
+// --- パス2：自己診断（確信度チェック）強化版 ---
+let hasWarning = false;
+let warningReasons = [];
+const isDictApplied = syllables.meta ? syllables.meta.isDict : false;
+
+syllables.forEach((syl, i) => {
+    syl.confidence = "HIGH";
+    
+    if ("ๆฯ".indexOf(syl.mainC) !== -1) return;
+
+    // A. 文字自体の不明チェック
+    if (syl.finalClass === '不明') {
+        syl.confidence = "LOW";
+        warningReasons.push(`[${syl.full}]: 不明な文字が含まれています`);
+    }
+
+    // B. 裸の子音（記号も母音も末子音もない）のチェック
+    const isNaked = !syl.leadingV && syl.marks.length === 0 && !syl.lastC && !syl.isRoHan && syl.mainC.length === 1;
+    
+    if (!isDictApplied && isNaked) {
+        if (i === syllables.length - 1) {
+            // 末尾の場合：既存の末子音分離チェック
+            const isLikelyFinalC = "งนมยรลวยกบด".indexOf(syl.mainC) !== -1;
+            if (isLikelyFinalC && i > 0 && (syllables[i-1].marks.length > 0 || syllables[i-1].leadingV)) {
+                syl.confidence = "LOW";
+                warningReasons.push(`[${syl.full}]: 末子音の分離（解析ミス）の疑い`);
+            }
+        } else {
+            // ★強化ポイント：音節の途中に裸の子音がある場合
+            // 本来の「暗黙a」か「解析ミス（吸着漏れ）」か判別不能なため、あえて「LOW」にして警告を出す
+            syl.confidence = "LOW";
+            warningReasons.push(`[${syl.full}]: 音節中央の単独子音（末子音吸着漏れ、またはOverlapの疑い）`);
+        }
+    }
+    
+    if (syl.confidence === "LOW") hasWarning = true;
+});
+
+    // メタデータとして診断結果と「完成済み発音記号」を付与
+    syllables.meta = {
+        isReliable: !hasWarning,
+        warnings: warningReasons,
+        isDict: isDictApplied,
+        derivedPhonetic: syllables.map(s => s.derived).join("-") // ここで連結
+    };
+// --- 🛡️ パス3：正直なリカバリー・レイヤー (中間吸着 & 履歴残し) ---
+    if (!isDictApplied && syllables.length >= 2) {
+        let recoveryHappened = false;
+        let history = [];
+
+        for (let j = syllables.length - 1; j >= 1; j--) {
+            let current = syllables[j];
+            let prev = syllables[j - 1];
+
+            // 判定条件：現在が「裸の子音」かつ「前の音節に母音がある」場合
+            const isOrphan = !current.leadingV && current.marks.length === 0 && !current.lastC && current.mainC.length === 1;
+            const prevHasVowel = prev.marks.length > 0 || prev.leadingV || prev.isRoHan;
+
+            if (isOrphan && prevHasVowel) {
+                const beforeStr = `${prev.full}-${current.full}`;
+                
+                // 1. 強制吸着
+                prev.lastC = current.mainC;
+                prev.full += current.mainC;
+                
+                // 2. 再計算
+                const recV = ThaiValidator.resolveVowel(prev);
+                prev.sType = prev.lastC ? (ThaiMasterData.terminalGroups[prev.lastC] || 'Dead') : recV.type;
+                const tMark = prev.marks.find(m => /[\u0E48-\u0E4B]/.test(m));
+                prev.toneNum = ThaiValidator.getToneNumber(prev.finalClass, tMark, prev.sType, recV.length);
+                
+                // 3. 発音記号(derived)の再生成
+                const tObj = ThaiMasterData.toneMap[prev.toneNum] || { mark: "" };
+                const pHead = (prev.mainC.length > 1 && (prev.mainC[0] === 'ห' || prev.mainC[0] === 'อ')) ? prev.mainC[1] : prev.mainC[0];
+                const pInit = (ThaiMasterData.consonants[pHead]?.sound || "").toLowerCase();
+                const pFinal = (ThaiMasterData.consonants[prev.lastC]?.final || "").toLowerCase();
+                prev.derived = pInit + (recV.sound || "").toLowerCase() + tObj.mark + pFinal;
+                // 4. 履歴を記録して削除
+                history.push(`[${beforeStr} → ${prev.full}]`);
+                syllables.splice(j, 1);
+                recoveryHappened = true;
+            }
+            
+        }
+        
+  if (recoveryHappened) {
+            // ★ 足したこと：確信度の塗り替え
+            // 吸着に成功した音節については、最低限の体裁は整ったので "MID" に格上げする
+            syllables.forEach(s => {
+                if (s.confidence === "LOW") {
+                    s.confidence = "MID"; // 赤から黄色へ
+                }
+            });
+
+            // メタデータの更新
+            syllables.meta.isReliable = false; // 依然として「100%確実」ではないので false を維持
+            syllables.meta.warnings = [
+                `🛠️ 吸着リカバリー実行: ${history.join(', ')}`,
+                // warningReasons は「吸着前の状態」の警告なので、ここではあえて含めず履歴を優先する
+            ];
+            syllables.meta.derivedPhonetic = syllables.map(s => s.derived).join("-");
+        }
+
+    }
+
+    return syllables;
+  }
 };
 
 /**
  * GS_Validator: 判定ロジック
  */
 const ThaiValidator = {
-resolveVowel: function(syl) {
-  console.log(`DEBUG: [${syl.full}] base: "${(syl.leadingV || '') + syl.marks.filter(m => !/[่้๊๋์]/.test(m)).join('')}" lastC: "${syl.lastC}"`);
-const isRoHanChar = syl.full.indexOf('รร') !== -1;
 
-  if (isRoHanChar) {
-    return { 
-      sound: 'a', 
-      length: 'short', 
-      // syl.sType が 'Dead' (resolveLogicで設定済み) なら dead を返す
-      type: (syl.sType === 'Dead') ? 'dead' : 'live' 
-    };
-  }
-    // 1. 声調記号と黙字記号を徹底除去してベースを作る
+  resolveVowel: function(syl) {
+    // デバッグ用: マスタに照合する直前の「ベース文字列」と「末子音」を出力
+    console.log(`DEBUG: [${syl.full}] mainC: "${(syl.mainC || '') + syl.marks.filter(m => !/[่้๊๋์]/.test(m)).join('')}" lastC: "${syl.lastC}"`);
+    
+    // --- 0. Ro Han (รร) の強制割り込み処理 ---
+    // Parserのフラグ漏れを防ぐため、文字面に 'รร' が含まれているかを物理検知する
+    const isRoHanChar = syl.full.indexOf('รร') !== -1;
+
+    if (isRoHanChar) {
+      return { 
+        sound: 'a', // Ro Han はデフォルトで短母音の 'a' を持つ
+        length: 'short', 
+        // Parser側 (resolveLogic) で「後ろに子音が続くから死音(Dead)」と
+        // 判定されている場合はそれに従い、それ以外は生音(Live)とする
+        type: (syl.sType === 'Dead') ? 'dead' : 'live' 
+      };
+    }
+
+    // --- 1. マスタ照合用の純粋なベース文字列を作成 ---
+    // 声調記号(่้๊๋)と黙字記号(์)を徹底除去して、母音だけの構成にする
     const pure = syl.marks.filter(m => !/[่้๊๋์]/.test(m)).join('');
     const base = (syl.leadingV || '') + pure;
     
-    // 2. マスタ側の symbols からもハイフンなどを除去して比較する
-    // symbols: 'เ-ีย' と base: 'เีย' を一致させるため
+    // マスタ側の symbols (例: 'เ-ีย') からハイフン等を除去して比較可能にする関数
     const normalize = (str) => str.replace(/[-\s]/g, '');
 
-    // 3. マスタ照合（3段構え）
-    // A: 記号 + 末子音 (เดี๋ยว のように 'ย' を含むマスタ用)
-    // B: 記号のみ
+    // --- 2. マスタ照合（最長一致の原則） ---
+    // A: 記号 + 末子音 (เดี๋ยว のように 'ย' や 'ว' が母音に組み込まれるパターンを優先)
     const withLast = base + (syl.lastC || '');
+    
+    // 優先度1: 末子音を含めた形でマスタに存在するか
+    // 優先度2: 母音記号のみでマスタに存在するか
     let rule = ThaiMasterData.vowelRules.find(r => normalize(r.symbols) === withLast) ||
                ThaiMasterData.vowelRules.find(r => normalize(r.symbols) === base);
 
     if (rule) {
-      // 母音の一部として 'ย' や 'ว' が食われた場合、末子音フラグを消す
+      // 母音の一部として 'ย' や 'ว' が食われた場合（例: เีย + ว）
+      // これを末子音として二重計算しないようフラグを立てる
       if (normalize(rule.symbols).endsWith(syl.lastC)) {
         syl.isVowelPart = true; 
       }
       return rule;
     }
 
-    // 4. 最終フォールバック
+    // --- 3. 最終フォールバック (マスタにない場合の推測) ---
+    // 記号が何もなく、末子音だけがある場合 (例: คน の ค + น) は暗黙の短母音 'o'
     if (syl.lastC && !syl.isVowelPart) {
       return { sound: 'o', length: 'short', type: 'live' };
     }
+    
+    // 末子音すらなく、記号もない単独子音 (例: ะ が省略された形など) は暗黙の短母音 'a'
     return { sound: 'a', length: 'short', type: 'dead' };
   },
-getToneNumber: function(charClass, tMark, sType, vLength) {
+
+  /**
+   * 声調計算ロジック (タイ語の絶対ルールに基づく)
+   * 戻り値: 0(平), 1(低), 2(下), 3(高), 4(上)
+   */
+  getToneNumber: function(charClass, tMark, sType, vLength) {
     const vLen = (vLength || 'short').toLowerCase();
     
-    // 1. 声調記号がある場合（最優先：ここは完璧）
+    // --- ルール1: 声調記号がある場合（最優先） ---
+    // 子音のクラス（低級か、中/高級か）によって記号の意味が変わる
     if (tMark) {
-        if (tMark === '่') return (charClass === 'Low') ? 2 : 1;
-        if (tMark === '้') return (charClass === 'Low') ? 3 : 2;
-        if (tMark === '๊') return 3;
-        if (tMark === '๋') return 4;
+        if (tMark === '่') return (charClass === 'Low') ? 2 : 1; // ่ : 低級なら下声(2)、他は低声(1)
+        if (tMark === '้') return (charClass === 'Low') ? 3 : 2; // ้ : 低級なら高声(3)、他は下声(2)
+        if (tMark === '๊') return 3;                            // ๊ : 常に高声(3) ※主に中級で使用
+        if (tMark === '๋') return 4;                            // ๋ : 常に上声(4) ※主に中級で使用
     }
 
-    // 2. 無記号・生音 (Live Sound) ★ここを厳格に
-    // 母音が am, ai, ao 等、または末子音がある Live なら、何があってもここ
+    // --- ルール2: 無記号・生音 (Live Sound) ---
+    // 長母音で終わる、または末子音が生音(ง,น,ม,ย,ว)の場合
     if (sType.toLowerCase() === 'live') {
-        return (charClass === 'High') ? 4 : 0; // 高級なら上声(4)、それ以外は平声(0)
+        // 高級子音なら上声(4)、中級・低級なら平声(0)
+        return (charClass === 'High') ? 4 : 0; 
     }
 
-    // 3. 無記号・死音 (Dead Sound)
-    // 中・高級子音は一律で 低声(1)
+    // --- ルール3: 無記号・死音 (Dead Sound) の 中級・高級 ---
+    // 短母音で終わる、または末子音が死音(ก,ด,บ)の場合
     if (charClass === 'High' || charClass === 'Mid') {
-        return 1;
+        return 1; // 長さに関係なく一律で「低声(1)」
     }
 
-    // 4. 低級子音(Low) かつ 死音(Dead) の場合のみ、長短で分岐
-    // 短母音なら 高声(3)、長母音なら 下声(2)
+    // --- ルール4: 無記号・死音 (Dead Sound) の 低級 ---
+    // 低級子音の死音だけは、母音の長さで声調が分岐する
+    // 短母音なら「高声(3)」、長母音なら「下声(2)」
     return (vLen === 'short') ? 3 : 2;
-}
+  }
 };
-
-
-
-
 
 
 

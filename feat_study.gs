@@ -172,3 +172,57 @@ function getLearningStatistics() {
 
   return dataPoints;
 }
+
+
+/**
+ * DB全件をスキャンし、解析が不安定（警告あり）かつ
+ * まだ custom_split が設定されていない単語だけを抽出する
+ */
+function scanDbForWarnings() {
+  console.log("🔍 === STARTING FULL DB WARNING SCAN ===");
+  
+  const allVocab = getRawVocabulary();
+  const warningList = [];
+
+  allVocab.forEach(item => {
+    // 既に custom_split があるものは「解決済み」としてスキップ
+    if (item.custom_split) return;
+
+    try {
+      const syllables = GS_Parser.parseSyllables(item.word_th, item);
+      const meta = syllables.meta || { isReliable: true, warnings: [] };
+
+      if (!meta.isReliable) {
+        // 警告が出たものだけをリストに追加
+        warningList.push({
+          word: item.word_th,
+          current_split: syllables.map(s => s.full).join('|'),
+          reasons: meta.warnings.join(', ')
+        });
+      }
+    } catch (e) {
+      // エラー自体も重大な警告として扱う
+      warningList.push({ word: item.word_th, current_split: "ERROR", reasons: e.message });
+    }
+  });
+
+  // 結果の出力
+  if (warningList.length === 0) {
+    console.log("✅ 素晴らしい！警告が出る単語はゼロです。");
+  } else {
+    console.log(`⚠️ ${warningList.length} 件の不完全な単語が見つかりました：`);
+    
+    // スプレッドシートの「貼り付け用」に近い形式でログ出し
+    warningList.forEach((res, i) => {
+      console.log(`${i+1}. 【${res.word}】 現在の分割: [${res.current_split}]`);
+      console.log(`   └ 理由: ${res.reasons}`);
+    });
+
+    // 最後に、コピーしやすいように「単語リスト」だけをカンマ区切りで出す
+    const wordOnlyList = warningList.map(r => r.word).join(', ');
+    console.log("\n📋 --- COPY & PASTE LIST ---");
+    console.log(wordOnlyList);
+  }
+
+  console.log("🏁 === SCAN COMPLETE ===");
+}

@@ -346,5 +346,28 @@ reGenerate: function(id) {
     // 手応えとしての振動
     if (window.navigator.vibrate) window.navigator.vibrate(5);
   },
+
+
+  /**
+ * スプレッドシートの custom_split 列を特定IDで更新する
+ */
+updateCustomSplitInSheet: function(id, jsonValue) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("シート1"); // シート名は適宜変更
+  const data = sheet.getDataRange().getValues();
+  const header = data[0];
+  
+  const idColIdx = header.indexOf("id");
+  const splitColIdx = header.indexOf("custom_split");
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][idColIdx] === id) {
+      // ピンポイントでセルを更新
+      sheet.getRange(i + 1, splitColIdx + 1).setValue(jsonValue);
+      return { status: "success" };
+    }
+  }
+  return { status: "error", message: "ID not found" };
+},
 };
 </script>
