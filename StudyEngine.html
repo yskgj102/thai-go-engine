@@ -555,6 +555,7 @@ if (hasCustomSplit) {
     </div>`;
 
 // --- 🏗️ 【機能追加】エディタパネル ---
+// --- 🏗️ エディタパネル（×ボタン・動的表示対応） ---
 const editorPanel = `
     <div id="editor-${item.id}" style="display:none;" 
          onclick="event.stopPropagation()" 
@@ -565,38 +566,42 @@ const editorPanel = `
             <div class="relative flex-1">
                 <input type="text" id="input-${item.id}" 
                        value="${currentValue}" 
-                       class="w-full p-2.5 pr-16 rounded-lg thai-font text-sm outline-none transition-colors shadow-inner
+                       class="w-full p-2.5 pr-20 rounded-lg thai-font text-sm outline-none transition-colors shadow-inner
                               bg-[var(--input-bg)] text-[var(--input-text)] border-[var(--input-border)]
                               focus:ring-2 focus:ring-blue-500"
-                       placeholder="スペース区切りで入力...">
+                       placeholder="スペース区切りで入力..."
+                       oninput="const btn=document.getElementById('clear-btn-${item.id}'); btn.style.display=this.value?'flex':'none';">
                 
                 <div class="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-                    <button onclick="event.stopPropagation(); document.getElementById('input-${item.id}').value='${item.word_th}'"
+                    <button id="clear-btn-${item.id}"
+                            onclick="event.stopPropagation(); const input=document.getElementById('input-${item.id}'); input.value=''; input.focus(); this.style.display='none';"
+                            style="display: ${currentValue ? 'flex' : 'none'};"
+                            class="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-all">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+
+                    <button onclick="event.stopPropagation(); const input=document.getElementById('input-${item.id}'); input.value='${item.word_th}'; document.getElementById('clear-btn-${item.id}').style.display='flex';"
                             title="Reset to Original"
                             class="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-all">
                         <span class="text-[14px]">🪄</span>
-                    </button>
-                    <button onclick="event.stopPropagation(); document.getElementById('input-${item.id}').value=''"
-                            title="Clear Input"
-                            class="w-7 h-7 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-md transition-all">
-                        <span class="text-[14px]">🗑️</span>
                     </button>
                 </div>
             </div>
 
             <button onclick="event.stopPropagation(); Bridge.executeSaveSplit('${item.id}')" 
                     class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-lg text-[11px] font-black shadow-md transition-all active:scale-95">
-                保存
+                Save
             </button>
         </div>
         
         <div class="text-[8px] px-1 flex justify-between items-center opacity-80 text-[var(--text-sub)]">
             <span>※スペース区切りで入力してください</span>
-            <span class="font-mono opacity-50">🪄 Original / 🗑️ Clear</span>
+            <span class="font-mono opacity-50">🪄 Original</span>
         </div>
     </div>
     `;
-
     panel.insertAdjacentHTML('beforeend', statusHTML + editorPanel);
 
     const wrapper = document.createElement('div');
@@ -617,14 +622,14 @@ syllables.forEach((syl) => {
         // --- 🎨 AppStoreの状態からモード判定 ---
         const isLight = AppStore.state.isLightMode;
 
-        // --- 🎨 モード別の色出し分け (ここが重要！) ---
+        // --- 🎨 モード別の色出し分け設定 ---
         
         // ラベル（左側：クラス、子音名称など）
-        // ライト：slate-500 (ハッキリしたグレー) / ダーク：white/20 (超薄いグレー)
+        // ライト：slate-500（ハッキリしたグレー） / ダーク：white/20（超薄いグレー）
         const labelColor = isLight ? "text-slate-500" : "text-white/20";
 
         // 詳細テキスト（右側：クラス名、子音名称本体）
-        // ライト：slate-700 (濃いグレー) / ダーク：white/80 (少し薄い白)
+        // ライト：slate-700（濃いグレー） / ダーク：white/80（少し薄い白）
         const detailTextColor = isLight ? "text-slate-700" : "text-white/80";
 
         // メイン文字の「グレー」部分
@@ -786,27 +791,30 @@ parseSyllables: function(text, dbEntry = null) {
       if (i < chars.length && leadingV.indexOf(chars[i]) !== -1) {
         syl.leadingV = chars[i]; syl.full += chars[i]; i++;
       }
-
-      // Step 2. 核子音の回収 (クラスタ、ห引導、ฤ の処理)
+// Step 2. 核子音の回収 (マスタによるクラスタ・ห引導・ฤ の処理)
       if (i < chars.length) {
-        syl.mainC = chars[i]; syl.full += chars[i]; i++;
-        
-        if (syl.mainC === 'ฤ') {
-          // ฤ (Rue) は母音の性質を持つため、そのまま次へ
-        } else if (i < chars.length) {
-          const c2 = chars[i];
-          const nextMark = chars[i+1];
-          const isHo = syl.mainC === 'ห' && "งญนมรลวยว".indexOf(c2) !== -1;
-          const isCluster = "กขคตปผพจสซ".indexOf(syl.mainC) !== -1 && "รลว".indexOf(c2) !== -1;
-          
-          if (isHo || isCluster) {
-            // ★重要: c2が 'ร' で、次も 'ร' なら Ro Han のためクラスタ化をキャンセル！
-            if (c2 === 'ร' && nextMark === 'ร') {
-               // 何もしない（Step 3 に任せる）
-            } else if (!(vMarks.indexOf(c2) !== -1 || toneMarks.indexOf(c2) !== -1)) {
-               syl.mainC += c2; syl.full += c2; i++;
-            }
+        const c1 = chars[i];
+        const c2 = chars[i+1];
+        const nextMark = chars[i+2]; // 3文字目（รร判定用）
+        const combo = c1 + c2;
+
+        // 1. 二重子音マスタ (ThaiMasterData.clusters) にあるかチェック
+        // 例: 'ตร' がマスタにあれば、2文字まとめて mainC に入れる
+        if (c2 && ThaiMasterData.clusters[combo]) {
+          // ★重要: c2が 'ร' で次も 'ร' (รร) なら Ro Han 優先のため、ここでは吸わない
+          if (c2 === 'ร' && nextMark === 'ร') {
+            syl.mainC = c1; syl.full += c1; i++;
+          } else {
+            syl.mainC = combo; syl.full += combo; i += 2;
           }
+        } 
+        // 2. 引導子音 (ห + 低級単独子音) の判定
+        else if (c1 === 'ห' && c2 && "งญนมรลวยว".indexOf(c2) !== -1) {
+          syl.mainC = combo; syl.full += combo; i += 2;
+        } 
+        // 3. ฤ (Rue) または 単独子音
+        else {
+          syl.mainC = c1; syl.full += c1; i++;
         }
       }
 
@@ -939,21 +947,32 @@ if (syl.isRoHan) {
         syl.vLen = vRule.length;
 
         // --- 🔊 【ロジック層での発音記号導出】 ---
-const tObj = ThaiMasterData.toneMap[syl.toneNum] || { mark: "" };
+// --- 🔊 【ロジック層での発音記号導出】 ---
+        const tObj = ThaiMasterData.toneMap[syl.toneNum] || { mark: "" };
         
-        // A. 頭音の確定（引導子音スキップ）
-        const phoneticHead = (syl.mainC.length > 1 && (syl.mainC[0] === 'ห' || syl.mainC[0] === 'อ'))
-                             ? syl.mainC[1] : syl.mainC[0];
-        syl.pInitial = (ThaiMasterData.consonants[phoneticHead]?.sound || "").toLowerCase();
+        let baseSound = "";
+        const headStr = syl.mainC;
 
-        // B. 末音の確定（★ここがポイント：.final を参照）
-        syl.pFinal = syl.lastC ? (ThaiMasterData.consonants[syl.lastC]?.final || "").toLowerCase() : "-";
+        // 1. マスタ(clusters)を最優先で引く（'ตร' -> 'tr'）
+        if (ThaiMasterData.clusters[headStr]) {
+            baseSound = ThaiMasterData.clusters[headStr].sound;
+        } 
+        // 2. 引導子音(ห/อ)の場合は2文字目を採用 (既存ロジック)
+        else if (headStr.length > 1 && (headStr[0] === 'ห' || headStr[0] === 'อ')) {
+            baseSound = ThaiMasterData.consonants[headStr[1]]?.sound || "";
+        } 
+        // 3. 通常の単独子音
+        else {
+            baseSound = ThaiMasterData.consonants[headStr[0]]?.sound || "";
+        }
 
-        // C. 全体発音の組み立て（末子が "-" の場合は含めない）
+        syl.pInitial = baseSound.toLowerCase();
+
+        // 4. 全体発音の組み立て（母音の直後に声調記号を置く [ sà-nùk ] 形式）
         const pVowel = (syl.vSound || "").toLowerCase();
-        const pFinalClean = (syl.pFinal === "-") ? "" : syl.pFinal;
+        const pFinalClean = (syl.lastC) ? (ThaiMasterData.consonants[syl.lastC]?.final || "").toLowerCase() : "";
+        
         syl.derived = syl.pInitial + pVowel + tObj.mark + pFinalClean;
-
         
     });
 

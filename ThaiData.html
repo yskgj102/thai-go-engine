@@ -57,10 +57,20 @@ const ThaiMasterData = {
     'อ': { class: 'Mid',  name: 'O Ang',        sound: '-',  final: '-' },
     'ฮ': { class: 'Low',  name: 'Ho Nok-huk',   sound: 'h',  final: '-' },
     'ฤ': { class: 'Low',  name: 'Rue',          sound: 'rue', final: '-' },
+'ฒ': { class: 'Low',  name: 'Tho Phuthao', sound: 'th', final: 't' }, 
+'ฬ': { class: 'Low',  name: 'Lo Chula',    sound: 'l',  final: 'n' },
+// これらは「文字」としてカウントされないように除外するか、
+// 特殊な class: 'Symbol' として定義しておくと安全です
+'ๆ': { class: 'Symbol', name: 'Mai Yamok', sound: '(repeat)', final: '-' }, // 繰り返し
+'ฯ': { class: 'Symbol', name: 'Paiyan Noi', sound: '(etc)',    final: '-' }, // 省略
 
 },
   // vowelRules に追加・上書き（最長一致のため、記号が多い順に並べること）
   vowelRules: [
+
+    { symbols: 'เ็',  sound: 'e',   length: 'short', type: 'dead' },
+{ symbols: 'แ็',  sound: 'ɛ',   length: 'short', type: 'dead' },
+{ symbols: 'เิ',  sound: 'əə',  length: 'long',  type: 'live' },
     // vowelRules の最初に追加
     { symbols: 'เื',  sound: 'ɯa', length: 'long', type: 'live' },
 { symbols: 'เีย', sound: 'ia', length: 'long', type: 'live' },
@@ -108,11 +118,11 @@ const ThaiMasterData = {
   },
 
   toneMap: {
-    0: { mark: '', label: '平声 (Mid)', color: 'text-white/40' },
-    1: { mark: '̀', label: '低声 (Low)', color: 'text-rose-300' },
-    2: { mark: '̂', label: '下声 (Falling)', color: 'text-orange-300' },
-    3: { mark: '́', label: '高声 (High)', color: 'text-cyan-300' },
-    4: { mark: '̌', label: '上声 (Rising)', color: 'text-yellow-300' }
+    0: { mark: '', label: '平声 (Common)', color: 'text-teal-600 dark:text-teal-400' }, 
+    1: { mark: '̀', label: '低声 (Low)', color: 'text-red-500' },
+    2: { mark: '̂', label: '下声 (Falling)', color: 'text-purple-500' },
+    3: { mark: '́', label: '高声 (High)', color: 'text-sky-500' },
+    4: { mark: '̌', label: '上声 (Rising)', color: 'text-amber-500' }
   },
 
   classColors: {
@@ -120,8 +130,23 @@ const ThaiMasterData = {
     'Mid': 'text-green-400',
     'High': 'text-red-400',
     '不明': 'text-white/30'
-  }
-
+  },
+  clusters : {
+// --- 伝統的なタイ語の二重子音 ---
+    'กร': { sound: 'kr', class: 'Mid' }, 'กล': { sound: 'kl', class: 'Mid' }, 'กว': { sound: 'kw', class: 'Mid' },
+    'ขร': { sound: 'khr', class: 'High' }, 'ขล': { sound: 'khl', class: 'High' }, 'ขว': { sound: 'khw', class: 'High' },
+    'คร': { sound: 'khr', class: 'Low' }, 'คล': { sound: 'khl', class: 'Low' }, 'คว': { sound: 'khw', class: 'Low' },
+    'ตร': { sound: 'tr', class: 'Mid' },
+    'ปร': { sound: 'pr', class: 'Mid' }, 'ปล': { sound: 'pl', class: 'Mid' },
+    'พร': { sound: 'phr', class: 'Low' }, 'พล': { sound: 'phl', class: 'Low' },
+'ทร': { sound: 's', class: 'Low' }, // 擬似二重子音の代表格
+    // --- 外来語（英語由来）対応：これを足すと完璧 ---
+    'ฟร': { sound: 'fr', class: 'Low' }, // free
+    'ฟล': { sound: 'fl', class: 'Low' }, // flute
+    'บร': { sound: 'br', class: 'Mid' }, // brake
+    'บล': { sound: 'bl', class: 'Mid' }, // blue
+    'ดร': { sound: 'dr', class: 'Mid' }  // dream
+}
 };
 
 </script>

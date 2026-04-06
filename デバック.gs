@@ -308,27 +308,30 @@ parseSyllables: function(text, dbEntry = null) {
       if (i < chars.length && leadingV.indexOf(chars[i]) !== -1) {
         syl.leadingV = chars[i]; syl.full += chars[i]; i++;
       }
-
-      // Step 2. 核子音の回収 (クラスタ、ห引導、ฤ の処理)
+// Step 2. 核子音の回収 (マスタによるクラスタ・ห引導・ฤ の処理)
       if (i < chars.length) {
-        syl.mainC = chars[i]; syl.full += chars[i]; i++;
-        
-        if (syl.mainC === 'ฤ') {
-          // ฤ (Rue) は母音の性質を持つため、そのまま次へ
-        } else if (i < chars.length) {
-          const c2 = chars[i];
-          const nextMark = chars[i+1];
-          const isHo = syl.mainC === 'ห' && "งญนมรลวยว".indexOf(c2) !== -1;
-          const isCluster = "กขคตปผพจสซ".indexOf(syl.mainC) !== -1 && "รลว".indexOf(c2) !== -1;
-          
-          if (isHo || isCluster) {
-            // ★重要: c2が 'ร' で、次も 'ร' なら Ro Han のためクラスタ化をキャンセル！
-            if (c2 === 'ร' && nextMark === 'ร') {
-               // 何もしない（Step 3 に任せる）
-            } else if (!(vMarks.indexOf(c2) !== -1 || toneMarks.indexOf(c2) !== -1)) {
-               syl.mainC += c2; syl.full += c2; i++;
-            }
+        const c1 = chars[i];
+        const c2 = chars[i+1];
+        const nextMark = chars[i+2]; // 3文字目（รร判定用）
+        const combo = c1 + c2;
+
+        // 1. 二重子音マスタ (ThaiMasterData.clusters) にあるかチェック
+        // 例: 'ตร' がマスタにあれば、2文字まとめて mainC に入れる
+        if (c2 && ThaiMasterData.clusters[combo]) {
+          // ★重要: c2が 'ร' で次も 'ร' (รร) なら Ro Han 優先のため、ここでは吸わない
+          if (c2 === 'ร' && nextMark === 'ร') {
+            syl.mainC = c1; syl.full += c1; i++;
+          } else {
+            syl.mainC = combo; syl.full += combo; i += 2;
           }
+        } 
+        // 2. 引導子音 (ห + 低級単独子音) の判定
+        else if (c1 === 'ห' && c2 && "งญนมรลวยว".indexOf(c2) !== -1) {
+          syl.mainC = combo; syl.full += combo; i += 2;
+        } 
+        // 3. ฤ (Rue) または 単独子音
+        else {
+          syl.mainC = c1; syl.full += c1; i++;
         }
       }
 
@@ -461,21 +464,32 @@ if (syl.isRoHan) {
         syl.vLen = vRule.length;
 
         // --- 🔊 【ロジック層での発音記号導出】 ---
-const tObj = ThaiMasterData.toneMap[syl.toneNum] || { mark: "" };
+// --- 🔊 【ロジック層での発音記号導出】 ---
+        const tObj = ThaiMasterData.toneMap[syl.toneNum] || { mark: "" };
         
-        // A. 頭音の確定（引導子音スキップ）
-        const phoneticHead = (syl.mainC.length > 1 && (syl.mainC[0] === 'ห' || syl.mainC[0] === 'อ'))
-                             ? syl.mainC[1] : syl.mainC[0];
-        syl.pInitial = (ThaiMasterData.consonants[phoneticHead]?.sound || "").toLowerCase();
+        let baseSound = "";
+        const headStr = syl.mainC;
 
-        // B. 末音の確定（★ここがポイント：.final を参照）
-        syl.pFinal = syl.lastC ? (ThaiMasterData.consonants[syl.lastC]?.final || "").toLowerCase() : "-";
+        // 1. マスタ(clusters)を最優先で引く（'ตร' -> 'tr'）
+        if (ThaiMasterData.clusters[headStr]) {
+            baseSound = ThaiMasterData.clusters[headStr].sound;
+        } 
+        // 2. 引導子音(ห/อ)の場合は2文字目を採用 (既存ロジック)
+        else if (headStr.length > 1 && (headStr[0] === 'ห' || headStr[0] === 'อ')) {
+            baseSound = ThaiMasterData.consonants[headStr[1]]?.sound || "";
+        } 
+        // 3. 通常の単独子音
+        else {
+            baseSound = ThaiMasterData.consonants[headStr[0]]?.sound || "";
+        }
 
-        // C. 全体発音の組み立て（末子が "-" の場合は含めない）
+        syl.pInitial = baseSound.toLowerCase();
+
+        // 4. 全体発音の組み立て（母音の直後に声調記号を置く [ sà-nùk ] 形式）
         const pVowel = (syl.vSound || "").toLowerCase();
-        const pFinalClean = (syl.pFinal === "-") ? "" : syl.pFinal;
+        const pFinalClean = (syl.lastC) ? (ThaiMasterData.consonants[syl.lastC]?.final || "").toLowerCase() : "";
+        
         syl.derived = syl.pInitial + pVowel + tObj.mark + pFinalClean;
-
         
     });
 
@@ -564,7 +578,7 @@ syllables.forEach((syl, i) => {
             
         }
         
-if (recoveryHappened) {
+  if (recoveryHappened) {
             // ★ 足したこと：確信度の塗り替え
             // 吸着に成功した音節については、最低限の体裁は整ったので "MID" に格上げする
             syllables.forEach(s => {
@@ -687,8 +701,6 @@ const GS_Validator = {
 
 };
 const ThaiMasterData = {
-// --- 例外単語の強制分割辞書（1000語完全網羅版） ---
-
  consonants: {
     // --- K-group (末尾だと 'k' になるグループ) ---
     'ก': { class: 'Mid',  name: 'Ko Kai',      sound: 'k',  final: 'k' },
@@ -746,10 +758,20 @@ const ThaiMasterData = {
     'อ': { class: 'Mid',  name: 'O Ang',        sound: '-',  final: '-' },
     'ฮ': { class: 'Low',  name: 'Ho Nok-huk',   sound: 'h',  final: '-' },
     'ฤ': { class: 'Low',  name: 'Rue',          sound: 'rue', final: '-' },
+'ฒ': { class: 'Low',  name: 'Tho Phuthao', sound: 'th', final: 't' }, 
+'ฬ': { class: 'Low',  name: 'Lo Chula',    sound: 'l',  final: 'n' },
+// これらは「文字」としてカウントされないように除外するか、
+// 特殊な class: 'Symbol' として定義しておくと安全です
+'ๆ': { class: 'Symbol', name: 'Mai Yamok', sound: '(repeat)', final: '-' }, // 繰り返し
+'ฯ': { class: 'Symbol', name: 'Paiyan Noi', sound: '(etc)',    final: '-' }, // 省略
 
 },
   // vowelRules に追加・上書き（最長一致のため、記号が多い順に並べること）
   vowelRules: [
+
+    { symbols: 'เ็',  sound: 'e',   length: 'short', type: 'dead' },
+{ symbols: 'แ็',  sound: 'ɛ',   length: 'short', type: 'dead' },
+{ symbols: 'เิ',  sound: 'əə',  length: 'long',  type: 'live' },
     // vowelRules の最初に追加
     { symbols: 'เื',  sound: 'ɯa', length: 'long', type: 'live' },
 { symbols: 'เีย', sound: 'ia', length: 'long', type: 'live' },
@@ -797,11 +819,11 @@ const ThaiMasterData = {
   },
 
   toneMap: {
-    0: { mark: '', label: '平声 (Mid)', color: 'text-white/40' },
-    1: { mark: '̀', label: '低声 (Low)', color: 'text-rose-300' },
-    2: { mark: '̂', label: '下声 (Falling)', color: 'text-orange-300' },
-    3: { mark: '́', label: '高声 (High)', color: 'text-cyan-300' },
-    4: { mark: '̌', label: '上声 (Rising)', color: 'text-yellow-300' }
+    0: { mark: '', label: '平声 (Common)', color: 'text-teal-600 dark:text-teal-400' }, 
+    1: { mark: '̀', label: '低声 (Low)', color: 'text-red-500' },
+    2: { mark: '̂', label: '下声 (Falling)', color: 'text-purple-500' },
+    3: { mark: '́', label: '高声 (High)', color: 'text-sky-500' },
+    4: { mark: '̌', label: '上声 (Rising)', color: 'text-amber-500' }
   },
 
   classColors: {
@@ -809,8 +831,23 @@ const ThaiMasterData = {
     'Mid': 'text-green-400',
     'High': 'text-red-400',
     '不明': 'text-white/30'
-  }
-
+  },
+  clusters : {
+// --- 伝統的なタイ語の二重子音 ---
+    'กร': { sound: 'kr', class: 'Mid' }, 'กล': { sound: 'kl', class: 'Mid' }, 'กว': { sound: 'kw', class: 'Mid' },
+    'ขร': { sound: 'khr', class: 'High' }, 'ขล': { sound: 'khl', class: 'High' }, 'ขว': { sound: 'khw', class: 'High' },
+    'คร': { sound: 'khr', class: 'Low' }, 'คล': { sound: 'khl', class: 'Low' }, 'คว': { sound: 'khw', class: 'Low' },
+    'ตร': { sound: 'tr', class: 'Mid' },
+    'ปร': { sound: 'pr', class: 'Mid' }, 'ปล': { sound: 'pl', class: 'Mid' },
+    'พร': { sound: 'phr', class: 'Low' }, 'พล': { sound: 'phl', class: 'Low' },
+'ทร': { sound: 's', class: 'Low' }, // 擬似二重子音の代表格
+    // --- 外来語（英語由来）対応：これを足すと完璧 ---
+    'ฟร': { sound: 'fr', class: 'Low' }, // free
+    'ฟล': { sound: 'fl', class: 'Low' }, // flute
+    'บร': { sound: 'br', class: 'Mid' }, // brake
+    'บล': { sound: 'bl', class: 'Mid' }, // blue
+    'ดร': { sound: 'dr', class: 'Mid' }  // dream
+}
 
 };
 
