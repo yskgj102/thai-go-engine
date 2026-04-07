@@ -98,7 +98,7 @@ function getRawLogs() {
 }
 
 /**
- * 学習ログ（t_learning_logs）の全データを取得
+ * 子音ルール（m_consonants）の全データを取得
  */
 function getConsonants() {
   return getSheetDataAsObjects('m_consonants');
