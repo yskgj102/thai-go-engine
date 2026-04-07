@@ -54,6 +54,8 @@
       padding: 0 16px;
       gap: 8px;
       border-bottom: 1px solid var(--border);
+      z-index: 9999 !important; /* 他の要素より絶対的に上に */
+  background: var(--header-bg) !important; /* 透過させない */
     }
 
     /* 検索・入力欄の特殊なスケーリング設定 */
