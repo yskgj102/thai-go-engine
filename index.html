@@ -146,15 +146,13 @@
 </button>
 
             </div>
-            <div class="relative inline-block" style="z-index: 60;"> <div id="word-th" 
-     onclick="event.stopPropagation(); StudyEngine.toggleAnalysis();" 
+            <div class="relative inline-block" style="z-index: 60;"> <div id="word-th"  
      class="thai-font text-6xl font-bold mb-4 text-center cursor-pointer relative z-50">
 </div>
               <button onclick="event.stopPropagation(); StudyEngine.speak(false)" class="absolute -top-2 -left-10 text-[14px] opacity-100 p-2 active:scale-125 transition-transform">🔊</button>
             </div>
-            <div id="analysis-panel" class="hidden w-full mt-4 flex flex-wrap justify-center gap-2 px-4 select-none animate-in fade-in slide-in-from-top-2 duration-300">
-  </div>
-            <div id="phonetic" class="reveal-target hidden text-sm italic mb-6" style="color: var(--text-sub)"></div>
+            <div id="phonetic"  onclick="event.stopPropagation(); StudyEngine.toggleAnalysis();" class="reveal-target hidden text-sm italic mb-6" style="color: var(--text-sub)"></div>
+            <div id="analysis-panel" class="hidden w-full mt-4 flex flex-wrap justify-center gap-2 px-4 select-none animate-in fade-in slide-in-from-top-2 duration-300"></div>
 
             <div id="meaning-area" class="reveal-target hidden w-full pt-6 border-t text-center" style="border-color: var(--border);">
               <div class="mb-2">
