@@ -13,6 +13,14 @@ const Bridge = {
   initialize: function() {
     console.log("[Bridge] Requesting initial data...");
     
+
+    // --- 追加：タイ語解析用マスタの取得 ---
+    google.script.run.withSuccessHandler(masterRes => {
+      // 前の工程で作った「展開関数」をここで実行
+      initializeThaiMaster(masterRes); 
+      console.log("[Bridge] Thai Master Data Loaded.");
+    }).getThaiMasterFull();
+    
     // 1. 本日の学習済み件数（Activity）を取得
     google.script.run.withSuccessHandler(count => {
       AppStore.update('todayScore', count);

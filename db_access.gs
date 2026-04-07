@@ -97,5 +97,35 @@ function getRawLogs() {
   return getSheetDataAsObjects('t_learning_logs');
 }
 
+/**
+ * 学習ログ（t_learning_logs）の全データを取得
+ */
+function getConsonants() {
+  return getSheetDataAsObjects('m_consonants');
+}
+
+/**
+ * 母音ルール（m_vowel_rules）の全データを取得
+ */
+function getVowelRules() {
+  return getSheetDataAsObjects('m_vowel_rules');
+}
+
+/**
+ * 二重子音マスタ（m_clusters）の全データを取得
+ */
+function getClusters() {
+  return getSheetDataAsObjects('m_clusters');
+}
 
 
+/**
+ * 解析エンジン(ThaiMasterData)に必要な全マスタを統合して返す
+ */
+function getThaiMasterFull() {
+  return {
+    consonants: getSheetDataAsObjects('m_consonants'),
+    vowelRules: getSheetDataAsObjects('m_vowel_rules'),
+    clusters:   getSheetDataAsObjects('m_clusters')
+  };
+}

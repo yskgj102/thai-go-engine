@@ -1,147 +1,9 @@
 <script>
 const ThaiMasterData = {
- consonants: {
-    // --- K-group (末尾だと 'k' になるグループ) ---
-    'ก': { class: 'Mid',  name: 'Ko Kai',      sound: 'k',  final: 'k' },
-    'ข': { class: 'High', name: 'Kho Khai',    sound: 'kh', final: 'k' },
-    'ฃ': { class: 'High', name: 'Kho Khuat',   sound: 'kh', final: 'k' }, // 現在は使われない
-    'ค': { class: 'Low',  name: 'Kho Khwai',   sound: 'kh', final: 'k' },
-    'ฅ': { class: 'Low',  name: 'Kho Khon',    sound: 'kh', final: 'k' }, // 現在は使われない
-    'ฆ': { class: 'Low',  name: 'Kho Rakhang', sound: 'kh', final: 'k' },
-
-    // --- T-group (末尾だと 't' になるグループ) ---
-    'จ': { class: 'Mid',  name: 'Cho Chan',     sound: 'ch', final: 't' },
-    'ฉ': { class: 'High', name: 'Cho Ching',    sound: 'ch', final: 't' },
-    'ช': { class: 'Low',  name: 'Cho Chang',    sound: 'ch', final: 't' },
-    'ซ': { class: 'Low',  name: 'So So',        sound: 's',  final: 't' },
-    'ฌ': { class: 'Low',  name: 'Cho Choe',     sound: 'ch', final: 't' },
-    'ฎ': { class: 'Mid',  name: 'Do Chada',     sound: 'd',  final: 't' },
-    'ฏ': { class: 'Mid',  name: 'To Patak',     sound: 't',  final: 't' },
-    'ฐ': { class: 'High', name: 'Tho Than',     sound: 'th', final: 't' },
-    'ฑ': { class: 'Low',  name: 'Tho Montho',   sound: 'th', final: 't' },
-    'ฒ': { class: 'Low',  name: 'Tho Phuthao',  sound: 'th', final: 't' },
-    'ด': { class: 'Mid',  name: 'Do Dek',       sound: 'd',  final: 't' },
-    'ต': { class: 'Mid',  name: 'To Tao',       sound: 't',  final: 't' },
-    'ถ': { class: 'High', name: 'Tho Thung',    sound: 'th', final: 't' },
-    'ท': { class: 'Low',  name: 'Tho Thahaan',  sound: 'th', final: 't' },
-    'ธ': { class: 'Low',  name: 'Tho Thong',    sound: 'th', final: 't' },
-    'ศ': { class: 'High', name: 'So Sala',      sound: 's',  final: 't' },
-    'ษ': { class: 'High', name: 'So Ruesi',     sound: 's',  final: 't' },
-    'ส': { class: 'High', name: 'So Suea',      sound: 's',  final: 't' },
-
-    // --- P-group (末尾だと 'p' になるグループ) ---
-    'บ': { class: 'Mid',  name: 'Bo Baimai',    sound: 'b',  final: 'p' },
-    'ป': { class: 'Mid',  name: 'Po Plaa',      sound: 'p',  final: 'p' },
-    'ผ': { class: 'High', name: 'Pho Phueng',   sound: 'ph', final: 'p' },
-    'ฝ': { class: 'High', name: 'Fo Fa',        sound: 'f',  final: 'p' },
-    'พ': { class: 'Low',  name: 'Pho Phan',     sound: 'ph', final: 'p' },
-    'ฟ': { class: 'Low',  name: 'Fo Fan',       sound: 'f',  final: 'p' },
-    'ภ': { class: 'Low',  name: 'Pho Samphao',  sound: 'ph', final: 'p' },
-
-    // --- N-group (末尾だと 'n' になるグループ) ---
-    'ญ': { class: 'Low',  name: 'Yo Ying',      sound: 'y',  final: 'n' },
-    'ณ': { class: 'Low',  name: 'No Nen',       sound: 'n',  final: 'n' },
-    'น': { class: 'Low',  name: 'No Nuu',       sound: 'n',  final: 'n' },
-    'ร': { class: 'Low',  name: 'Ro Ruea',      sound: 'r',  final: 'n' },
-    'ล': { class: 'Low',  name: 'Lo Ling',      sound: 'l',  final: 'n' },
-    'ฬ': { class: 'Low',  name: 'Lo Chula',     sound: 'l',  final: 'n' },
-
-    // --- Nasal / Semi-vowel (末尾もそのまま) ---
-    'ง': { class: 'Low',  name: 'Ngo Nguu',     sound: 'ng', final: 'ng' },
-    'ม': { class: 'Low',  name: 'Mo Maa',       sound: 'm',  final: 'm' },
-    'ย': { class: 'Low',  name: 'Yo Yak',       sound: 'y',  final: 'y' },
-    'ว': { class: 'Low',  name: 'Wo Waen',      sound: 'w',  final: 'w' },
-
-    // --- その他（末尾にはならない文字） ---
-    'ห': { class: 'High', name: 'Ho Hip',       sound: 'h',  final: '-' },
-    'อ': { class: 'Mid',  name: 'O Ang',        sound: '-',  final: '-' },
-    'ฮ': { class: 'Low',  name: 'Ho Nok-huk',   sound: 'h',  final: '-' },
-    'ฤ': { class: 'Low',  name: 'Rue',          sound: 'rue', final: '-' },
-'ฒ': { class: 'Low',  name: 'Tho Phuthao', sound: 'th', final: 't' }, 
-'ฬ': { class: 'Low',  name: 'Lo Chula',    sound: 'l',  final: 'n' },
-// これらは「文字」としてカウントされないように除外するか、
-// 特殊な class: 'Symbol' として定義しておくと安全です
-'ๆ': { class: 'Symbol', name: 'Mai Yamok', sound: '(repeat)', final: '-' }, // 繰り返し
-'ฯ': { class: 'Symbol', name: 'Paiyan Noi', sound: '(etc)',    final: '-' }, // 省略
-
-},
-  // vowelRules に追加・上書き（最長一致のため、記号が多い順に並べること）
-  vowelRules: [
-    { symbols: 'าญจน์', sound: 'aa', length: 'long', type: 'live' }, // กาญจน์ 用
-    { symbols: 'าสตร์', sound: 'aa', length: 'long', type: 'live' }, // ศาสตร์ (科学) 用
-    // --- 画像3枚目：特殊な末子音（黙字セット） ---
-    { symbols: 'าสตร์', sound: 'aat', length: 'long', type: 'dead' }, // ศาสตร์ 等
-    { symbols: 'ารถ',  sound: 'aat', length: 'long', type: 'dead' }, // สามารถ 等
-    { symbols: 'จักร',  sound: 'cak', length: 'short', type: 'dead' }, // จักร 等
-    { symbols: 'ัตร',   sound: 'at',  length: 'short', type: 'dead' }, // บัตร 等
-    { symbols: 'ุตร',   sound: 'ut',  length: 'short', type: 'dead' }, // บุตร 等
-    { symbols: 'ิธ',    sound: 'it',  length: 'short', type: 'dead' }, // อิทธิ 等
-    { symbols: 'รส',    sound: 'rot', length: 'short', type: 'dead' }, // ธรรมรส 等
-    { symbols: 'ติ',    sound: 't',   length: 'short', type: 'dead' }, // สมมติ 等（末尾のi無視）
-    { symbols: 'ตุ',    sound: 't',   length: 'short', type: 'dead' }, // เหตุ 等（末尾のu無視）
-    { symbols: 'มิ',    sound: 'm',   length: 'short', type: 'dead' }, // ภูมิ 等（末尾のi無視）
-    
-    // --- 画像1枚目：足りない二重・三重母音 ---
-    { symbols: 'เียว', sound: 'iao', length: 'long', type: 'live' },
-    { symbols: 'เือะ', sound: 'ɯa',  length: 'short', type: 'dead' },
-    { symbols: 'เอะ',  sound: 'ə',   length: 'short', type: 'dead' },
-    { symbols: 'เอ',  sound: 'əə',  length: 'long',  type: 'live' },
-    { symbols: '์',      sound: '',   length: '',     type: ''     }, // 単独の黙字記号（念のため）
-    { symbols: 'าย',  sound: 'aai', length: 'long', type: 'live' }, // 'อาย' 用
-    { symbols: 'าว',  sound: 'aao', length: 'long', type: 'live' }, // 'หิว' などの対抗
-    { symbols: 'เียว', sound: 'iao', length: 'long', type: 'live' }, // 'เดียว' 用
-    { symbols: 'เ็',  sound: 'e',   length: 'short', type: 'dead' },
-     { symbols: 'แ็',  sound: 'ɛ',   length: 'short', type: 'dead' },
-     { symbols: 'เิ',  sound: 'əə',  length: 'long',  type: 'live' },
-    // vowelRules の最初に追加
-    { symbols: 'เื',  sound: 'ɯa', length: 'long', type: 'live' },
-    { symbols: 'เีย', sound: 'ia', length: 'long', type: 'live' },
-    { symbols: 'เือ', sound: 'ɯa', length: 'long', type: 'live' },
-    { symbols: 'ัว',  sound: 'ua', length: 'long', type: 'live' },
-    // --- 3文字セット ---
-    { symbols: 'เีย', sound: 'ia', length: 'long', type: 'live' }, // diaw (เดี๋ยว) 等
-    
-    // --- 2文字セット ---
-    // vowelRules に「挟み込み」の概念を持たせる
-    { symbols: 'แว', sound: 'ɛɛo', length: 'long', type: 'live' },
-    { symbols: 'เาะ', sound: 'ɔ',  length: 'short', type: 'dead' },
-    { symbols: 'เิ',  sound: 'əə', length: 'long', type: 'live' },
-    { symbols: 'เะ',  sound: 'e',   length: 'short', type: 'dead' },
-    { symbols: 'แะ',  sound: 'ɛ',   length: 'short', type: 'dead' },
-    { symbols: 'โะ',  sound: 'o',   length: 'short', type: 'dead' },
-    { symbols: 'ัว',  sound: 'ua', length: 'long', type: 'live' }, // 末子音がない時の ua
-    { symbols: 'เา',  sound: 'ao', length: 'long', type: 'live' },
-    
-    // --- 特殊母音（末子音ありで形が変わるもの） ---
-    
-    { symbols: 'ั',   sound: 'a',   length: 'short', type: 'dead' }, // c-a-c
-    { symbols: 'ิ',   sound: 'i',   length: 'short', type: 'dead' },
-    { symbols: 'ึ',   sound: 'ɯ',   length: 'short', type: 'dead' },
-    { symbols: 'ุ',   sound: 'u',   length: 'short', type: 'dead' },
-    { symbols: '็',   sound: 'e',   length: 'short', type: 'dead' }, // 短母音化記号 (เ-็)
-    { symbols: 'ี',   sound: 'ii',  length: 'long',  type: 'live' },
-    { symbols: 'ื',   sound: 'ɯɯ',  length: 'long',  type: 'live' },
-    { symbols: 'ู',   sound: 'uu',  length: 'long',  type: 'live' },
-    { symbols: 'เ',   sound: 'ee',  length: 'long',  type: 'live' },
-    { symbols: 'แ',   sound: 'ɛɛ',  length: 'long',  type: 'live' },
-    { symbols: 'โ',   sound: 'oo',  length: 'long',  type: 'live' },
-    { symbols: 'อ',   sound: 'ɔɔ',  length: 'long',  type: 'live' },
-    { symbols: 'า',   sound: 'aa',  length: 'long',  type: 'live' },
-    { symbols: 'ำ',   sound: 'am',  length: 'short', type: 'live' },
-    { symbols: 'ใ',   sound: 'ai',  length: 'short', type: 'live' },
-    { symbols: 'ไ',   sound: 'ai',  length: 'short', type: 'live' },
-    { symbols: 'ะ',   sound: 'a',   length: 'short', type: 'dead' }
-  ],
-
-  terminalGroups: {
-    'จน์': 'Live', // 黙字を含んだ末子音（音は出さないが、ญ の Live 判定を邪魔させない）
-    'น์': 'Live',
-    'ก': 'Dead', 'ข': 'Dead', 'ค': 'Dead', 'ฆ': 'Dead',
-    'ง': 'Live', 'น': 'Live', 'ณ': 'Live', 'ญ': 'Live', 'ร': 'Live', 'ล': 'Live', 'ฬ': 'Live',
-    'บ': 'Dead', 'ป': 'Dead', 'พ': 'Dead', 'ฟ': 'Dead', 'ภ': 'Dead',
-    'ม': 'Live', 'ย': 'Live', 'ว': 'Live',
-    'ด': 'Dead', 'ต': 'Dead', 'ถ': 'Dead', 'ท': 'Dead', 'ธ': 'Dead', 'ส': 'Dead', 'ศ': 'Dead', 'ษ': 'Dead'
-  },
+  consonants: {}, 
+  vowelRules: [], 
+  clusters: {},
+  terminalGroups:{},
 
   toneMap: {
     0: { mark: '', label: '平声 (Common)', color: 'text-teal-600 dark:text-teal-400' }, 
@@ -157,33 +19,45 @@ const ThaiMasterData = {
     'High': 'text-red-400',
     '不明': 'text-white/30'
   },
-  clusters : {
-    // --- 画像3枚目：擬似二重子音（rを読まない・音が変わる） ---
-    'ทร': { sound: 's',  class: 'Low' },  // ทราบ (saap)
-    'ศร': { sound: 's',  class: 'High' }, // ศรี (sii)
-    'สร': { sound: 's',  class: 'High' }, // สร้าง (sâang)
-    'จร': { sound: 'c',  class: 'Mid' },  // จริง (cing)
-    
-    // --- 画像3枚目：真性二重子音の補完 ---
-    'ผล': { sound: 'phl', class: 'High' },
-    'ขว': { sound: 'khw', class: 'High' },
-    'คว': { sound: 'khw', class: 'Low' },
-    'กว': { sound: 'kw',  class: 'Mid' },
-// --- 伝統的なタイ語の二重子音 ---
-    'กร': { sound: 'kr', class: 'Mid' }, 'กล': { sound: 'kl', class: 'Mid' }, 'กว': { sound: 'kw', class: 'Mid' },
-    'ขร': { sound: 'khr', class: 'High' }, 'ขล': { sound: 'khl', class: 'High' }, 'ขว': { sound: 'khw', class: 'High' },
-    'คร': { sound: 'khr', class: 'Low' }, 'คล': { sound: 'khl', class: 'Low' }, 'คว': { sound: 'khw', class: 'Low' },
-    'ตร': { sound: 'tr', class: 'Mid' },
-    'ปร': { sound: 'pr', class: 'Mid' }, 'ปล': { sound: 'pl', class: 'Mid' },
-    'พร': { sound: 'phr', class: 'Low' }, 'พล': { sound: 'phl', class: 'Low' },
-'ทร': { sound: 's', class: 'Low' }, // 擬似二重子音の代表格
-    // --- 外来語（英語由来）対応：これを足すと完璧 ---
-    'ฟร': { sound: 'fr', class: 'Low' }, // free
-    'ฟล': { sound: 'fl', class: 'Low' }, // flute
-    'บร': { sound: 'br', class: 'Mid' }, // brake
-    'บล': { sound: 'bl', class: 'Mid' }, // blue
-    'ดร': { sound: 'dr', class: 'Mid' }  // dream
-}
+
 };
+// ==========================================
+// 2. DB展開ロジック：Bridgeから呼ばれる「加工担当」
+// ==========================================
+function initializeThaiMaster(dbFull) {
+  if (!dbFull) return;
+
+  // 子音展開 (charをキーにする)
+  ThaiMasterData.consonants = {};
+  dbFull.consonants.forEach(item => {
+    const key = item.char || item.symbol; 
+    ThaiMasterData.consonants[key] = {
+      class: item.class, name: item.name, sound: item.sound, final: item.final
+    };
+  });
+
+  // 母音展開 (長い文字列から順にソートして、誤判定を防ぐ)
+  ThaiMasterData.vowelRules = dbFull.vowelRules.sort((a, b) => 
+    (b.symbols?.length || 0) - (a.symbols?.length || 0)
+  );
+
+  // クラスタ展開 (comboをキーにする)
+  ThaiMasterData.clusters = {};
+  dbFull.clusters.forEach(item => {
+    ThaiMasterData.clusters[item.combo] = { sound: item.sound, class: item.class };
+  });
+
+  // 末子音グループ (final の値から Live/Dead を動的生成)
+  ThaiMasterData.terminalGroups = {};
+  Object.entries(ThaiMasterData.consonants).forEach(([char, info]) => {
+    if (['k', 't', 'p'].includes(info.final)) {
+      ThaiMasterData.terminalGroups[char] = 'Dead';
+    } else if (info.final && info.final !== '-') {
+      ThaiMasterData.terminalGroups[char] = 'Live';
+    }
+  });
+
+  console.log("✅ ThaiMasterData Initialized from DB.");
+}
 
 </script>
