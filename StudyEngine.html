@@ -503,7 +503,7 @@ pasteTo: function(elementId) {
 
     // 4. 実行
     navigator.clipboard.writeText(text).then(() => {
-      const toastMsg = isMismatch ? "不一致検出！" : "コピー完了";
+      const toastMsg = isMismatch ? "コピー完了（不一致検出！）" : "コピー完了";
       ViewController.showToast(toastMsg, isMismatch ? "warning" : "success");
       if (window.navigator.vibrate) window.navigator.vibrate(isMismatch ? [10, 50, 10] : 5);
     });
@@ -599,34 +599,31 @@ if (hasCustomSplit) {
 
     // --- 🏗️ HTML構築 (ステータスバー + 編集トリガー) ---
     const statusBaseClass = "w-full px-3 py-2 border rounded-xl text-[10px] font-bold flex items-center justify-between transition-all";
-    const statusHTML = `
+const statusHTML = `
     <div class="w-full mb-3 px-1">
-        <div class="${statusBaseClass} ${statusConfig.class} flex items-center justify-between py-3 px-5">
+        <div class="${statusBaseClass} ${statusConfig.class} flex items-center justify-between py-2 px-1">
             
-            <div class="flex-1 flex flex-col gap-1 min-w-0">
-                <div class="flex items-center gap-2 text-[10px] font-black tracking-wider opacity-90">
+            <div class="flex flex-col gap-0.5">
+                <div class="flex items-center gap-1.5 text-[10px] font-bold">
                     ${statusConfig.icon} <span>${statusConfig.label}</span>
                 </div>
-                <div class="font-mono text-[12px] lowercase tracking-[0.2em] opacity-80 truncate">
-                    [ ${derivedStr} ]
+                <div class="font-mono text-[11px] opacity-80 lowercase tracking-widest">
+                     ${derivedStr} 
                 </div>
             </div>
             
-            <div class="flex items-center gap-5 ml-4">
-<button onclick="event.stopPropagation(); StudyEngine.copyAnalysisToClipboard(event);"
-        title="Copy Analysis"
-        class="hover:opacity-40 active:scale-90 transition-all outline-none group p-1">
-    <svg class="w-4 h-4 opacity-40 group-hover:opacity-100 transition-opacity" 
-         fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.8" 
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-    </svg>
-</button>
+            <div class="flex items-center gap-4">
+                <button onclick="event.stopPropagation(); StudyEngine.copyAnalysisToClipboard(event);"
+                        class="hover:opacity-60 active:scale-90 transition-opacity outline-none group p-1">
+                    <svg class="w-4 h-4 text-current opacity-40 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" 
+                              d="M8.5 6.5h-2a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8.5 6.5a2 2 0 002 2h2a2 2 0 002-2M8.5 6.5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                </button>
 
                 <button onclick="event.stopPropagation(); const el=document.getElementById('editor-${item.id}'); el.style.display=(el.style.display==='none'?'flex':'none');"
-                        title="Edit Split"
-                        class="hover:opacity-40 active:scale-90 transition-all outline-none group p-1">
-                    <svg class="w-4 h-4 opacity-40 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        class="hover:opacity-60 active:scale-90 transition-opacity outline-none group p-1">
+                    <svg class="w-4 h-4 text-current opacity-40 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" 
                               d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -634,71 +631,46 @@ if (hasCustomSplit) {
                 </button>
             </div>
         </div>
-
-        ${statusConfig.subMessage ? `
-            <div class="text-[9px] opacity-60 px-5 mt-2 italic font-mono flex items-center gap-1.5 ${statusConfig.class.split(' ')[2]}">
-                <span class="opacity-30">└</span> ${statusConfig.subMessage}
-            </div>
-        ` : ''}
+        
+        ${statusConfig.subMessage ? `<div class="text-[9px] opacity-70 px-2 mt-1 italic font-mono truncate ${statusConfig.class.split(' ')[2]}">${statusConfig.subMessage}</div>` : ''}
     </div>`;
+// --- 🏗️ 【機能追加】エディタパネル ---
+// --- 🏗️ エディタパネル（×ボタン・動的表示対応） ---
 const editorPanel = `
     <div id="editor-${item.id}" style="display:none;" 
          onclick="event.stopPropagation()" 
-         class="w-full mb-4 p-3 rounded-xl border animate-in fade-in zoom-in-95 duration-200 
-                /* 背景色：ライトでは白、ダークでは濃いグレー */
-                bg-white dark:bg-slate-900 
-                /* ボーダー：ライトでは薄いグレー、ダークでは境界線色 */
-                border-slate-200 dark:border-white/10 
-                shadow-xl dark:shadow-none flex flex-col gap-2.5">
+         class="w-full mb-4 p-2 rounded-xl border animate-in fade-in zoom-in-95 duration-200 
+                bg-[var(--bg-card)] border-[var(--border)] shadow-sm dark:shadow-none flex flex-col gap-2">
         
         <div class="flex gap-2 items-center">
             <div class="relative flex-1">
                 <input type="text" id="input-${item.id}" 
                        value="${currentValue}" 
-                       class="w-full p-2.5 pr-24 rounded-lg thai-font text-sm outline-none transition-all
-                              /* 入力欄の色を明示的に指定 */
-                              bg-slate-50 dark:bg-black/20 
-                              text-slate-900 dark:text-white 
-                              border border-slate-200 dark:border-white/5
-                              focus:ring-2 focus:ring-blue-500 shadow-inner"
-                       placeholder="スペース区切りで入力..."
-                       oninput="const btn=document.getElementById('clear-btn-${item.id}'); btn.style.display=this.value?'flex':'none';">
+                       class="w-full p-2.5 pr-12 rounded-lg thai-font text-sm outline-none transition-colors shadow-inner
+                              bg-[var(--input-bg)] text-[var(--input-text)] border-[var(--input-border)]
+                              focus:ring-2 focus:ring-blue-500"
+                       placeholder="発音分割を入力...">
                 
-                <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-                    <button onclick="event.stopPropagation(); StudyEngine.copyAnalysisToClipboard(event);" 
-                            title="Copy Analysis"
-                            class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-all active:scale-90">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                        </svg>
-                    </button>
-
-                    <button id="clear-btn-${item.id}"
-                            onclick="event.stopPropagation(); const input=document.getElementById('input-${item.id}'); input.value=''; input.focus(); this.style.display='none';"
-                            style="display: ${currentValue ? 'flex' : 'none'};"
-                            class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-all">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-
-                    <button onclick="event.stopPropagation(); const input=document.getElementById('input-${item.id}'); input.value='${item.word_th}'; document.getElementById('clear-btn-${item.id}').style.display='flex';"
+                <div class="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                    <button onclick="event.stopPropagation(); document.getElementById('input-${item.id}').value='${item.word_th}';"
                             title="Reset to Original"
-                            class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-all">
-                        <span class="text-[14px]">🪄</span>
+                            class="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-all">
+                        <span class="text-[16px]"><svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 5L5 19" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 2l1 1M18 6l1 1M21 3l-1 1" />
+                        </svg></span>
                     </button>
                 </div>
             </div>
 
             <button onclick="event.stopPropagation(); Bridge.executeSaveSplit('${item.id}')" 
-                    class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-lg text-[11px] font-black shadow-lg shadow-blue-500/20 transition-all active:scale-95">
-                SAVE
+                    class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-lg text-[11px] font-black shadow-md transition-all active:scale-95">
+                Save
             </button>
         </div>
         
-        <div class="text-[9px] px-2 flex justify-between items-center font-bold tracking-tight">
-            <span class="text-slate-400 dark:text-slate-500 uppercase">※ Use space to split</span>
-            <span class="text-slate-300 dark:text-slate-600 font-mono">ID: ${item.id}</span>
+        <div class="text-[8px] px-1 flex justify-between items-center opacity-80 text-[var(--text-sub)]">
+            <span>※スペース区切りで入力してください</span>
         </div>
     </div>
     `;
