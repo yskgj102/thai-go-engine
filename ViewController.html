@@ -62,11 +62,8 @@ const ViewController = {
     
     document.getElementById('tap-hint').classList.add('hidden');
     
-    // 日本語学習モード時は、めくった瞬間に発音記号(phonetic)を露出させる
-    if (!isTargetThai) {
       const ph = document.getElementById('phonetic');
       if (ph) ph.classList.remove('hidden');
-    }
   },
 
   /**
@@ -358,7 +355,11 @@ const ViewController = {
     const area = document.getElementById('stats-area');
     if (!area) return;
     const isOpening = area.classList.toggle('hidden');
-    if (!isOpening) StudyEngine.renderHeatmap();
+    if (!isOpening){
+       StudyEngine.renderHeatmap();
+       // ルール表の描画（今回追加）
+       StudyEngine.renderToneRules();
+    }
   },
 
   /**

@@ -281,6 +281,115 @@ renderHeatmap: function() {
     this.render(); 
   },
 
+renderToneRules: function() {
+const container = document.getElementById('tone-rules-container');
+    if (!container || !ThaiMasterData.consonants) return;
+
+    // --- 1. 子音クラスの動的グルーピング ---
+    const groups = { 'Mid': [], 'High': [], 'Low': [] };
+    Object.entries(ThaiMasterData.consonants).forEach(([char, info]) => {
+      if (groups[info.class]) groups[info.class].push(char);
+    });
+
+    let html = '<div class="mt-8 space-y-8 text-[10px] pb-40">';
+    html += '<h3 class="text-xs font-black opacity-40 mb-6 tracking-widest text-center underline decoration-blue-500/30 underline-offset-8">DB-SYNCED MASTER REFERENCE</h3>';
+
+    // --- A. 子音クラス (Consonants from DB) ---
+    html += '<section class="bg-white/5 rounded-2xl p-4 border border-white/10">';
+    html += '<p class="font-bold mb-3 text-cyan-400 flex items-center"><span class="text-lg mr-2">A</span>Consonant Classes</p>';
+    html += '<div class="grid grid-cols-1 gap-2">';
+    
+    const classInfo = [
+      { id: 'Mid', label: '中級', color: 'text-green-400', bg: 'bg-green-500/10' },
+      { id: 'High', label: '高級', color: 'text-purple-400', bg: 'bg-purple-500/10' },
+      { id: 'Low', label: '低級', color: 'text-rose-400', bg: 'bg-rose-500/10' }
+    ];
+
+    classInfo.forEach(c => {
+      html += `<div class="p-2 ${c.bg} rounded-lg border border-white/5 flex items-start gap-2">`;
+      html += `<span class="font-black ${c.color} min-w-[40px]">${c.label}</span>`;
+      html += `<span class="opacity-70 break-all leading-relaxed">${groups[c.id].join(' ')}</span>`;
+      html += `</div>`;
+    });
+    html += '</div></section>';
+
+    // --- B. 主要母音 (Vowels from DB) ---
+    // 重複を避け、代表的なもの（symbolsが短いものや基本形）を表示
+    html += '<section class="bg-white/5 rounded-2xl p-4 border border-white/10">';
+    html += '<p class="font-bold mb-3 text-green-400 flex items-center"><span class="text-lg mr-2">B</span>Vowel Rules</p>';
+    html += '<div class="max-h-60 overflow-y-auto pr-2 custom-scrollbar">';
+    html += '<table class="w-full text-left border-collapse">';
+    html += '<thead><tr class="opacity-50 border-b border-white/10 text-[8px]"><th class="py-1">Symbol</th><th class="py-1">Sound</th><th class="py-1">Type</th></tr></thead>';
+    html += '<tbody class="divide-y divide-white/5 font-mono">';
+    
+    // 全て出すと長いので、主要なルールをスライスまたはフィルタリング
+    ThaiMasterData.vowelRules.slice(0, 30).forEach(rule => {
+      const typeColor = rule.length === 'long' ? 'text-green-300' : 'text-rose-300';
+      html += `<tr>`;
+      html += `<td class="py-1.5 text-[11px]">${rule.symbols}</td>`;
+      html += `<td class="py-1.5 font-bold">${rule.sound}</td>`;
+      html += `<td class="py-1.5 ${typeColor} opacity-70">${rule.length}</td>`;
+      html += `</tr>`;
+    });
+    
+    html += '</tbody></table></div>';
+    html += '<p class="mt-2 text-center opacity-30 text-[7px]">Showing top 30 rules from DB</p></section>';
+    // --- 1. 声調記号がある場合 (With Marks) ---
+    html += '<div class="bg-white/5 rounded-2xl p-4 border border-blue-500/20 shadow-lg">';
+    html += '<p class="font-bold mb-3 text-blue-400 flex items-center"><span class="text-lg mr-2">①</span>有記号 (With Tone Marks)</p>';
+    html += '<table class="w-full text-center border-collapse">';
+    html += '<thead><tr class="opacity-50 border-b border-white/10"><th class="py-1 text-left">子音クラス</th><th class="py-1 text-blue-300">่ (Ek)</th><th class="py-1 text-amber-300">้ (Tho)</th><th class="py-1 text-rose-300">๊ / ๋</th></tr></thead>';
+    html += '<tbody class="divide-y divide-white/5">';
+    html += '<tr><td class="py-3 text-left font-bold opacity-70">中 (Mid)</td><td class="bg-blue-500/10 text-blue-200">低</td><td class="bg-amber-500/10 text-amber-200">落</td><td>高 (๊) / 上 (๋)</td></tr>';
+    html += '<tr><td class="py-3 text-left font-bold opacity-70">高 (High)</td><td class="bg-blue-500/10 text-blue-200">低</td><td class="bg-amber-500/10 text-amber-200">落</td><td>-</td></tr>';
+    html += '<tr><td class="py-3 text-left font-bold opacity-70 text-rose-200">低 (Low)</td><td class="bg-amber-500/10 text-amber-200 font-black">落</td><td class="bg-rose-500/10 text-rose-200 font-black">高</td><td>-</td></tr>';
+    html += '</tbody></table>';
+    html += '<p class="mt-2 opacity-40 text-[8px]">※ 低級子音は「記号より一段高い音」になるのがポイント</p></div>';
+
+    // --- 2. 記号がない場合 (No Marks) ---
+    html += '<div class="bg-white/5 rounded-2xl p-4 border border-amber-500/20 shadow-lg">';
+    html += '<p class="font-bold mb-3 text-amber-400 flex items-center"><span class="text-lg mr-2">②</span>無記号 (No Tone Marks)</p>';
+    html += '<table class="w-full text-center border-collapse">';
+    html += '<thead><tr class="opacity-50 border-b border-white/10"><th class="py-1 text-left">子音クラス</th><th class="py-1 text-green-300">生 (Live)</th><th class="py-1 text-rose-300">死-短</th><th class="py-1 text-rose-300">死-長</th></tr></thead>';
+    html += '<tbody class="divide-y divide-white/5">';
+    html += '<tr><td class="py-3 text-left font-bold opacity-70">中 (Mid)</td><td>平</td><td class="text-blue-200">低</td><td class="text-blue-200">低</td></tr>';
+    html += '<tr><td class="py-3 text-left font-bold opacity-70">高 (High)</td><td class="text-purple-300 font-black">上</td><td class="text-blue-200">低</td><td class="text-blue-200">低</td></tr>';
+    html += '<tr><td class="py-3 text-left font-bold opacity-70 text-rose-200">低 (Low)</td><td>平</td><td class="text-rose-300 font-black">高</td><td class="text-amber-200 font-black">落</td></tr>';
+    html += '</tbody></table></div>';
+
+    // --- 3. 生音・死音の判別基準 (Live/Dead Definition) ---
+    html += '<div class="grid grid-cols-2 gap-3">';
+    
+    // 生音 (Live)
+    html += '<div class="bg-green-500/5 rounded-xl p-3 border border-green-500/20">';
+    html += '<p class="text-[9px] font-black text-green-400 mb-1 tracking-tighter">● 生音 (LIVE SYLLABLE)</p>';
+    html += '<p class="opacity-80">・長母音 (Long V)</p>';
+    html += '<p class="opacity-80">・末子音: <span class="text-green-200">n, m, ng, y, w</span></p>';
+    html += '<p class="opacity-40 text-[7px] mt-1">💡 鼻音や半母音でスッと伸びる音</p></div>';
+
+    // 死音 (Dead)
+    html += '<div class="bg-rose-500/5 rounded-xl p-3 border border-rose-500/20">';
+    html += '<p class="text-[9px] font-black text-rose-400 mb-1 tracking-tighter">● 死音 (DEAD SYLLABLE)</p>';
+    html += '<p class="opacity-80">・短母音 (Short V)</p>';
+    html += '<p class="opacity-80">・末子音: <span class="text-rose-200">p, t, k</span></p>';
+    html += '<p class="opacity-40 text-[7px] mt-1">💡 詰まって止まる音（促音）</p></div>';
+    
+    html += '</div>';
+
+    // --- 4. 忘れがちな特殊ルール ---
+    html += '<div class="bg-white/5 rounded-xl p-3 border border-white/5 text-[9px] leading-relaxed opacity-60">';
+    html += '<p class="mb-1 font-bold text-gray-300">💡 判定の注意点</p>';
+    html += '<ul class="list-disc list-inside space-y-0.5">';
+    html += '<li>「引導子音 (ห / อ)」がある場合は、そのクラスに従う。</li>';
+    html += '<li>暗黙の a / o はすべて「死音-短」として扱う。</li>';
+    html += '<li>-ำ, -าย, -าว, ใ-, ไ- は、見た目によらず「生音」扱い。</li>';
+    html += '</ul></div>';
+    
+    html += '</div>';
+
+    container.innerHTML = html;
+  },
+
   /**
    * 学習アルゴリズム（Smart:忘却曲線重視 / Classic:ランダム）を切り替える
    */
