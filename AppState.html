@@ -32,7 +32,12 @@ const AppStore = {
     // --- UI/UX 制御フラグ ---
     isProcessing: false,      // 通信中（グローバルロック）の状態管理
     isVocabPanelOpen: false,  // 辞書リストパネルが開いているかどうか
-    isHeaderSwapped: false    // スクロールによるミニマルヘッダーへの切り替え状態
+    isHeaderSwapped: false  ,  // スクロールによるミニマルヘッダーへの切り替え状態
+
+    // --- ★新設：解析データキャッシュ ---
+    // ThaiParser.parseSyllables からの戻り値（最新の解析結果）を保持する。
+    // コピー機能やID共有機能は、常にこの「最新の真実」を参照する。
+    currentAnalysis: null
   },
 
   /**

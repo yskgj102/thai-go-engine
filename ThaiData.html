@@ -69,22 +69,41 @@ const ThaiMasterData = {
   vowelRules: [
     { symbols: 'าญจน์', sound: 'aa', length: 'long', type: 'live' }, // กาญจน์ 用
     { symbols: 'าสตร์', sound: 'aa', length: 'long', type: 'live' }, // ศาสตร์ (科学) 用
+    // --- 画像3枚目：特殊な末子音（黙字セット） ---
+    { symbols: 'าสตร์', sound: 'aat', length: 'long', type: 'dead' }, // ศาสตร์ 等
+    { symbols: 'ารถ',  sound: 'aat', length: 'long', type: 'dead' }, // สามารถ 等
+    { symbols: 'จักร',  sound: 'cak', length: 'short', type: 'dead' }, // จักร 等
+    { symbols: 'ัตร',   sound: 'at',  length: 'short', type: 'dead' }, // บัตร 等
+    { symbols: 'ุตร',   sound: 'ut',  length: 'short', type: 'dead' }, // บุตร 等
+    { symbols: 'ิธ',    sound: 'it',  length: 'short', type: 'dead' }, // อิทธิ 等
+    { symbols: 'รส',    sound: 'rot', length: 'short', type: 'dead' }, // ธรรมรส 等
+    { symbols: 'ติ',    sound: 't',   length: 'short', type: 'dead' }, // สมมติ 等（末尾のi無視）
+    { symbols: 'ตุ',    sound: 't',   length: 'short', type: 'dead' }, // เหตุ 等（末尾のu無視）
+    { symbols: 'มิ',    sound: 'm',   length: 'short', type: 'dead' }, // ภูมิ 等（末尾のi無視）
+    
+    // --- 画像1枚目：足りない二重・三重母音 ---
+    { symbols: 'เียว', sound: 'iao', length: 'long', type: 'live' },
+    { symbols: 'เือะ', sound: 'ɯa',  length: 'short', type: 'dead' },
+    { symbols: 'เอะ',  sound: 'ə',   length: 'short', type: 'dead' },
+    { symbols: 'เอ',  sound: 'əə',  length: 'long',  type: 'live' },
     { symbols: '์',      sound: '',   length: '',     type: ''     }, // 単独の黙字記号（念のため）
-{ symbols: 'าย',  sound: 'aai', length: 'long', type: 'live' }, // 'อาย' 用
+    { symbols: 'าย',  sound: 'aai', length: 'long', type: 'live' }, // 'อาย' 用
     { symbols: 'าว',  sound: 'aao', length: 'long', type: 'live' }, // 'หิว' などの対抗
     { symbols: 'เียว', sound: 'iao', length: 'long', type: 'live' }, // 'เดียว' 用
     { symbols: 'เ็',  sound: 'e',   length: 'short', type: 'dead' },
-{ symbols: 'แ็',  sound: 'ɛ',   length: 'short', type: 'dead' },
-{ symbols: 'เิ',  sound: 'əə',  length: 'long',  type: 'live' },
+     { symbols: 'แ็',  sound: 'ɛ',   length: 'short', type: 'dead' },
+     { symbols: 'เิ',  sound: 'əə',  length: 'long',  type: 'live' },
     // vowelRules の最初に追加
     { symbols: 'เื',  sound: 'ɯa', length: 'long', type: 'live' },
-{ symbols: 'เีย', sound: 'ia', length: 'long', type: 'live' },
-{ symbols: 'เือ', sound: 'ɯa', length: 'long', type: 'live' },
-{ symbols: 'ัว',  sound: 'ua', length: 'long', type: 'live' },
+    { symbols: 'เีย', sound: 'ia', length: 'long', type: 'live' },
+    { symbols: 'เือ', sound: 'ɯa', length: 'long', type: 'live' },
+    { symbols: 'ัว',  sound: 'ua', length: 'long', type: 'live' },
     // --- 3文字セット ---
     { symbols: 'เีย', sound: 'ia', length: 'long', type: 'live' }, // diaw (เดี๋ยว) 等
     
     // --- 2文字セット ---
+    // vowelRules に「挟み込み」の概念を持たせる
+    { symbols: 'แว', sound: 'ɛɛo', length: 'long', type: 'live' },
     { symbols: 'เาะ', sound: 'ɔ',  length: 'short', type: 'dead' },
     { symbols: 'เิ',  sound: 'əə', length: 'long', type: 'live' },
     { symbols: 'เะ',  sound: 'e',   length: 'short', type: 'dead' },
@@ -139,6 +158,17 @@ const ThaiMasterData = {
     '不明': 'text-white/30'
   },
   clusters : {
+    // --- 画像3枚目：擬似二重子音（rを読まない・音が変わる） ---
+    'ทร': { sound: 's',  class: 'Low' },  // ทราบ (saap)
+    'ศร': { sound: 's',  class: 'High' }, // ศรี (sii)
+    'สร': { sound: 's',  class: 'High' }, // สร้าง (sâang)
+    'จร': { sound: 'c',  class: 'Mid' },  // จริง (cing)
+    
+    // --- 画像3枚目：真性二重子音の補完 ---
+    'ผล': { sound: 'phl', class: 'High' },
+    'ขว': { sound: 'khw', class: 'High' },
+    'คว': { sound: 'khw', class: 'Low' },
+    'กว': { sound: 'kw',  class: 'Mid' },
 // --- 伝統的なタイ語の二重子音 ---
     'กร': { sound: 'kr', class: 'Mid' }, 'กล': { sound: 'kl', class: 'Mid' }, 'กว': { sound: 'kw', class: 'Mid' },
     'ขร': { sound: 'khr', class: 'High' }, 'ขล': { sound: 'khl', class: 'High' }, 'ขว': { sound: 'khw', class: 'High' },
