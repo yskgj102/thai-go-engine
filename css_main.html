@@ -54,8 +54,12 @@
       padding: 0 16px;
       gap: 8px;
       border-bottom: 1px solid var(--border);
-      z-index: 9999 !important; /* 他の要素より絶対的に上に */
-  background: var(--header-bg) !important; /* 透過させない */
+ /* z-indexをカード(60)より少し高い数値に設定 */
+  z-index: 100 !important; 
+  /* 背景をしっかり不透明にして、透けを防止 */
+  background-color: var(--header-bg) !important;
+  /* タッチ操作を透過させない（基本はこれでOK） */
+  touch-action: pan-y;
     }
 
     /* 検索・入力欄の特殊なスケーリング設定 */
