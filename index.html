@@ -160,6 +160,7 @@
               </div>
               <div id="meaning" class="text-3xl font-black text-center" style="color: var(--text-main)"></div>
             </div>
+
             <div id="logic-debug" class="absolute bottom-10 right-8 text-[7px] font-mono opacity-40 flex flex-col items-end">
               <span id="stat-interval"></span><span id="stat-last"></span>
             </div>
@@ -206,11 +207,38 @@
 
 
     </main>
+
+<div id="memo-open-btn"
+     onclick="event.stopPropagation(); ViewController.toggleMemoSheet(true)" 
+     class="floating-action-btn left-5">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+  </svg>
+</div>
+
 <div onclick="ViewController.toggleVocabPanel(event)" 
-     class="fixed bottom-32 right-5 w-12 h-12 bg-white/5 backdrop-blur-md rounded-full border border-white/10 flex items-center justify-center active:scale-90 active:bg-white/20 transition-all z-[40] cursor-pointer">
-  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+     class="floating-action-btn right-5">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
   </svg>
+</div>
+
+<div id="memo-overlay" onclick="ViewController.toggleMemoSheet(false)"></div>
+<div id="memo-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <button class="done-btn" onclick="ViewController.saveAndCloseMemo()">Done</button>
+  </div>
+  <div class="memo-edit-area">
+    <span style="color:#8e8e93; font-size:11px; font-weight:bold; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">✎ Memo</span>
+    <textarea id="memo-textarea" placeholder="メモを入力..."></textarea>
+  </div>
+</div>
+<div id="memo-preview-area" class="hidden">
+  <div class="memo-preview-box shadow-xl">
+    <span class="text-[10px] text-blue-500 font-black opacity-60">✎</span>
+    <p id="memo-preview-text"></p>
+  </div>
 </div>
     <footer id="footer-ui"
       class="p-6 pb-12 border-t flex gap-4 fixed bottom-0 left-0 right-0 max-w-md mx-auto z-50 pointer-events-none translate-y-full backdrop-blur-xl transition-all"

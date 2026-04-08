@@ -60,7 +60,22 @@ const StudyEngine = {
     // 4. スクロール時に出現するヘッダー情報の同期
     this.syncHeader();
 
-    
+this.updateMemoPreview(item); // 共通化して呼び出す
+  },
+
+updateMemoPreview: function(item) {
+    const previewArea = document.getElementById('memo-preview-area');
+    const previewText = document.getElementById('memo-preview-text');
+    if (!previewArea || !previewText) return;
+
+    if (item && item.memo && item.memo.trim() !== "") {
+      previewText.innerText = item.memo;
+      previewArea.classList.remove('hidden');
+    } else {
+      // ★ ここが重要：テキストを空にしてから隠す
+      previewText.innerText = ""; 
+      previewArea.classList.add('hidden');
+    }
   },
 
   /**
@@ -431,7 +446,7 @@ const container = document.getElementById('tone-rules-container');
               + "&search_form_all%5Bforce_type%5D=thai";
     
     window.open(url, '_blank');
-    ViewController.showToast(`Searching "${word}" on GotThai...`, "success");
+    // ViewController.showToast(`Searching "${word}" on GotThai...`, "success");
   },
 
 

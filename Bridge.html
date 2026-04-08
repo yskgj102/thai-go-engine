@@ -204,6 +204,9 @@ reGenerate: function(id) {
     // 2. 例外解除（Footer & List）
     const activeTargets = [
       '#footer-ui button', 
+      '#memo-sheet',        // ★シート本体を追加
+  '#memo-sheet *',      // ★シートの中にある textarea や Doneボタンすべて
+  '#memo-overlay'       // ★シート用の背景
     // '#vocab-list-container *'
     ];
     activeTargets.forEach(selector => {
@@ -318,7 +321,7 @@ reGenerate: function(id) {
         btn.innerText = originalText;
         btn.classList.remove('text-green-500');
         btn.style.opacity = "0.3"; 
-        ViewController.showToast("Re-Gen Ready.", "success");
+        // ViewController.showToast("Re-Gen Ready.", "success");
       }
     }, 1000);
   },
@@ -407,5 +410,31 @@ executeSaveSplit: function(id) {
       })
       .updateCustomSplit(id, jsonStr); 
   },
+
+// Bridge.js 内
+executeSaveMemo: function(id, text) {
+  if (!id) return;
+
+  google.script.run
+    .withSuccessHandler(res => {
+      if (res.status === "success") {
+        // 1. 全データ(allVocab)の中から対象を更新
+        const item = AppStore.state.allVocab.find(v => String(v.id) === String(id));
+        if (item) {
+          item.memo = text; // ここで空文字がセットされる
+        }
+
+        // 2. ★重要：今表示しているカードが「保存した単語」なら、即座に見た目を更新
+        const currentItem = AppStore.getCurrentItem();
+        if (currentItem && String(currentItem.id) === String(id)) {
+          // メモが空なら隠し、あれば表示するロジックを強制実行
+          StudyEngine.updateMemoPreview(currentItem);
+        }
+
+        // ViewController.showToast(text ? "Memo saved" : "Memo cleared", "success");
+      }
+    })
+    .updateWordMemo(id, text);
+}
 };
 </script>

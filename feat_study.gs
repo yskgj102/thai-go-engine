@@ -264,3 +264,30 @@ function updateCustomSplit(id, splitArrayJson) {
     return { status: "error", message: e.toString() };
   }
 }
+  /**
+ * メモ（memoカラム）を更新する
+ * @param {string} id - 単語ID
+ * @param {string} memoText - 入力されたメモ内容
+ */
+function updateWordMemo(id, memoText) {
+  try {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("m_vocabulary");
+    const data = sheet.getDataRange().getValues();
+    const header = data[0];
+    
+    const idColIdx = header.indexOf("id");
+    const memoColIdx = header.indexOf("memo");
+
+    if (idColIdx === -1 || memoColIdx === -1) throw new Error("ID or memo column missing");
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][idColIdx].toString() === id.toString()) {
+        sheet.getRange(i + 1, memoColIdx + 1).setValue(memoText);
+        return { status: "success", data: memoText };
+      }
+    }
+    return { status: "error", message: "ID not found" };
+  } catch (e) {
+    return { status: "error", message: e.toString() };
+  }
+}

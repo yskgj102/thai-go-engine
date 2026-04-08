@@ -646,4 +646,181 @@ input, textarea, select {
     transform-origin: left top;
     width: 114.3%; /* スケールに合わせて幅を調整 (1 / 0.875) */
 }
+
+/* --- 追加：フローティングボタン共通スタイル --- */
+.floating-action-btn {
+  position: fixed;
+  bottom: 32px; /* 検索ボタンと同じ高さ */
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.05); /* ダークモード初期値 */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  transition: all 0.2s;
+  cursor: pointer;
+  transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s; /* アニメーションを追加 */
+}
+/* --- フローティングボタン共通 (メモ・検索共通) --- */
+.floating-action-btn {
+  position: fixed;
+  bottom: 32px;
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  transition: all 0.2s;
+  cursor: pointer;
+  color: var(--text-main); /* アイコンの色をテーマに合わせる */
+}
+
+/* ライトモード時のボタン色調整 */
+.light-mode .floating-action-btn {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.floating-action-btn:active {
+  scale: 0.9;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* --- ボトムシート本体 --- */
+#memo-sheet {
+  position: fixed; bottom: -100%; left: 0; width: 100%; height: 60%;
+  background: #1c1c1e; /* ダークモード背景 */
+  border-top-left-radius: 24px; border-top-right-radius: 24px;
+  transition: bottom 0.3s cubic-bezier(0.25, 1, 0.5, 1); z-index: 1000;
+  display: flex; flex-direction: column; padding: 12px 16px env(safe-area-inset-bottom);
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+  z-index: 9999 !important;
+}
+#memo-sheet.show { bottom: 0; }
+
+/* ライトモード時のシート背景 */
+.light-mode #memo-sheet {
+  background: #f2f2f7;
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+}
+
+/* --- フッター（回答ボタン）出現時の連動 --- */
+/* bodyまたはapp-containerに .is-revealed がついた時、ボタンを上に逃がす */
+.is-revealed .floating-action-btn {
+  bottom: 130px; /* フッターの高さ + 本来の余白 */
+}
+/* 背景の暗調（オーバーレイ） */
+#memo-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 900;z-index: 9999 !important;
+}
+.light-mode #memo-overlay {
+  background: rgba(0,0,0,0.3);
+}
+
+/* つまみ */
+.sheet-handle { width: 36px; height: 5px; background: #3a3a3c; border-radius: 3px; align-self: center; margin-bottom: 8px; }
+.light-mode .sheet-handle { background: #c7c7cc; }
+
+/* 完了ボタンエリア */
+.sheet-header { display: flex; justify-content: flex-end; padding: 4px 4px 12px 4px; }
+.done-btn { color: #007aff; font-weight: 600; background: none; border: none; font-size: 17px; cursor: pointer; pointer-events: auto !important; /* ロック中もボタンを押せる */}
+
+/* 入力エリア（内側のボックス） */
+.memo-edit-area {
+  flex: 1; background: #2c2c2e; border-radius: 14px; padding: 16px;
+  display: flex; flex-direction: column;
+}
+.light-mode .memo-edit-area {
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+#memo-textarea {
+  width: 100%; height: 100%; background: transparent; border: none;
+  color: #efeff4; font-size: 16px; outline: none; resize: none; line-height: 1.5;
+  pointer-events: auto !important; /* ロック中も入力を受け付ける */
+}
+.light-mode #memo-textarea {
+  color: #000000;
+}
+/* --- メモプレビュー (フローティング・スタイル) --- */
+#memo-preview-area {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  /* 左右のボタン(48px * 2)と余白を考慮した幅 */
+  width: calc(100% - 130px); 
+  bottom: 32px; /* ボタンの下端と揃える */
+  height: 48px; /* ボタンの高さと揃える */
+  display: flex;
+  align-items: center;
+  z-index: 35;
+  pointer-events: none;
+  transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+}
+/* --- メモプレビュー (ボタンの間に固定) --- */
+#memo-preview-area {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  /* 横幅を固定：左右のボタンに絶対ぶつからない幅 */
+  width: calc(100% - 130px); 
+  max-width: 250px; /* 大きな画面でも伸びすぎないように */
+  bottom: 32px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  z-index: 35;
+  pointer-events: none;
+  transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.memo-preview-box {
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.05); /* ダークモード */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden; /* はみ出しを隠す */
+}
+
+/* ライトモード対応 */
+.light-mode .memo-preview-box {
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+#memo-preview-text {
+  font-size: 11px;
+  color: var(--text-main);
+  opacity: 0.7;
+  font-style: italic;
+  /* ★ ここが重要：一行に固定して、長い場合は ... にする */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+/* 連動：フッター出現時 */
+.is-revealed #memo-preview-area {
+  bottom: 130px;
+}
 </style>
