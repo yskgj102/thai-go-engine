@@ -1,5 +1,8 @@
 <!-- css_main.html -->
 <style>
+
+
+
   /* --- 基本設定 & フォント --- */
   @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap');
   :root { --thai-font: 'Sarabun', sans-serif; }
@@ -142,6 +145,54 @@
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
     }
+
+
+  /* --- デスクトップ(PC)対応：スマホに影響を与えない設定 --- */
+
+@media (min-width: 449px) {
+  /* 全体の幅を少し広げる（ゆったりさせる） */
+  #app-container {
+    max-width: 600px !important; /* スマホより一回り広い */
+    box-shadow: 0 0 100px rgba(0,0,0,0.5); /* PCで見ると浮いて見える高級感 */
+  }
+
+  /* フッターもコンテナの幅に合わせる */
+  #footer-ui {
+    max-width: 600px !important;
+  }
+
+  /* 単語カードの文字サイズをPCに合わせて最適化 */
+  #word-th {
+    font-size: 5rem !important; /* 6xlより少し大きく */
+  }
+
+  /* PCのみ：マウスホバー時の演出（スマホにはタッチなので関係なし） */
+  .floating-action-btn:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    transform: scale(1.1);
+  }
+  
+  .light-mode .floating-action-btn:hover {
+    background: rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* PCで見ると目立つスクロールバーを細くオシャレに */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+  }
+  .light-mode ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+  }
+  
+}
+
 
 
 
@@ -847,4 +898,6 @@ position: fixed;
 .is-revealed #memo-preview-area {
   bottom: 130px;
 }
+
+
 </style>
