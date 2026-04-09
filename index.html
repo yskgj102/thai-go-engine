@@ -285,6 +285,154 @@
           if (e.key === 'Enter') Bridge.executeQuickAdd();
         });
       }
+// ==========================================
+    // スマホ用：指に完全に吸い付く「物理引っ張りドロワー」（パッと消えない完全版）
+    // ==========================================
+    const panelContainer = document.getElementById('vocab-panel');
+    const panelContent = document.querySelector('.panel-content');
+    
+    let isDragging = false;
+    let startX = 0, startY = 0;
+    let panelWidth = 0;
+    let isHorizontalSwipe = null;
+    let wasOpen = false;
+
+    // 指を置いた時
+    document.addEventListener('touchstart', (e) => {
+      if (window.innerWidth >= 1024) return; // PCは除外
+      
+      wasOpen = panelContainer.classList.contains('is-open');
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+
+      // 閉じている時は、画面の右端(30px以内)を触った時だけドラッグ開始
+      if (!wasOpen && startX < window.innerWidth - 30) return;
+
+      isDragging = true;
+      isHorizontalSwipe = null;
+
+      // アニメーションを無効化し、指に1ミリの遅れもなく追従させる
+      panelContent.style.transition = 'none';
+      panelContainer.style.transition = 'none';
+
+      if (!wasOpen) {
+        // CSSの visibility:hidden を上書きして表示の準備をする
+        panelContainer.style.visibility = 'visible'; 
+        // パネルの幅を取得
+        panelWidth = panelContent.offsetWidth || (window.innerWidth * 0.85); 
+        panelContent.style.transform = `translateX(${panelWidth}px)`; 
+        panelContainer.style.background = `rgba(0,0,0,0)`;
+      } else {
+        panelWidth = panelContent.offsetWidth;
+      }
+    }, { passive: true });
+
+    // 指を動かしている時（リアルタイム吸い付き）
+    document.addEventListener('touchmove', (e) => {
+      if (!isDragging) return;
+
+      const touchX = e.touches[0].clientX;
+      const touchY = e.touches[0].clientY;
+      const deltaX = touchX - startX;
+      const deltaY = touchY - startY;
+
+      // 縦スクロールか横スワイプかを最初に判定する
+      if (isHorizontalSwipe === null) {
+        if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 5) {
+          isHorizontalSwipe = true;
+        } else if (Math.abs(deltaY) > 5) {
+          isHorizontalSwipe = false;
+          isDragging = false;
+          resetInlineStyles();
+          return;
+        }
+      }
+
+      if (isHorizontalSwipe) {
+        e.preventDefault(); // iOSの「戻る/進むスワイプ」を強制ブロック
+
+        let currentTranslate = 0;
+        if (wasOpen) {
+          // 開いている状態から閉じる（右へ押し込む）
+          currentTranslate = Math.max(0, deltaX);
+        } else {
+          // 閉じている状態から引き出す（パネル左端と指の座標を同期）
+          const openLeftEdge = window.innerWidth - panelWidth; 
+          currentTranslate = touchX - openLeftEdge;
+          
+          // 引き出しすぎ・押し込みすぎを防止
+          currentTranslate = Math.max(0, Math.min(panelWidth, currentTranslate));
+        }
+
+        // 指の動きに合わせてパネルをミリ単位で動かす
+        panelContent.style.transform = `translateX(${currentTranslate}px)`;
+
+        // 引き出し具合に合わせて背景を暗くする
+        const progress = 1 - (currentTranslate / panelWidth);
+        panelContainer.style.background = `rgba(0,0,0,${progress * 0.5})`;
+      }
+    }, { passive: false });
+
+    // 指を離した時（パチン！と開閉を確定する）
+    document.addEventListener('touchend', (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+
+      if (!isHorizontalSwipe) {
+        resetInlineStyles();
+        return;
+      }
+
+      const touchX = e.changedTouches[0].clientX;
+      const deltaX = touchX - startX;
+      const threshold = panelWidth / 3; // パネルの1/3以上ドラッグしたら確定
+
+      let shouldBeOpen = wasOpen;
+
+      // 判定
+      if (wasOpen && deltaX > threshold) {
+        shouldBeOpen = false; // 右に押し込んだので閉じる
+      } else if (!wasOpen && deltaX < -threshold) {
+        shouldBeOpen = true;  // 左に引き出したので開く
+      }
+
+      // ★ バトンタッチの瞬間 ★
+      // 指の追従をオフにする前に、CSSの滑らかなバネアニメーションをオンにする！
+      panelContent.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)';
+      panelContainer.style.transition = 'background 0.3s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.3s';
+
+      // インラインの座標を消去（これでCSSの .is-open の位置へアニメーションが走る）
+      panelContent.style.transform = '';
+      panelContainer.style.background = '';
+
+      // 状態を更新
+      if (shouldBeOpen && !wasOpen) {
+         panelContainer.classList.add('is-open');
+         AppStore.state.isVocabPanelOpen = true;
+      } else if (!shouldBeOpen && wasOpen) {
+         panelContainer.classList.remove('is-open');
+         AppStore.state.isVocabPanelOpen = false;
+      } else if (!shouldBeOpen && !wasOpen) {
+         // 引き出しかけてやめた場合、インラインの visibility を消してCSSに任せる
+         panelContainer.style.visibility = '';
+      }
+
+      // アニメーションが終わる頃（0.3秒後）に、設定したJSのゴミを掃除する
+      setTimeout(() => {
+        panelContent.style.transition = '';
+        panelContainer.style.transition = '';
+        panelContainer.style.visibility = '';
+      }, 300);
+    });
+
+    // リセット用ヘルパー
+    function resetInlineStyles() {
+      panelContent.style.transition = '';
+      panelContent.style.transform = '';
+      panelContainer.style.transition = '';
+      panelContainer.style.background = '';
+      panelContainer.style.visibility = '';
+    }
     };
   </script>
 </body>

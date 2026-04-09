@@ -36,6 +36,9 @@
       margin: 0;
       padding: 0;
       transition: background-color 0.3s ease;
+
+      /* 【追加】iOSの「画面端スワイプで戻る」を禁止し、アプリの引っ張りに専念させる */
+  overscroll-behavior-x: none;
     }
 
     #app-container {
@@ -147,6 +150,7 @@
     }
 
 
+
   /* --- デスクトップ(PC)対応：スマホに影響を与えない設定 --- */
 
 @media (min-width: 449px) {
@@ -245,17 +249,35 @@
     to { transform: translateY(0); opacity: 1; } 
   }
 
-  /* --- VOCABULARY ドロワー（右からスライド） --- */
+/* --- VOCABULARY ドロワー（スマホ用） --- */
+
 /* 外枠：背景を暗くする */
 #vocab-panel {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.5);
-  display: none; /* JSで flex に切り替える */
-  justify-content: flex-end; /* 右寄せ */
+  
+  /* ★ 修正：display: none をやめて、常にflexにしておく */
+  display: flex !important; 
+  justify-content: flex-end; 
+  
+  /* ★ 追加：閉じている時は「見えない・触れない・背景透明」 */
+  visibility: hidden;
+  pointer-events: none; 
+  background: rgba(0, 0, 0, 0); 
   backdrop-filter: blur(2px);
+  
+  /* 背景の暗転も滑らかにアニメーションさせる */
+  transition: background 0.3s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.3s;
 }
+
+/* ドロワーが開いた時 */
+#vocab-panel.is-open { 
+  visibility: visible; 
+  pointer-events: auto; /* タッチ可能にする */
+  background: rgba(0, 0, 0, 0.5); /* 暗くする */
+}
+
 /* 中身：右からスライドする本体 */
 .panel-content {
   background: var(--bg-card);
@@ -263,19 +285,18 @@
   max-width: 340px;
   height: 100%;
   transform: translateX(100%); /* 最初は右側に隠しておく */
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* ★ 修正：バネのような滑らかな動きを設定 */
+  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+  
   display: flex;
   flex-direction: column;
   border-left: 1px solid var(--border);
 }
 
-  /* ドロワーが開いた時 */
-  #vocab-panel.is-open { 
-    display: flex !important; 
-  }
-  #vocab-panel.is-open .panel-content { 
-    transform: translateX(0) !important; 
-  }
+#vocab-panel.is-open .panel-content { 
+  transform: translateX(0) !important; 
+}
 
   /* --- リスト表示の最適化 --- */
   #vocab-list-container::-webkit-scrollbar { width: 4px; }
