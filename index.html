@@ -102,17 +102,20 @@
             <button onclick="ViewController.toggleVocabPanel(event)" class="opacity-100 text-xs tracking-tighter">CLOSE ×</button>
           </div>
           <div class="p-4 border-b border-white/5">
-            <div class="search-container">
+<div class="search-container flex items-center">
+  <div class="relative flex-1">
     <input id="list-search" type="search" placeholder="Search..."
            oninput="VocabListUI.update(this.value)"
-           class="w-full rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-blue-500 font-mono bg-white/5 border border-white/5">
-    
-    <button onclick="StudyEngine.pasteTo('list-search')" class="paste-icon-btn">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-      </svg>
-    </button>
+           class="w-full rounded-xl pl-4 pr-2 py-2 text-sm focus:outline-none focus:border-blue-500 font-mono bg-white/5 border border-white/5">
   </div>
+  
+  <button onclick="StudyEngine.pasteTo('list-search')" 
+          class="ml-3 opacity-30 hover:opacity-100 p-1 active:scale-90 transition-all shrink-0">
+    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+    </svg>
+  </button>
+</div>
                              <div id="category-filter-bar" 
      style="display: flex; overflow-x: auto; padding: 8px; gap: 8px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; -webkit-overflow-scrolling: touch;">
   </div>
@@ -234,8 +237,10 @@
     <textarea id="memo-textarea" placeholder="メモを入力..."></textarea>
   </div>
 </div>
-<div id="memo-preview-area" class="hidden">
-  <div class="memo-preview-box shadow-xl"  onclick="ViewController.toggleMemoSheet(false)">
+<div id="memo-preview-area" 
+     onclick="ViewController.toggleMemoSheet(true)" 
+     class="hidden cursor-pointer active:scale-95 transition-transform">
+  <div class="memo-preview-box shadow-xl">
     <span class="text-[10px] text-blue-500 font-black opacity-60">✎</span>
     <p id="memo-preview-text"></p>
   </div>

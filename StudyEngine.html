@@ -559,12 +559,12 @@ pasteTo: function(elementId) {
         if (elementId === 'list-search') {
           VocabListUI.update(text);
         }
-        ViewController.showToast("Pasted!", "success");
+        // ViewController.showToast("Pasted!", "success");
       }
     })
     .catch(err => {
-      console.error('Failed to read clipboard:', err);
-      ViewController.showToast("Clipboard access denied", "warning");
+      // console.error('Failed to read clipboard:', err);
+      // ViewController.showToast("Clipboard access denied", "warning");
     });
 },
 
@@ -574,25 +574,27 @@ pasteTo: function(elementId) {
    */
   copyAnalysisToClipboard: function(e) {
     if (e) e.stopPropagation();
-
-    const analysis = AppStore.state.currentAnalysis; // syllables配列
+const analysis = AppStore.state.currentAnalysis;
     const item = AppStore.getCurrentItem();
 
-    if (!analysis || !item) {
-      ViewController.showToast("解析データが存在しません", "error");
-      return;
-    }
+    if (!analysis || !item) return;
 
-    // 読みの比較用
-    const aiValue = item.phonetic || '---';
-    const engineValue = analysis.meta?.derivedPhonetic || '---';
-    const isMismatch = aiValue !== engineValue;
+    // --- ここで「完全比較用」の文字列を作る ---
+    // カッコを全部消し、前後のスペースも完全に消す
+    const rawAi = (item.phonetic || '').replace(/[\[\]]/g, '').trim();
+    const rawEngine = (analysis.meta?.derivedPhonetic || '').replace(/[\[\]]/g, '').trim();
 
-    // 1. ヘッダー組み立て
+    // 純粋な中身だけで一致判定
+    const isMismatch = rawAi !== rawEngine;
+
+    // --- 表示用（クリップボード）は1重カッコ [a-rai] に統一 ---
+    const displayAi = `[${rawAi}]`;
+    const displayEngine = `[${rawEngine}]`;
+
     let text = `【THAI-GO 発音比較】\n`;
     text += `単語: ${item.word_th}\n`;
-    text += `🤖 AI生成値: [ ${aiValue} ]\n`;
-    text += `⚙️ 解析エンジン: [ ${engineValue} ]\n`;
+    text += `🤖 AI生成値: ${displayAi}\n`;
+    text += `⚙️ 解析エンジン: ${displayEngine}\n`;
     text += isMismatch ? `⚠️ 読みの不一致を検出\n\n` : `✅ 読みは一致\n\n`;
     
     text += `意味: ${item.meaning_ja || '---'}\n\n`;
@@ -627,7 +629,7 @@ pasteTo: function(elementId) {
 
     // 4. 実行
     navigator.clipboard.writeText(text).then(() => {
-      const toastMsg = isMismatch ? "コピー完了（不一致検出！）" : "コピー完了";
+      const toastMsg = isMismatch ? "Copied（不一致検出！）" : "Copied";
       ViewController.showToast(toastMsg, isMismatch ? "warning" : "success");
       if (window.navigator.vibrate) window.navigator.vibrate(isMismatch ? [10, 50, 10] : 5);
     });
@@ -737,13 +739,13 @@ const statusHTML = `
             </div>
             
             <div class="flex items-center gap-4">
-                <button onclick="event.stopPropagation(); StudyEngine.copyAnalysisToClipboard(event);"
-                        class="hover:opacity-60 active:scale-90 transition-opacity outline-none group p-1">
-                    <svg class="w-4 h-4 text-current opacity-40 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" 
-                              d="M8.5 6.5h-2a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8.5 6.5a2 2 0 002 2h2a2 2 0 002-2M8.5 6.5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                    </svg>
-                </button>
+<button onclick="event.stopPropagation(); StudyEngine.copyAnalysisToClipboard(event);"
+            class="hover:opacity-60 active:scale-90 transition-opacity outline-none group p-1">
+        <svg class="w-4 h-4 text-current opacity-40 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" 
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+        </svg>
+    </button>
 
                 <button onclick="event.stopPropagation(); const el=document.getElementById('editor-${item.id}'); el.style.display=(el.style.display==='none'?'flex':'none');"
                         class="hover:opacity-60 active:scale-90 transition-opacity outline-none group p-1">

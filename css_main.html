@@ -308,6 +308,7 @@ input[type="search"]::-webkit-search-cancel-button {
   /* ★ ここが魔法：親の文字色（白か黒）に合わせてアイコンの色を自動で変える */
   filter: opacity(0.4);
   cursor: pointer;
+  margin-right: 0; /* ★ ここ！余白をゼロにして詰めさせる */
 }
 
 /* ダークモード（背景黒）の時は、アイコンを白く浮かび上がらせる */
@@ -704,7 +705,7 @@ position: fixed;
   left: 0; 
   width: 100%; 
   /* ★ 高さを45%に抑える（せり上がりすぎ防止） */
-  height: 40%; 
+  height: 45%; 
   /* ★ iPadなどの大画面でも高くなりすぎない制限 */
   max-height: 400px; 
   
@@ -766,20 +767,6 @@ position: fixed;
   color: #000000;
 }
 /* --- メモプレビュー (フローティング・スタイル) --- */
-#memo-preview-area {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  /* 左右のボタン(48px * 2)と余白を考慮した幅 */
-  width: calc(100% - 130px); 
-  bottom: 32px; /* ボタンの下端と揃える */
-  height: 48px; /* ボタンの高さと揃える */
-  display: flex;
-  align-items: center;
-  z-index: 35;
-  pointer-events: none;
-  transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
-}
 /* --- メモプレビュー (ボタンの間に固定) --- */
 #memo-preview-area {
   position: fixed;
@@ -792,9 +779,16 @@ position: fixed;
   height: 48px;
   display: flex;
   align-items: center;
-  z-index: 35;
-  pointer-events: none;
+  z-index: 45;
+  pointer-events: auto !important;
   transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  
+}
+
+/* 押した時に少し沈むエフェクトを入れると「ボタン感」が出ます */
+#memo-preview-area:active {
+  transform: translateX(-50%) scale(0.95);
+  opacity: 0.8;
 }
 
 .memo-preview-box {

@@ -266,7 +266,8 @@ reGenerate: function(id) {
    * 単語データおよび学習ログの完全抹消
    */
   deleteWordAndLogs: function(id) {
-    if (!id || AppStore.state.isProcessing) return;
+    // if (!id || AppStore.state.isProcessing) return;
+    if (!id ) return;
 
     ViewController.applyGlobalLock("Destructing word data...");
 
