@@ -154,11 +154,30 @@
     display: none !important; 
     opacity: 0; 
   }
-  #footer-ui { 
-    transform: translateY(100%); 
-    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
-    pointer-events: none;
-  }
+/* --- 透けるフッター：最終奥義 --- */
+#footer-ui {
+  /* 0.4まで透明度を上げます（かなり透けます） */
+  background: rgba(10, 10, 10, 0.4) !important; 
+  
+  /* ぼかしを少し弱めて（12px）、背後の文字の形がわかるように調整 */
+  backdrop-filter: blur(12px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(200%) !important;
+  
+  /* 境界線をより明るくして「ここから透けてる」ことを強調 */
+  border-top: 1px solid rgba(255, 255, 255, 0.15) !important;
+  
+  /* z-indexを最大級に */
+  z-index: 50 !important;
+  
+  /* 下からの突き上げを防ぐ */
+  padding-bottom: calc(32px + env(safe-area-inset-bottom)) !important;
+}
+
+/* ライトモード */
+.light-mode #footer-ui {
+  background: rgba(255, 255, 255, 0.5) !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
 
   .is-revealed .reveal-target { 
     display: block !important; 

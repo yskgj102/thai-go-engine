@@ -245,13 +245,13 @@
     <p id="memo-preview-text"></p>
   </div>
 </div>
-    <footer id="footer-ui"
-      class="p-6 pb-12 border-t flex gap-4 fixed bottom-0 left-0 right-0 max-w-md mx-auto z-50 pointer-events-none translate-y-full backdrop-blur-xl transition-all"
-      style="background: var(--header-bg); border-color: var(--border);">
-      <button onclick="StudyEngine.answer(3)" class="flex-1 bg-transparent text-blue-500 py-5 rounded-2xl font-black text-[10px] border border-blue-500/30 active:scale-95 transition-all">簡単</button>
-      <button onclick="StudyEngine.answer(2)" class="flex-1 bg-transparent text-slate-500 py-5 rounded-2xl font-black text-[10px] border border-slate-500/30 active:scale-95 transition-all">普通</button>
-      <button onclick="StudyEngine.answer(1)" class="flex-1 bg-transparent text-rose-600 py-5 rounded-2xl font-black text-[10px] border border-rose-600/30 active:scale-95 transition-all">難しい</button>
-    </footer>
+
+<footer id="footer-ui"
+  class="p-6 pb-12 border-t flex gap-4 fixed bottom-0 left-0 right-0 max-w-md mx-auto z-50 pointer-events-none translate-y-full transition-all">
+  <button onclick="StudyEngine.answer(3)" class="flex-1 bg-transparent text-blue-500 py-5 rounded-2xl font-black text-[10px] border border-blue-500/30 active:scale-95 transition-all">簡単</button>
+  <button onclick="StudyEngine.answer(2)" class="flex-1 bg-transparent text-slate-500 py-5 rounded-2xl font-black text-[10px] border border-slate-500/30 active:scale-95 transition-all">普通</button>
+  <button onclick="StudyEngine.answer(1)" class="flex-1 bg-transparent text-rose-600 py-5 rounded-2xl font-black text-[10px] border border-rose-600/30 active:scale-95 transition-all">難しい</button>
+</footer>
   </div>
 <?!= include('ThaiData'); ?>
 <?!= include('AppState'); ?>
