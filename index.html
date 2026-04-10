@@ -13,6 +13,19 @@
 </head>
 
 <body class="min-h-screen font-sans antialiased overflow-x-hidden">
+  <div id="splash-screen" class="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#000000]">
+  <div class="relative flex flex-col items-center">
+    <div class="logo-loader text-3xl font-black italic tracking-[0.3em] text-blue-500 mb-2">
+      THAI GO
+    </div>
+    <div class="w-32 h-[1px] bg-white/10 overflow-hidden relative">
+      <div class="progress-bar absolute inset-0 bg-blue-500/50"></div>
+    </div>
+    <div class="mt-4 text-[8px] font-bold tracking-[0.2em] opacity-30 uppercase text-white">
+      Initializing Thai Go Engine...
+    </div>
+  </div>
+</div>
   <div id="app-container" class="mx-auto min-h-screen flex flex-col relative border-x border-white/5">
 
     <header
@@ -172,10 +185,10 @@
 
 
 
-          <div id="details-area" class="reveal-target hidden">
-            <div onclick="StudyEngine.speak(true)"
-                 class="p-6 shadow-xl space-y-4 rounded-[1.5rem] border-l-4 border-blue-500 cursor-pointer active:opacity-80 transition-opacity"
-                 style="background-color: var(--bg-card); border: 1px solid var(--border);">
+        <div id="details-area" class="reveal-target hidden">
+  <div onclick="StudyEngine.speak(true)"
+       class="p-6 shadow-xl space-y-4 rounded-[2rem] cursor-pointer"
+       style="background-color: var(--bg-card); border: 1px solid var(--border);">
               <div class="flex justify-between items-center mb-1">
                 <p class="text-[10px] font-black uppercase tracking-widest text-blue-500">Context</p>
                 <button onclick="event.stopPropagation(); StudyEngine.copyText('ex-th')" class="text-[14px] opacity-100 hover:opacity-100 active:scale-125 transition-all">⧉</button>
@@ -221,6 +234,14 @@
   </svg>
 </div>
 
+
+<div id="scroll-top-btn" 
+     onclick="window.scrollTo({top: 0, behavior: 'smooth'})" 
+     class="floating-action-btn right-5 opacity-0 pointer-events-none translate-y-4">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 15l7-7 7 7" />
+  </svg>
+</div>
 <div onclick="ViewController.toggleVocabPanel(event)" 
      class="floating-action-btn right-5">
   <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -374,7 +395,7 @@
             setTimeout(() => {
               searchInput.focus();
               searchInput.setSelectionRange(0, searchInput.value.length);
-            }, 200); 
+            }, 100); 
           }
         });
         document.body.style.overflow = 'hidden';
@@ -389,9 +410,22 @@
             if (searchInput) searchInput.blur();
             resetStyles(); // ここでJSのスタイルを全消去
           }
-        }, 200);
+        }, 100);
       }
     });
+
+    // スクロール監視：300px以上進んだら「上へ」ボタンを表示
+window.addEventListener('scroll', () => {
+  const scrollBtn = document.getElementById('scroll-top-btn');
+  if (!scrollBtn) return;
+
+  if (window.scrollY > 300) {
+    scrollBtn.classList.add('is-visible');
+  } else {
+    scrollBtn.classList.remove('is-visible');
+  }
+}, { passive: true });
+
     };
   </script>
 </body>

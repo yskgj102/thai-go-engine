@@ -943,4 +943,118 @@ position: fixed;
   bottom: 130px;
 }
 
+
+/* --- スプラッシュ画面の演出 --- */
+#splash-screen {
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
+}
+
+/* ロゴが呼吸するように光る */
+.logo-loader {
+  animation: logo-pulse 2s ease-in-out infinite;
+}
+
+@keyframes logo-pulse {
+  0%, 100% { opacity: 0.5; filter: drop-shadow(0 0 0px rgba(59, 130, 246, 0)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.5)); }
+}
+
+/* プログレスバーが左から右へ流れる */
+.progress-bar {
+  width: 100%;
+  transform: translateX(-100%);
+  animation: progress-load 2.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes progress-load {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(0); }
+  100% { transform: translateX(100%); }
+}
+
+/* 消える時のエフェクト：ただ消えるのではなく、少し拡大しながら消える */
+.splash-fade-out {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transform: scale(1.05);
+}
+
+
+
+/* --- 解説エリア（note）究極の安定化 ＆ 質感同期版 --- */
+
+#details-area > div {
+  /* 1. 素材をメモエリアと同期：真っ黒をやめて透過ガラスにする */
+  background: rgba(10, 10, 10, 0.4) !important; 
+  backdrop-filter: blur(12px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(200%) !important;
+  
+  /* 2. 枠線を「光る細い線」にしてガラスの質感を出す（青線は削除） */
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+
+  /* 3. スマホ特有のタップ反応（影）を殺す */
+  -webkit-tap-highlight-color: transparent;
+  
+  /* 4. コピーを許可 */
+  user-select: text !important;
+  -webkit-user-select: text !important;
+
+  /* 5. アニメーションを一切させない（ちらつきの根本治療） */
+  transition: none !important;
+  transform: none !important;
+}
+
+/* ライトモード時の透過色調整 */
+.light-mode #details-area > div {
+  background: rgba(255, 255, 255, 0.5) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+/* タップしても質感を変えない（岩のような安定感） */
+#details-area > div:active {
+  opacity: 1 !important;
+  /* active時に一瞬でも色が変わるとチラつくので、背景色を固定 */
+  background: rgba(10, 10, 10, 0.4) !important; 
+}
+.light-mode #details-area > div:active {
+  background: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* テキストエリアの設定 */
+#note {
+  white-space: pre-wrap !important;
+  word-break: break-word;
+  user-select: text !important;
+  line-height: 1.8 !important;
+  color: var(--text-main) !important;
+}
+
+/* --- 上スクロールボタン：配置と挙動 --- */
+#scroll-top-btn {
+  /* 通常時：検索ボタン(32px) + 本体(48px) + 余白(10px) = 90px */
+  bottom: 90px; 
+  transition: bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+              opacity 0.3s ease, 
+              transform 0.3s ease,
+              background 0.2s;
+  z-index: 35; /* 検索ボタンより少し下にレイヤーを置く（重なり時の自然さ） */
+}
+
+/* 回答ボタン（footer-ui）が出現した時、検索ボタンと一緒にせり上がる */
+.is-revealed #scroll-top-btn {
+  bottom: 188px; /* 130px + 48px + 10px */
+}
+
+/* 表示フラグ（JSで切り替え） */
+#scroll-top-btn.is-visible {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: translateY(0);
+}
+
+/* 質感は他のボタンと共通（active時の沈み込み） */
+#scroll-top-btn:active {
+  transform: scale(0.9) !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+}
 </style>

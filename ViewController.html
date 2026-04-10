@@ -293,7 +293,7 @@ const ViewController = {
               searchInput.click(); 
               // 既存の文字があれば全選択、なければ即入力可能な状態に
               searchInput.setSelectionRange(0, searchInput.value.length);
-            }, 200); 
+            }, 100); 
           }
       });
       document.body.style.overflow = 'hidden';
@@ -305,7 +305,7 @@ const ViewController = {
         panel.classList.add('hidden');
         document.body.style.overflow = '';
         if (searchInput) searchInput.blur();
-      }, 200);
+      }, 100);
     }
   },
 

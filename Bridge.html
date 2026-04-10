@@ -44,14 +44,26 @@ const Bridge = {
       ViewController.updateTotalCount(res.length);
       VocabListUI.update();
 VocabListUI.renderCategoryBar()
-      // ロード画面（スピナー）を隠し、メインコンテンツを表示
+// --- ★ ここからスプラッシュ画面を消す演出 ---
+      
+      // データが届いたので、スピナーを隠す
       document.getElementById('loader')?.classList.add('hidden');
       const container = document.getElementById('card-container');
       if (container) {
         container.classList.remove('hidden');
-        setTimeout(() => { container.style.opacity = '1'; }, 50);
+        container.style.opacity = '1';
       }
 
+      // スプラッシュ画面を「いけてる感じ」にフェードアウトさせる
+      const splash = document.getElementById('splash-screen');
+      if (splash) {
+        // データ読み込み後、一瞬「タメ」を作ると高級感が出ます
+        setTimeout(() => {
+          splash.classList.add('splash-fade-out');
+          setTimeout(() => splash.remove(), 800); // アニメーション終了後にDOM削除
+          console.log("[Bridge] Splash cleared. Application Ready.");
+        }, 800); 
+      }
       console.log("[Bridge] Sync Complete.");
     }).getSpacedRepetitionData();
   },
