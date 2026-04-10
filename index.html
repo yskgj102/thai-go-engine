@@ -374,7 +374,7 @@
             setTimeout(() => {
               searchInput.focus();
               searchInput.setSelectionRange(0, searchInput.value.length);
-            }, 300); 
+            }, 200); 
           }
         });
         document.body.style.overflow = 'hidden';
@@ -389,7 +389,7 @@
             if (searchInput) searchInput.blur();
             resetStyles(); // ここでJSのスタイルを全消去
           }
-        }, 300);
+        }, 200);
       }
     });
     };
