@@ -463,7 +463,7 @@ const AutoPlayEngine = {
     if (this.active) return;
     this.active = true;
     this.updateUI(true);
-    // ViewController.showToast("Listening Mode: ON", "success");
+    this.updateLock(true); // 鉄壁ロックON
     this.executeStep(0); 
   },
 
@@ -472,7 +472,43 @@ const AutoPlayEngine = {
     if (this.timer) clearTimeout(this.timer);
     window.speechSynthesis.cancel();
     this.updateUI(false);
-    // ViewController.showToast("Listening Mode: OFF", "info");
+    this.updateLock(false); // ロック解除
+  },
+
+  // ★ 鉄壁ロック：再生ボタン以外への干渉を物理的に遮断
+  updateLock: function(isActive) {
+    let shield = document.getElementById('autoplay-shield');
+    const toggleBtn = document.getElementById('autoplay-toggle-btn');
+
+    if (isActive) {
+      // 1. 全画面を覆う透明なシールドを作成
+      if (!shield) {
+        shield = document.createElement('div');
+        shield.id = 'autoplay-shield';
+        // z-index 90 でヘッダー(50)より上に配置。背景は完全に透明。
+        shield.style = "position:fixed; inset:0; z-index:90; background:transparent; cursor:default; pointer-events:auto;";
+        document.body.appendChild(shield);
+      }
+      shield.style.display = 'block';
+
+      // 2. 再生ボタンだけをシールドより上(z-index 100)に浮かせる
+      if (toggleBtn) {
+        toggleBtn.style.position = 'relative';
+        toggleBtn.style.zIndex = '100';
+      }
+
+      // 3. ロック中の視覚効果（メインとフッターを減光）
+      document.querySelector('main').style.opacity = '0.4';
+      document.querySelector('#footer-ui').style.opacity = '0.2';
+      document.querySelector('#header-input-area').style.opacity = '0.2';
+    } else {
+      // 全解除
+      if (shield) shield.style.display = 'none';
+      if (toggleBtn) toggleBtn.style.zIndex = '';
+      document.querySelector('main').style.opacity = '1';
+      document.querySelector('#footer-ui').style.opacity = '1';
+      document.querySelector('#header-input-area').style.opacity = '1';
+    }
   },
 
   updateUI: function(isActive) {
@@ -488,7 +524,7 @@ const AutoPlayEngine = {
     } else {
       btn.classList.replace('text-blue-500', 'text-blue-500/40');
       pulse?.classList.add('hidden');
-      icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />';
+      icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />';
     }
   },
 
@@ -497,8 +533,8 @@ const AutoPlayEngine = {
     const item = AppStore.state.queue[AppStore.state.currentIndex];
     if (!item) return this.stop();
     
-    const isThaiMode = AppStore.state.isThaiMode;
-    const rate = AppStore.state.isSlow ? 0.7 : 0.9;
+    const isThaiMode = AppStore.state.isTargetThai;
+    const rate = AppStore.state.isSlowMode ? 0.7 : 0.9;
 
     switch (step) {
       case 0: // ① 単語（表面）1回目
@@ -528,7 +564,7 @@ const AutoPlayEngine = {
         });
         break;
 
-      case 2: // ③ 例文（表面側言語）1回目
+      case 2: // ③ 例文（問い側）1回目
         // 日本語モードなら日本語例文を先に2回
         const text2 = isThaiMode ? item.example_th : item.example_ja;
         const lang2 = isThaiMode ? 'th-TH' : 'ja-JP';
@@ -539,21 +575,17 @@ const AutoPlayEngine = {
             this.timer = setTimeout(() => this.executeStep(2.5), 800);
           });
         } else {
-          this.executeStep(3); // 例文なければスキップ
+          this.executeStep(3);
         }
         break;
 
-      case 2.5: // ③ 例文（表面側言語）2回目
-        const text25 = isThaiMode ? item.example_th : item.example_ja;
-        const lang25 = isThaiMode ? 'th-TH' : 'ja-JP';
-        const rate25 = isThaiMode ? rate : 1.0;
-
-        AudioSystem.play(text25, lang25, rate25, () => {
+      case 2.5: // ③ 例文（問い側）2回目
+        AudioSystem.play(text2, lang2, rate2, () => {
           this.timer = setTimeout(() => this.executeStep(3), 1200);
         });
         break;
 
-      case 3: // ④ 例文（裏面側言語：答え）
+      case 3: // ④ 例文（答え側）
         const text3 = isThaiMode ? item.example_ja : item.example_th;
         const lang3 = isThaiMode ? 'ja-JP' : 'th-TH';
         const rate3 = isThaiMode ? 1.0 : rate;
