@@ -463,7 +463,7 @@ const AutoPlayEngine = {
     if (this.active) return;
     this.active = true;
     this.updateUI(true);
-    this.updateLock(true); // 鉄壁ロックON
+    this.updateLock(true); // ★ロック
     this.executeStep(0); 
   },
 
@@ -472,51 +472,45 @@ const AutoPlayEngine = {
     if (this.timer) clearTimeout(this.timer);
     window.speechSynthesis.cancel();
     this.updateUI(false);
-    this.updateLock(false); // ロック解除
+    this.updateLock(false); // ★解除
   },
 
-  // ★ 鉄壁ロック：再生ボタン以外への干渉を物理的に遮断
+  // ★ 鉄壁ロック：シールドを張りつつヘッダーだけを次元上昇させる
   updateLock: function(isActive) {
     let shield = document.getElementById('autoplay-shield');
-    const toggleBtn = document.getElementById('autoplay-toggle-btn');
+    const header = document.querySelector('header');
+    // ヘッダー内のボタン以外の要素（Activity, Add欄, 右側アイコン）
+    const headerOthers = document.querySelectorAll('header > div');
 
     if (isActive) {
-      // 1. 全画面を覆う透明なシールドを作成
       if (!shield) {
         shield = document.createElement('div');
         shield.id = 'autoplay-shield';
-        // z-index 90 でヘッダー(50)より上に配置。背景は完全に透明。
-        shield.style = "position:fixed; inset:0; z-index:90; background:transparent; cursor:default; pointer-events:auto;";
+        // z-index 10000 で全画面をガード
+        shield.style = "position:fixed; inset:0; z-index:10000; background:transparent; pointer-events:auto; touch-action:none;";
         document.body.appendChild(shield);
       }
       shield.style.display = 'block';
 
-      // 2. 再生ボタンだけをシールドより上(z-index 100)に浮かせる
-      if (toggleBtn) {
-        toggleBtn.style.position = 'relative';
-        toggleBtn.style.zIndex = '100';
+      // 【重要】ヘッダーごとシールド(10000)より上の階層(10001)に持ち上げる
+      if (header) {
+        header.style.zIndex = '10001';
+        // ヘッダー内の他の要素はクリックできないようにする
+        headerOthers.forEach(el => el.style.pointerEvents = 'none');
       }
-
-      // 3. ロック中の視覚効果（メインとフッターを減光）
-      document.querySelector('main').style.opacity = '0.4';
-      document.querySelector('#footer-ui').style.opacity = '0.2';
-      document.querySelector('#header-input-area').style.opacity = '0.2';
+      document.activeElement.blur();
     } else {
-      // 全解除
       if (shield) shield.style.display = 'none';
-      if (toggleBtn) toggleBtn.style.zIndex = '';
-      document.querySelector('main').style.opacity = '1';
-      document.querySelector('#footer-ui').style.opacity = '1';
-      document.querySelector('#header-input-area').style.opacity = '1';
+      if (header) {
+        header.style.zIndex = '50'; // 元のz-indexに戻す
+        headerOthers.forEach(el => el.style.pointerEvents = 'auto');
+      }
     }
   },
-
   updateUI: function(isActive) {
     const btn = document.getElementById('autoplay-toggle-btn');
     const icon = document.getElementById('play-icon');
     const pulse = document.getElementById('autoplay-pulse');
-    if (!btn || !icon) return;
-
     if (isActive) {
       btn.classList.replace('text-blue-500/40', 'text-blue-500');
       pulse?.classList.remove('hidden');
@@ -537,41 +531,38 @@ const AutoPlayEngine = {
     const rate = AppStore.state.isSlowMode ? 0.7 : 0.9;
 
     switch (step) {
-      case 0: // ① 単語（表面）1回目
+      case 0: // ① 表面1回目
         const text0 = isThaiMode ? item.word_th : item.meaning_ja;
         const lang0 = isThaiMode ? 'th-TH' : 'ja-JP';
-        const rate0 = isThaiMode ? rate : 1.0;
-
-        AudioSystem.play(text0, lang0, rate0, () => {
+        AudioSystem.play(text0, lang0, isThaiMode ? rate : 1.0, () => {
           this.timer = setTimeout(() => this.executeStep(0.5), 800);
         });
         break;
 
-      case 0.5: // ① 単語（表面）2回目：めくり動作
+      case 0.5: // ② めくり ＋ 長文対応
         StudyEngine.revealAll(); 
+        const text05 = isThaiMode ? item.word_th : item.meaning_ja;
+        const lang05 = isThaiMode ? 'th-TH' : 'ja-JP';
+        // めくり直後に AudioSystem で上書きして終了を待つ（これで途中で切れない）
         this.timer = setTimeout(() => {
-          if (this.active) this.executeStep(1);
-        }, 1500); 
+          AudioSystem.play(text05, lang05, isThaiMode ? rate : 1.0, () => {
+            if (this.active) this.timer = setTimeout(() => this.executeStep(1), 1000);
+          });
+        }, 100); 
         break;
 
-      case 1: // ② 単語（裏面：答え）
+      case 1: // ③ 裏面（答え）
         const text1 = isThaiMode ? item.meaning_ja : item.word_th;
         const lang1 = isThaiMode ? 'ja-JP' : 'th-TH';
-        const rate1 = isThaiMode ? 1.0 : rate;
-
-        AudioSystem.play(text1, lang1, rate1, () => {
+        AudioSystem.play(text1, lang1, isThaiMode ? 1.0 : rate, () => {
           this.timer = setTimeout(() => this.executeStep(2), 1200);
         });
         break;
 
-      case 2: // ③ 例文（問い側）1回目
-        // 日本語モードなら日本語例文を先に2回
+      case 2: // ④ 例文問い 1回目
         const text2 = isThaiMode ? item.example_th : item.example_ja;
-        const lang2 = isThaiMode ? 'th-TH' : 'ja-JP';
-        const rate2 = isThaiMode ? rate : 1.0;
-
         if (text2 && text2 !== "---") {
-          AudioSystem.play(text2, lang2, rate2, () => {
+          AudioSystem.play(text2, isThaiMode ? 'th-TH' : 'ja-JP', isThaiMode ? rate : 1.0, () => {
             this.timer = setTimeout(() => this.executeStep(2.5), 800);
           });
         } else {
@@ -579,17 +570,15 @@ const AutoPlayEngine = {
         }
         break;
 
-      case 2.5: // ③ 例文（問い側）2回目
-        AudioSystem.play(text2, lang2, rate2, () => {
+      case 2.5: // ⑤ 例文問い 2回目
+        const text25 = isThaiMode ? item.example_th : item.example_ja;
+        AudioSystem.play(text25, isThaiMode ? 'th-TH' : 'ja-JP', isThaiMode ? rate : 1.0, () => {
           this.timer = setTimeout(() => this.executeStep(3), 1200);
         });
         break;
 
-      case 3: // ④ 例文（答え側）
+      case 3: // ⑥ 例文答え
         const text3 = isThaiMode ? item.example_ja : item.example_th;
-        const lang3 = isThaiMode ? 'ja-JP' : 'th-TH';
-        const rate3 = isThaiMode ? 1.0 : rate;
-
         const nextWord = () => {
           if (!this.active) return;
           const nextIdx = (AppStore.state.currentIndex + 1) % AppStore.state.queue.length;
@@ -597,9 +586,8 @@ const AutoPlayEngine = {
           StudyEngine.render(); 
           this.timer = setTimeout(() => this.executeStep(0), 2000);
         };
-
         if (text3 && text3 !== "---") {
-          AudioSystem.play(text3, lang3, rate3, nextWord);
+          AudioSystem.play(text3, isThaiMode ? 'ja-JP' : 'th-TH', isThaiMode ? 1.0 : rate, nextWord);
         } else {
           nextWord();
         }
