@@ -41,6 +41,14 @@
       </div>
 
       <div class="flex-1 flex justify-center px-3 relative h-10 overflow-hidden">
+<button id="autoplay-toggle-btn" onclick="AutoPlayEngine.toggle()" 
+        class="mr-2 text-blue-500/40 hover:text-blue-500 transition-all active:scale-125 p-1 relative">
+  <svg id="play-icon" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+  <span id="autoplay-pulse" class="hidden absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full animate-ping" style="pointer-events: none;"></span>
+</button>
         <div id="header-input-area" class="relative w-full max-w-[150px] transition-all duration-300 ease-out">
           
           <input id="quick-input" type="text" placeholder="Add..."
@@ -148,6 +156,7 @@
         </div>
 
         <div id="card-container" class="hidden space-y-4">
+
           <div id="word-card" onclick="if(AppStore.state.revealed) StudyEngine.speak(false)"
                class="card-style rounded-[2.5rem] p-8 shadow-2xl relative min-h-[360px] flex flex-col items-center justify-center cursor-pointer">
             <div class="absolute top-5 right-6 flex items-center gap-4">
