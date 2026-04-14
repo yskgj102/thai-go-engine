@@ -5,7 +5,6 @@
  * サーバー側のレスポンスを AppStore の状態に反映させる。
  */
 const Bridge = {
-  pendingId: null, // ★追加
   
   /**
    * アプリ起動時の初期データロード
@@ -206,8 +205,7 @@ VocabListUI.renderCategoryBar()
   // },
 reGenerate: function(id) {
     if (!id || AppStore.state.isProcessing) return;
-    this.pendingId = id;
-
+    
     const btn = document.getElementById('re-gen-btn');
     const originalText = "AI Re-Generate";
 
@@ -240,7 +238,6 @@ reGenerate: function(id) {
 
     google.script.run
       .withSuccessHandler((newAiData) => {
-        this.pendingId = null;
         ViewController.releaseLocks();
 
         if (newAiData) {
@@ -264,7 +261,6 @@ reGenerate: function(id) {
         Bridge._startReGenCooldown(btn, originalText);
       })
       .withFailureHandler(err => {
-        this.pendingId = null;
         ViewController.releaseLocks();
         ViewController.showToast("System error.", "error");
         
@@ -454,23 +450,4 @@ executeSaveMemo: function(id, text) {
     .updateWordMemo(id, text);
 }
 };
-
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && Bridge.pendingId) {
-    google.script.run.withSuccessHandler(res => {
-      if (!res) return;
-      const targetId = Bridge.pendingId;
-      const old = AppStore.state.allVocab.find(v => v.id === targetId);
-      const updated = res.find(v => v.id === targetId);
-
-      // 前後の例文を比較して変わっていれば成功とみなす
-      if (updated && old && updated.example_thai !== old.example_thai) {
-        AppStore.update('allVocab', res); // データを最新に
-        Bridge.pendingId = null;         // 追跡終了
-        StudyEngine.jumpToWordFromId(targetId); // ★あなたのジャンプ関数を実行
-        ViewController.showToast("AI Refreshed & Jumped!", "success");
-      }
-    }).getSpacedRepetitionData();
-  }
-});
 </script>
