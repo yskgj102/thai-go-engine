@@ -174,6 +174,8 @@ updateMemoPreview: function(item) {
 
     // 裏面表示と同時に単語を自動読み上げ
     this.speak(false); 
+
+    
   },
 
   /**
@@ -495,22 +497,91 @@ renderContextLinks: function(rawText, targetElementId, excludeId) {
   targetEl.innerHTML = text;
 },
 /**
- * 2クリック遷移のロジック（ここだけ追加）
- */
-handleContextClick: function(el, id) {
-  if (el.classList.contains('is-confirming')) {
-    // 2回目：ジャンプ
-    this.jumpToWordFromId(id);
-    el.classList.remove('is-confirming');
-  } else {
-    // 1回目：他を消して自分を「確認中」にする（これでCSSのTIPが出る）
-    document.querySelectorAll('.context-link').forEach(l => l.classList.remove('is-confirming'));
-    el.classList.add('is-confirming');
+   * 2クリック遷移のロジック（レイアウト崩れ・端っこ見切れ防止の完全版）
+   */
+  handleContextClick: function(el, id) {
+    // 2回目クリック：ジャンプ処理
+    if (el.dataset.active === 'true') {
+      this.jumpToWordFromId(id);
+      el.dataset.active = 'false';
+      this.hideTooltip();
+      return;
+    }
+
+    // 1回目クリック：他のハイライトをすべて消す
+    document.querySelectorAll('.context-link').forEach(l => {
+      l.dataset.active = 'false';
+      l.style.background = ''; 
+      l.style.borderRadius = '';
+    });
+
+    // 自分をハイライト（CSSに依存せず直接塗ることで、テキストの改行崩れを100%防ぐ）
+    el.dataset.active = 'true';
+    el.style.background = 'rgba(59, 130, 246, 0.3)'; // Tailwindの blue-500/30 相当
+    el.style.borderRadius = '4px';
     
+    // 独立したツールチップを表示（画面端を自動検知）
+    this.showTooltip(el, el.getAttribute('data-meaning'));
+
     // 3秒後に自動解除
-    setTimeout(() => el.classList.remove('is-confirming'), 3000);
-  }
-},
+    if (this.tooltipTimer) clearTimeout(this.tooltipTimer);
+    this.tooltipTimer = setTimeout(() => {
+      if (el.dataset.active === 'true') {
+        el.dataset.active = 'false';
+        el.style.background = '';
+        this.hideTooltip();
+      }
+    }, 3000);
+  },
+/**
+   * 画面端で見切れない独立ツールチップの生成・表示（スクロール追従版）
+   */
+  showTooltip: function(anchorEl, text) {
+    let tooltip = document.getElementById('global-context-tooltip');
+    if (!tooltip) {
+      tooltip = document.createElement('div');
+      tooltip.id = 'global-context-tooltip';
+      // ★ fixed を absolute に変更し、ページ全体に対する絶対配置にする
+      tooltip.className = 'absolute z-[10000] bg-[#1e293b] border border-blue-500/30 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-xl pointer-events-none whitespace-nowrap transition-opacity duration-200';
+      document.body.appendChild(tooltip);
+    }
+
+    tooltip.innerHTML = text;
+    tooltip.style.opacity = '0';
+    tooltip.style.display = 'block';
+
+    // 描画を待ってからサイズを計算
+    requestAnimationFrame(() => {
+      const rect = anchorEl.getBoundingClientRect();
+      const tooltipWidth = tooltip.offsetWidth;
+      
+      // ★ window.scrollY / scrollX を足して、スクロールされても元の単語にピタッと追従させる
+      let left = rect.left + window.scrollX + (rect.width / 2) - (tooltipWidth / 2);
+      let top = rect.top + window.scrollY - tooltip.offsetHeight - 8; 
+
+      // 画面端の「見切れ」防止ロジック（ここも scrollX を考慮）
+      const safePadding = 12; 
+      if (left < window.scrollX + safePadding) {
+        left = window.scrollX + safePadding; 
+      } else if (left + tooltipWidth > window.scrollX + window.innerWidth - safePadding) {
+        left = window.scrollX + window.innerWidth - tooltipWidth - safePadding; 
+      }
+
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${top}px`;
+      tooltip.style.opacity = '1';
+    });
+  },
+  /**
+   * ツールチップを隠す
+   */
+  hideTooltip: function() {
+    const tooltip = document.getElementById('global-context-tooltip');
+    if (tooltip) {
+      tooltip.style.opacity = '0';
+      setTimeout(() => tooltip.style.display = 'none', 200);
+    }
+  },
 /**
  * この単語を「解説」や「例文」に含んでいる他の単語を抽出する
  */
@@ -635,7 +706,6 @@ const analysis = AppStore.state.currentAnalysis;
     });
   },
 toggleAnalysis: function() {
-        console.log("hello ana"); // 山岡さんのデバッグログも復活
         const panel = document.getElementById('analysis-panel');
         if (!panel) return;
 
@@ -1274,21 +1344,34 @@ syllables.forEach((syl, i) => {
                 const tMark = prev.marks.find(m => /[\u0E48-\u0E4B]/.test(m));
                 prev.toneNum = ThaiValidator.getToneNumber(prev.finalClass, tMark, prev.sType, recV.length);
                 
-                // 3. 発音記号(derived)の再生成
-                const tObj = ThaiMasterData.toneMap[prev.toneNum] || { mark: "" };
-                const pHead = (prev.mainC.length > 1 && (prev.mainC[0] === 'ห' || prev.mainC[0] === 'อ')) ? prev.mainC[1] : prev.mainC[0];
-                const pInit = (ThaiMasterData.consonants[pHead]?.sound || "").toLowerCase();
-                const pFinal = (ThaiMasterData.consonants[prev.lastC]?.final || "").toLowerCase();
-                // ★ここから修正
+// ★追加：吸着後の母音情報を同期（表示・コピー用の不整合防止）
+prev.vSound = recV.sound;
+prev.vLen = recV.length;
+
+// 3. 発音記号(derived)の再生成
+const tObj = ThaiMasterData.toneMap[prev.toneNum] || { mark: "" };
+
+// ★追加：通常ルートと同じ優先順位で頭子音の音価を決定
+const headStr = prev.mainC || "";
+let pInit = "";
+
+if (ThaiMasterData.clusters[headStr]) {
+   pInit = (ThaiMasterData.clusters[headStr].sound || "").toLowerCase();
+} else if (headStr.length > 1 && (headStr[0] === 'ห' || headStr[0] === 'อ')) {
+   pInit = (ThaiMasterData.consonants[headStr[1]]?.sound || "").toLowerCase();
+} else {
+   pInit = (ThaiMasterData.consonants[headStr[0]]?.sound || "").toLowerCase();
+}
+
+const pFinal = (ThaiMasterData.consonants[prev.lastC]?.final || "").toLowerCase();
 const pVowel = (recV.sound || "").toLowerCase();
 const toneMark = tObj.mark || "";
 
 let vWithTone = "";
 if (pVowel.length > 0) {
-    // 1文字目に声調記号を差し込む
-    vWithTone = pVowel[0] + toneMark + pVowel.substring(1);
+   vWithTone = pVowel[0] + toneMark + pVowel.substring(1);
 } else {
-    vWithTone = toneMark;
+   vWithTone = toneMark;
 }
 
 prev.derived = pInit + vWithTone + pFinal;

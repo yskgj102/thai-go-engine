@@ -157,51 +157,51 @@ VocabListUI.renderCategoryBar()
   //  * 既存の単語IDに対して、AIが例文や解説を新しく作り直す。
   //  */
   // reGenerate: function(id) {
-  //   if (!id) return;
+  //  if (!id) return;
     
-  //   const btn = document.getElementById('re-gen-btn');
-  //   const originalText = "AI Re-Generate";
+  //  const btn = document.getElementById('re-gen-btn');
+  //  const originalText = "AI Re-Generate";
 
-  //   // 通信ロックを開始し、ボタンテキストを変更
-  //   ViewController.applyGlobalLock("AI is re-generating content...", btn);
-  //   btn.innerText = "Thinking..."; 
+  //  // 通信ロックを開始し、ボタンテキストを変更
+  //  ViewController.applyGlobalLock("AI is re-generating content...", btn);
+  //  btn.innerText = "Thinking..."; 
 
-  //   google.script.run
-  //     .withSuccessHandler((newAiData) => {
-  //       if (newAiData) {
-  //         // 現在表示中のカードとIDが一致するか確認
-  //         const currentItem = AppStore.state.queue[AppStore.state.currentIndex];
+  //  google.script.run
+  //    .withSuccessHandler((newAiData) => {
+  //      if (newAiData) {
+  //        // 現在表示中のカードとIDが一致するか確認
+  //        const currentItem = AppStore.state.queue[AppStore.state.currentIndex];
           
-  //         if (currentItem && currentItem.id === id) {
-  //           // 新しいAIデータを既存のオブジェクトにマージ（破壊的代入）
-  //           Object.assign(currentItem, newAiData);
+  //        if (currentItem && currentItem.id === id) {
+  //          // 新しいAIデータを既存のオブジェクトにマージ（破壊的代入）
+  //          Object.assign(currentItem, newAiData);
 
-  //           ViewController.showToast("AI Content Refreshed!", "success");
+  //          ViewController.showToast("AI Content Refreshed!", "success");
             
-  //           // 画面を再描画して新しい内容を反映
-  //           StudyEngine.render(); 
+  //          // 画面を再描画して新しい内容を反映
+  //          StudyEngine.render(); 
             
-  //           if (btn) {
-  //             btn.innerText = "Updated!";
-  //             btn.classList.add('text-green-500');
-  //           }
-  //         }
-  //       } else {
-  //         ViewController.showToast("AI Quota exceeded.", "warning");
-  //         btn.innerText = "AI Busy / Limit";
-  //       }
+  //          if (btn) {
+  //            btn.innerText = "Updated!";
+  //            btn.classList.add('text-green-500');
+  //          }
+  //        }
+  //      } else {
+  //        ViewController.showToast("AI Quota exceeded.", "warning");
+  //        btn.innerText = "AI Busy / Limit";
+  //      }
 
-  //       ViewController.releaseLocks();
-  //       // API負荷軽減のため、再生成ボタンを20秒間クールダウンさせる
-  //       this._startReGenCooldown(btn, originalText);
-  //     })
-  //     .withFailureHandler(err => {
-  //       ViewController.showToast("System error.", "error");
-  //       ViewController.releaseLocks();
-  //       btn.disabled = false;
-  //       btn.innerText = originalText;
-  //     })
-  //     .reGenerateCardById(id);
+  //      ViewController.releaseLocks();
+  //      // API負荷軽減のため、再生成ボタンを20秒間クールダウンさせる
+  //      this._startReGenCooldown(btn, originalText);
+  //    })
+  //    .withFailureHandler(err => {
+  //      ViewController.showToast("System error.", "error");
+  //      ViewController.releaseLocks();
+  //      btn.disabled = false;
+  //      btn.innerText = originalText;
+  //    })
+  //    .reGenerateCardById(id);
   // },
 reGenerate: function(id) {
     if (!id || AppStore.state.isProcessing) return;
@@ -453,13 +453,10 @@ executeSaveMemo: function(id, text) {
 const AutoPlayEngine = {
   active: false,
   timer: null,
+  wakeLock: null, 
 
-  // ★ 必殺技：クリック信号を最上位で撃ち落とすスナイパー
   _blocker: function(e) {
-    // 唯一の例外：再生ボタン（とその中身）だけは見逃す
     if (e.target.closest('#autoplay-toggle-btn')) return;
-    
-    // それ以外のクリックは、フッターだろうがヘッダーだろうが全てここで処刑
     e.stopPropagation();
     e.preventDefault();
   },
@@ -474,6 +471,13 @@ const AutoPlayEngine = {
     this.active = true;
     this.updateUI(true);
     this.updateLock(true);
+    
+    if ('wakeLock' in navigator) {
+      navigator.wakeLock.request('screen')
+        .then(lock => { this.wakeLock = lock; })
+        .catch(err => console.log('WakeLock Error:', err));
+    }
+
     this.executeStep(0); 
   },
 
@@ -483,20 +487,19 @@ const AutoPlayEngine = {
     window.speechSynthesis.cancel();
     this.updateUI(false);
     this.updateLock(false);
+    
+    if (this.wakeLock) {
+      this.wakeLock.release().catch(err => console.log(err));
+      this.wakeLock = null;
+    }
   },
 
-  // ★ 鉄壁ロック：CSSを使わず、クリックの根源を絶つ
   updateLock: function(isActive) {
     if (isActive) {
-      // true = キャプチャフェーズ（イベントが各ボタンに届く前の、一番外側の世界で捕獲する）
       document.addEventListener('click', this._blocker, true);
-      // 念のためスマホ特有のタッチイベントも無効化
-      document.addEventListener('touchstart', this._blocker, { capture: true, passive: false });
-      
       if (document.activeElement) document.activeElement.blur();
     } else {
       document.removeEventListener('click', this._blocker, true);
-      document.removeEventListener('touchstart', this._blocker, true);
     }
   },
 
@@ -526,65 +529,63 @@ const AutoPlayEngine = {
     const rate = AppStore.state.isSlowMode ? 0.7 : 0.9;
 
     switch (step) {
-      case 0:
-        const t0 = isThaiMode ? item.word_th : item.meaning_ja;
-        AudioSystem.play(t0, isThaiMode ? 'th-TH' : 'ja-JP', isThaiMode ? rate : 1.0, () => {
-          if (this.active) this.timer = setTimeout(() => this.executeStep(0.5), 800);
-        });
-        break;
-
-      case 0.5: // 二重再生防止ハック搭載
+      case 0: // ① 表面の読み上げ ＋ めくり
+        // 二重再生防止のため元の声帯を奪う
         const originalSpeak = StudyEngine.speak;
-        StudyEngine.speak = function() {}; // 声帯を奪う
+        StudyEngine.speak = function() {}; 
         
         StudyEngine.revealAll(); 
         
-        setTimeout(() => { StudyEngine.speak = originalSpeak; }, 500); // 声帯を返す
+        // 0.5秒後に声帯を返す
+        setTimeout(() => { StudyEngine.speak = originalSpeak; }, 500); 
 
-        const t05 = isThaiMode ? item.word_th : item.meaning_ja;
+        const t0 = isThaiMode ? item.word_th : item.meaning_ja;
         this.timer = setTimeout(() => {
-          AudioSystem.play(t05, isThaiMode ? 'th-TH' : 'ja-JP', isThaiMode ? rate : 1.0, () => {
+          AudioSystem.play(t0, isThaiMode ? 'th-TH' : 'ja-JP', isThaiMode ? rate : 1.0, () => {
+            // 単語（1回目）が終わったら、すぐに裏面（日本語）へ
             if (this.active) this.timer = setTimeout(() => this.executeStep(1), 1000);
           });
-        }, 100); 
+        }, 100);
         break;
 
-      case 1:
+      case 1: // ② 裏面（意味）の読み上げ
         const t1 = isThaiMode ? item.meaning_ja : item.word_th;
         AudioSystem.play(t1, isThaiMode ? 'ja-JP' : 'th-TH', isThaiMode ? 1.0 : rate, () => {
           if (this.active) this.timer = setTimeout(() => this.executeStep(2), 1200);
         });
         break;
 
-      case 2:
+      case 2: // ③ 例文問い（1回目）
         const t2 = isThaiMode ? item.example_th : item.example_ja;
         if (t2 && t2 !== "---") {
           AudioSystem.play(t2, isThaiMode ? 'th-TH' : 'ja-JP', isThaiMode ? rate : 1.0, () => {
-            if (this.active) this.timer = setTimeout(() => this.executeStep(2.5), 800);
+            if (this.active) this.timer = setTimeout(() => this.executeStep(3), 800);
           });
         } else {
-          this.executeStep(3);
+          // 例文がない場合はスキップして次へ
+          this.executeStep(4);
         }
         break;
 
-      case 2.5:
-        const t25 = isThaiMode ? item.example_th : item.example_ja;
-        AudioSystem.play(t25, isThaiMode ? 'th-TH' : 'ja-JP', isThaiMode ? rate : 1.0, () => {
-          if (this.active) this.timer = setTimeout(() => this.executeStep(3), 1200);
+      case 3: // ④ 例文問い（2回目リピート）
+        const t3 = isThaiMode ? item.example_th : item.example_ja;
+        AudioSystem.play(t3, isThaiMode ? 'th-TH' : 'ja-JP', isThaiMode ? rate : 1.0, () => {
+          if (this.active) this.timer = setTimeout(() => this.executeStep(4), 1200);
         });
         break;
 
-      case 3:
-        const t3 = isThaiMode ? item.example_ja : item.example_th;
+      case 4: // ⑤ 例文答え（日本語） ＋ 次のカードへ
+        const t4 = isThaiMode ? item.example_ja : item.example_th;
         const nextWord = () => {
           if (!this.active) return;
           const nextIdx = (AppStore.state.currentIndex + 1) % AppStore.state.queue.length;
           AppStore.update('currentIndex', nextIdx);
           StudyEngine.render(); 
-          this.timer = setTimeout(() => this.executeStep(0), 2000);
+          this.timer = setTimeout(() => this.executeStep(0), 2000); // 2秒待って次の単語へ
         };
-        if (t3 && t3 !== "---") {
-          AudioSystem.play(t3, isThaiMode ? 'ja-JP' : 'th-TH', isThaiMode ? 1.0 : rate, nextWord);
+        
+        if (t4 && t4 !== "---") {
+          AudioSystem.play(t4, isThaiMode ? 'ja-JP' : 'th-TH', isThaiMode ? 1.0 : rate, nextWord);
         } else {
           nextWord();
         }
@@ -592,4 +593,15 @@ const AutoPlayEngine = {
     }
   }
 };
+
+// ★追加：2. バックグラウンド（別アプリ切り替えや画面オフ）を検知して自動一時停止
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && AutoPlayEngine.active) {
+    AutoPlayEngine.stop();
+    // もしトースト通知が出せる状態なら、一言添えてあげる
+    if (typeof ViewController !== 'undefined' && ViewController.showToast) {
+      ViewController.showToast("Background mode: Paused.", "warning");
+    }
+  }
+});
 </script>

@@ -22,17 +22,17 @@ const VocabListUI = {
     return str.toLowerCase()
               .normalize("NFD")               // 声調記号を分離（á -> a + ´）
               .replace(/[\u0300-\u036f]/g, "") // 分離した声調記号のみを削除
-              .replace(/ɔ/g, "o")             // ɔ -> o (thɔ́ɔng -> thong)
-              .replace(/ɛ/g, "e")             // ɛ -> e (ka-fɛɛ -> kafee)
-              .replace(/ɯ/g, "u")             // ɯ -> u (mɯɯ -> muu)
-              .replace(/ə/g, "o")             // ə -> o
-              .replace(/[- ]/g, "")           // ハイフン・スペースを完全に除去
-              .replace(/ph/g, "p")            // 有気音の揺れ対策 (ph -> p)
-              .replace(/th/g, "t")            // (th -> t)
-              .replace(/kh/g, "k")            // (kh -> k)
-              .replace(/ng/g, "n")            // 末尾の鼻母音 (ng -> n)
-              .replace(/[’']/g, "")           // アポストロフィを除去
-              .replace(/y$/g, "i");           // 末尾のyをiとみなす
+              .replace(/ɔ/g, "o")              // ɔ -> o (thɔ́ɔng -> thong)
+              .replace(/ɛ/g, "e")              // ɛ -> e (ka-fɛɛ -> kafee)
+              .replace(/ɯ/g, "u")              // ɯ -> u (mɯɯ -> muu)
+              .replace(/ə/g, "o")              // ə -> o
+              .replace(/[- ]/g, "")            // ハイフン・スペースを完全に除去
+              .replace(/ph/g, "p")             // 有気音の揺れ対策 (ph -> p)
+              .replace(/th/g, "t")             // (th -> t)
+              .replace(/kh/g, "k")             // (kh -> k)
+              .replace(/ng/g, "n")             // 末尾の鼻母音 (ng -> n)
+              .replace(/[’']/g, "")            // アポストロフィを除去
+              .replace(/y$/g, "i");            // 末尾のyをiとみなす
   },
 
   /**
@@ -182,8 +182,8 @@ const ja   = String(v.meaning_ja || "");
           <button onclick="VocabListUI.startBookmarkStudy()" 
                   ${isLocked ? 'disabled' : ''} 
                   class="w-full p-4 bg-[#FFD700]/10 border border-[#FFD700]/30 rounded-2xl text-[#FFD700] text-[12px] font-black uppercase tracking-[0.2em] shadow-[0_0_15px_rgba(255,215,0,0.1)] transition-all flex items-center justify-center gap-3 ${btnClass}">
-            <span class="text-[14px]">${isLocked ? '⌛' : '🔀'}</span> 
-            ${isLocked ? 'PROCESSING...' : `START STAR SHUFFLE (${displayData.length})`}
+            <span class="text-[14px]">${isLocked ? '⌛' : '▶️'}</span> 
+            ${isLocked ? 'PROCESSING...' : `START STAR STUDY (${displayData.length})`}
           </button>
         </div>
       `;
@@ -241,8 +241,9 @@ const ja   = String(v.meaning_ja || "");
 
     this.initObserver();
   },
+  
   /**
-   * 星付き単語のみをシャッフルして学習を開始
+   * 星付き単語のみを抽出して学習を開始（シャッフルなし）
    */
   startBookmarkStudy: function() {
     // 1. 星付きだけを抽出
@@ -252,23 +253,18 @@ const ja   = String(v.meaning_ja || "");
 
     if (stars.length === 0) return;
 
-    // 2. シャッフル（Fisher-Yates アルゴリズム）
-    for (let i = stars.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [stars[i], stars[j]] = [stars[j], stars[i]];
-    }
-
-    // 3. AppStore のキューを「星付きシャッフル」に差し替え
+    // 2. AppStore のキューを「星付き（元の順番）」に差し替え
     AppStore.state.queue = stars;
     AppStore.update('currentIndex', 0);
 
-    // 4. 学習画面へ遷移して描画
+    // 3. 学習画面へ遷移して描画
     ViewController.toggleVocabPanel(); // リストを閉じる
-    StudyEngine.render();             // 最初のカードを表示
+    StudyEngine.render();              // 最初のカードを表示
     
-    ViewController.showToast(`Started Star Shuffle: ${stars.length} words`, "success");
+    ViewController.showToast(`Started Star Study: ${stars.length} words`, "success");
     if (window.navigator.vibrate) window.navigator.vibrate([10, 30, 10]);
   },
+
 /**
  * カテゴリーボタンの描画（アクティブ状態対応）
  */
