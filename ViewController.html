@@ -392,26 +392,50 @@ const ViewController = {
       }
     }
   },
-toggleMemoSheet: function(show) {
+// ViewController の中に追加・差し替え
+
+  /**
+   * メモシートの開閉 ＆ オートセーブ処理（Doneボタン廃止版）
+   * @param {boolean} show - true:開く, false:閉じる
+   */
+  toggleMemoSheet: function(show) {
     const sheet = document.getElementById('memo-sheet');
     const overlay = document.getElementById('memo-overlay');
     const textarea = document.getElementById('memo-textarea');
     
-    // Bridgeから読み込まれた現在の単語データを取得
-    const currentItem = AppStore.state.queue[AppStore.state.currentIndex];
+    // 現在の単語データを取得
+    const currentItem = AppStore.getCurrentItem();
+    if (!currentItem) return;
 
-    if (show && currentItem) {
-      // 1. メモ内容をセット
-      textarea.value = currentItem.memo || ""; 
+    if (show) {
+      // --- 【OPEN】 メモを開く時の処理 ---
+      const currentMemo = currentItem.memo || "";
+      textarea.value = currentMemo; 
       
-      // 2. 表示
+      // ★ ここで「開いた時の状態」を記憶する（Dirtyチェック用）
+      AppStore.state.openedMemoText = currentMemo;
+      
       overlay.style.display = 'block';
       setTimeout(() => sheet.classList.add('show'), 10);
-      
-      // 3. 入力しやすく
       textarea.focus();
+      
     } else {
-      // 閉じる処理
+      // --- 【CLOSE】 メモを閉じる時 ＆ オートセーブ処理 ---
+      const currentText = textarea.value.trim();
+      
+      // ★ 記憶していたテキストと「違い」があるかチェック
+      if (currentText !== AppStore.state.openedMemoText) {
+        // 変更されている場合のみ、裏側でGASに保存を投げる
+        Bridge.executeSaveMemo(currentItem.id, currentText);
+        
+        // メモリ上のデータも最新に更新（再描画せずとも次回開いた時に反映される）
+        currentItem.memo = currentText;
+        
+        // 次回また開いた時のために記憶も更新しておく
+        AppStore.state.openedMemoText = currentText;
+      }
+
+      // UIを閉じる（保存通信に関わらず即座に閉じる）
       sheet.classList.remove('show');
       setTimeout(() => {
         overlay.style.display = 'none';
@@ -419,6 +443,8 @@ toggleMemoSheet: function(show) {
       document.activeElement.blur();
     }
   },
+
+// （※ 以前の saveAndCloseMemo 関数は不要になったので削除してください）
 
   saveAndCloseMemo: function() {
     const text = document.getElementById('memo-textarea').value;

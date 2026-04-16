@@ -255,9 +255,12 @@
 <div id="memo-overlay" onclick="ViewController.toggleMemoSheet(false)"></div>
 <div id="memo-sheet">
   <div class="sheet-handle"></div>
-  <div class="sheet-header">
-    <button class="done-btn" onclick="ViewController.saveAndCloseMemo()">Done</button>
-  </div>
+<div class="sheet-header flex justify-between items-center w-full px-4">
+  <button id="ask-ai-btn" onclick="Bridge.executeAskAi()" class="text-[12px] font-bold text-purple-500 active:scale-95 transition-transform flex items-center gap-1">
+    🪄 Ask AI
+  </button>
+</div>
+  
   <div class="memo-edit-area">
     <span style="color:#8e8e93; font-size:11px; font-weight:bold; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.05em;">✎ Memo</span>
     <textarea id="memo-textarea" placeholder="メモを入力..."></textarea>

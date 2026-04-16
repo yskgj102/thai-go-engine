@@ -63,18 +63,36 @@ const StudyEngine = {
 this.updateMemoPreview(item); // 共通化して呼び出す
   },
 
-updateMemoPreview: function(item) {
-    const previewArea = document.getElementById('memo-preview-area');
-    const previewText = document.getElementById('memo-preview-text');
-    if (!previewArea || !previewText) return;
+/**
+   * メモのプレビュー表示を更新する
+   * 複数行ある場合は1行目のみを表示し、末尾に「...」を付与する
+   */
+  updateMemoPreview: function(item) {
+    const memoArea = document.getElementById('memo-preview-area');
+    const memoText = document.getElementById('memo-preview-text');
+    
+    if (!memoArea || !memoText) return;
 
     if (item && item.memo && item.memo.trim() !== "") {
-      previewText.innerText = item.memo;
-      previewArea.classList.remove('hidden');
+      const fullText = item.memo.trim();
+      
+      // 改行コードでテキストを配列に分割
+      const lines = fullText.split('\n');
+      
+      // 1行目を取得
+      let previewString = lines[0];
+      
+      // 元のテキストが2行以上あった場合は、末尾に「...」をつける
+      if (lines.length > 1) {
+        previewString += ' ...';
+      }
+
+      memoText.innerText = previewString;
+      memoArea.classList.remove('hidden');
     } else {
-      // ★ ここが重要：テキストを空にしてから隠す
-      previewText.innerText = ""; 
-      previewArea.classList.add('hidden');
+      // メモが空の場合はエリアごと隠す
+      memoArea.classList.add('hidden');
+      memoText.innerText = "";
     }
   },
 

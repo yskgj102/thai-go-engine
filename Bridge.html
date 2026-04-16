@@ -448,7 +448,59 @@ executeSaveMemo: function(id, text) {
       }
     })
     .updateWordMemo(id, text);
-}
+},
+/**
+   * メモ欄のテキストをAIに送信し、回答を追記して保存する
+   */
+  executeAskAi: function() {
+    const item = AppStore.getCurrentItem();
+    const textarea = document.getElementById('memo-textarea');
+    if (!item || !textarea) return;
+
+    const fullText = textarea.value.trim();
+    if (!fullText) {
+      ViewController.showToast("Please write something first.", "warning");
+      return;
+    }
+
+    // --- ★ 追加：表示テキスト・区切り文字の共通化（一元管理） ---
+    const AI_BTN_TEXT = "🪄 Ask AI";
+    const AI_LOADING_TEXT = "Thinking...";
+    const AI_DELIMITER = `\n\n--- ${AI_BTN_TEXT} ---\n`;
+    // -------------------------------------------------------------
+
+    // デリミタ（区切り文字）で分割し、過去のAIの回答（下半分）を切り捨てる
+    const userText = fullText.split(AI_DELIMITER)[0].trim();
+
+    const btn = document.getElementById('ask-ai-btn');
+    ViewController.applyGlobalLock("Asking AI Teacher...", btn);
+    if (btn) btn.innerText = AI_LOADING_TEXT;
+
+    google.script.run
+      .withSuccessHandler(res => {
+        ViewController.releaseLocks();
+        if (res) {
+          // 自分のテキスト ＋ デリミタ ＋ AIの最新回答 で上書き
+          const newText = userText + AI_DELIMITER + res;
+          textarea.value = newText;
+          
+          // 自動でDBに保存（手動でDoneを押す手間を省く）
+          Bridge.executeSaveMemo(item.id, newText);
+          ViewController.showToast("AI Replied!", "success");
+        } else {
+          ViewController.showToast("AI is busy.", "error");
+        }
+        // 成功時のボタン表記リセット
+        if (btn) btn.innerText = AI_BTN_TEXT;
+      })
+      .withFailureHandler(err => {
+        ViewController.releaseLocks();
+        ViewController.showToast("Network Error.", "error");
+        // 失敗時のボタン表記リセット
+        if (btn) btn.innerText = AI_BTN_TEXT;
+      })
+      .askAiTeacher(JSON.stringify(item), userText);
+  },
 };
 const AutoPlayEngine = {
   active: false,
@@ -591,7 +643,8 @@ const AutoPlayEngine = {
         }
         break;
     }
-  }
+  },
+
 };
 
 // ★追加：2. バックグラウンド（別アプリ切り替えや画面オフ）を検知して自動一時停止

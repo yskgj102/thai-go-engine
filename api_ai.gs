@@ -2,37 +2,58 @@
  * ファイル名: api_ai.gs
  */
 
+
 /**
- * メインのAI生成ロジック：安全装置付き
+ * 共通AI通信エンジン（完全分散ラウンドロビン＆連打ガード搭載）
+ * @param {string} prompt - AIに投げる指示
+ * @param {number} retryCount - リトライ回数（内部用）
+ * @return {string|null} AIからの返答テキスト（失敗時はnull）
  */
-function generateThaiDetails(word, keyIndex = 1) {
-if (!word) return null;
+function callGeminiApi(prompt, retryCount = 1) {
+  const TOTAL_KEYS = 5; // 真の独立プロジェクト数
 
-  const TOTAL_KEYS = 8; 
-  const MAX_RETRY_LIMIT = TOTAL_KEYS; 
-
-  // --- 【負荷分散】時刻をベースに開始地点をずらす ---
-  // 1秒単位のタイムスタンプを使用。リトライは数ミリ秒で走るため、1回のリクエスト中は offset が固定されます。
-  const offset = Math.floor(new Date().getTime() / 1000) % TOTAL_KEYS;
-  const currentKey = ((keyIndex - 1 + offset) % TOTAL_KEYS) + 1;
-  const propName = `GEMINI_API_KEY_${currentKey}`;
-
-  // 1. 【安全装置】全キーを試し終わったら終了
-  if (keyIndex > MAX_RETRY_LIMIT) {
-    console.error(`🛑 全 ${MAX_RETRY_LIMIT} 個のキーを試行しましたが全滅しました。`);
+  if (retryCount > TOTAL_KEYS) {
+    console.error(`🛑 全 ${TOTAL_KEYS} 個のキーが全滅しました。`);
     return null;
   }
 
-  const apiKey = PropertiesService.getScriptProperties().getProperty(propName);
+  const props = PropertiesService.getScriptProperties();
+  let currentKey = parseInt(props.getProperty('LAST_USED_KEY_INDEX')) || 0;
+  currentKey = (currentKey % TOTAL_KEYS) + 1;
+  props.setProperty('LAST_USED_KEY_INDEX', currentKey.toString());
+
+  const propName = `GEMINI_API_KEY_${currentKey}`;
+  const apiKey = props.getProperty(propName);
   
-  // 2. 【改善】キーが未設定なら、止まらずに「次のキー」へ再帰呼び出し
   if (!apiKey) {
-    console.warn(`⚠️ ${propName} が未設定のため、スキップして次を試します。`);
-    return generateThaiDetails(word, keyIndex + 1); 
+    return callGeminiApi(prompt, retryCount + 1); 
   }
 
-  // URL、プロンプト、Payload、Optionsは山岡さんの「正解」を1ミリも変えず継承
   const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
+  const payload = { contents: [{ parts: [{ text: prompt }] }] };
+  const options = {
+    method: 'POST',
+    contentType: 'application/json',
+    headers: { 'x-goog-api-key': apiKey },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(url, options);
+    if (response.getResponseCode() !== 200) {
+      Utilities.sleep(1500); // スパムガード
+      return callGeminiApi(prompt, retryCount + 1);
+    }
+    const data = JSON.parse(response.getContentText());
+    return data['candidates'][0]['content']['parts'][0]['text'];
+  } catch (e) {
+    Utilities.sleep(1500); // スパムガード
+    return callGeminiApi(prompt, retryCount + 1);
+  }
+}
+function generateThaiDetails(word) {
+  if (!word) return null;
 
 const prompt = `
     あなたはタイ語教育の最高権威です。単語「${word}」について、言語学的な視点と実戦的なコミュニケーションの両面から、完璧な解析を行ってください。
@@ -81,49 +102,44 @@ const prompt = `
     }
   `;
 
-
-  const payload = {
-    contents: [{ parts: [{ text: prompt }] }]
-  };
-
-  const options = {
-    method: 'POST',
-    contentType: 'application/json',
-    headers: { 'x-goog-api-key': apiKey },
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true
-  };
+// 共通エンジンを呼び出し
+  let resultText = callGeminiApi(prompt);
+  if (!resultText) return null;
 
   try {
-    const response = UrlFetchApp.fetch(url, options);
-    const code = response.getResponseCode();
-    const resText = response.getContentText();
-
-    if (code !== 200) {
-      console.warn(`🚨 Key_${keyIndex} (${propName}) エラー (Status: ${code})。次へ...`);
-      // エラーの詳細ログも落とさない
-      console.log(`Response: ${resText}`);
-      
-      // 次のキーへ（keyIndexをカウントアップして再帰呼び出し）
-      return generateThaiDetails(word, keyIndex + 1);
-    }
-
-    const data = JSON.parse(resText);
-    let resultText = data['candidates'][0]['content']['parts'][0]['text'];
-
-    // Markdownクリーニング処理（継承）
     resultText = resultText.replace(/```json/g, "").replace(/```/g, "").trim();
-    
-    console.log(`✨ Key_${keyIndex} で成功！`);
     return JSON.parse(resultText);
-
-  } catch (e) {
-    console.error(`💥 Key_${keyIndex} 例外発生: ${e.message}`);
-    // 通信エラーでも止まらず次を試す
-    return generateThaiDetails(word, keyIndex + 1);
+  } catch(e) {
+    console.error("JSONパースエラー", e);
+    return null;
   }
 }
 
+function askAiTeacher(cardDataJson, memoText) {
+  if (!cardDataJson || !memoText) return null;
+
+  const prompt = `あなたはプロのタイ語教師です。
+ユーザーは現在、以下の【単語カードデータ】を見ながら学習しています。
+
+【単語カードデータ】
+${cardDataJson}
+
+ユーザーから学習メモを通じてテキストが送られてきました。
+ユーザーの入力：『 ${memoText} 』
+
+入力内容の「意図」を判断し、以下のルールに従って返答してください。
+
+パターンA：ユーザーが「自分で作ったタイ語の文章」を書いている場合（作文・添削依頼）
+✅ 修正案: （最も自然なタイ語。声調記号付き発音も）
+💡 解説: （なぜ修正したか、単語カードの情報を踏まえた解説）
+
+パターンB：ユーザーが「日本語で質問」をしている場合
+🎓 AI先生: （単語カードの内容を踏まえ、質問に対する分かりやすい回答）
+
+※回答のプレーンテキストのみを出力してください。挨拶や前置きは不要です。`;
+
+  return callGeminiApi(prompt);
+}
 /**
  * クイック追加：JS側の「型」と「階層」に100%適合させる最終形
  */

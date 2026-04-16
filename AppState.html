@@ -37,7 +37,12 @@ const AppStore = {
     // --- ★新設：解析データキャッシュ ---
     // ThaiParser.parseSyllables からの戻り値（最新の解析結果）を保持する。
     // コピー機能やID共有機能は、常にこの「最新の真実」を参照する。
-    currentAnalysis: null
+    currentAnalysis: null,
+
+    // --- ★新設：メモ帳オートセーブ用キャッシュ ---
+    openedMemoText: "",
+
+
   },
 
   /**
