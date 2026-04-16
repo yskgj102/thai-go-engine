@@ -129,8 +129,19 @@ function quickAddAutoFill(inputText) {
   if (!inputText) return { status: "error" };
 
   const isThai = /[\u0E00-\u0E7F]/.test(inputText);
-  const word_th = isThai ? inputText : LanguageApp.translate(inputText, 'ja', 'th');
+  let word_th, meaning_ja;
 
+if (isThai) {
+    // タイ語入力 -> 日本語を補完
+    word_th = inputText.trim();
+    meaning_ja = LanguageApp.translate(word_th, 'th', 'ja');
+  } else {
+    // 日本語入力 -> タイ語を補完
+    meaning_ja = inputText.trim();
+    // Google翻訳の Ja->Th は余計な空白が入ることがあるため除去
+    word_th = LanguageApp.translate(meaning_ja, 'ja', 'th').replace(/\s+/g, '');
+  }
+  
   // 1. 重複チェック
   if (existsInVocabulary(word_th)) {
     const all = getRawVocabulary();
@@ -149,17 +160,17 @@ function quickAddAutoFill(inputText) {
   const timestamp = Utilities.formatDate(new Date(), "JST", "yyyyMMddHHmmss");
   const now = new Date();
   
-  const dataMap = {
+const dataMap = {
     "id": "word_" + timestamp,
     "word_th": word_th,
-    "phonetic": ai ? ai.phonetic : "---",
-    "meaning_ja": ai ? ai.meaning_ja : (isThai ? "---" : inputText),
-    "meaning_kana": ai ? ai.meaning_kana : "---",
-    "category": ai ? ai.category : "---",
-    "example_th": ai ? ai.example_th : "---",
-    "example_phonetic": ai ? ai.example_phonetic : "---",
-    "example_ja": ai ? ai.example_ja : "---",
-    "explanation": ai ? ai.explanation : "クイック追加によりAI詳細未生成。再生成ボタンを押してください。",
+    "phonetic": "---", // 翻訳エンジンでは発音記号が取れないため
+    "meaning_ja": meaning_ja,
+    "meaning_kana": "---",
+    "category": "---",
+    "example_th": "---",
+    "example_phonetic": "---",
+    "example_ja": "---",
+    "explanation": "クイック追加（翻訳）により詳細未生成。再生成ボタンを押してください。",
     "last_update": now,
     "is_bookmark": false
   };
