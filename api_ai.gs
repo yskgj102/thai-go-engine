@@ -6,33 +6,29 @@
  * メインのAI生成ロジック：安全装置付き
  */
 function generateThaiDetails(word, keyIndex = 1) {
-  if (!word) return null;
+if (!word) return null;
 
-  // --- 【安全装置】無限ループ防止 ---
-  // APIキーの最大試行数を設定（例：10個まで）。これを超えたら強制終了します。
-const TOTAL_KEYS = 8; // キーの総数
-  const MAX_RETRY_LIMIT = TOTAL_KEYS; // 8回（全キー分）試したら終了
+  const TOTAL_KEYS = 8; 
+  const MAX_RETRY_LIMIT = TOTAL_KEYS; 
 
-  // 実行時の「秒」を元に、開始地点（オフセット）を計算
-  // これにより、引数を変えずに「毎回ランダムなキーから開始」を実現
+  // --- 【負荷分散】時刻をベースに開始地点をずらす ---
+  // 1秒単位のタイムスタンプを使用。リトライは数ミリ秒で走るため、1回のリクエスト中は offset が固定されます。
   const offset = Math.floor(new Date().getTime() / 1000) % TOTAL_KEYS;
   const currentKey = ((keyIndex - 1 + offset) % TOTAL_KEYS) + 1;
+  const propName = `GEMINI_API_KEY_${currentKey}`;
+
+  // 1. 【安全装置】全キーを試し終わったら終了
   if (keyIndex > MAX_RETRY_LIMIT) {
-    console.error(`🛑 無限ループ防止のため、${MAX_RETRY_LIMIT}個目のキーで停止しました。`);
+    console.error(`🛑 全 ${MAX_RETRY_LIMIT} 個のキーを試行しましたが全滅しました。`);
     return null;
   }
 
-  const propName = `GEMINI_API_KEY_${currentKey}`;
   const apiKey = PropertiesService.getScriptProperties().getProperty(propName);
   
-  // 次のキー設定が空なら、そこで正常終了（ループ終了）
+  // 2. 【改善】キーが未設定なら、止まらずに「次のキー」へ再帰呼び出し
   if (!apiKey) {
-    if (keyIndex === 1) {
-      console.error("⚠️ GEMINI_API_KEY_1 が未設定です。");
-    } else {
-      console.warn(`🔚 ${propName} が未設定のため、キーの巡回を終了します。（計 ${keyIndex - 1} 個試行）`);
-    }
-    return null;
+    console.warn(`⚠️ ${propName} が未設定のため、スキップして次を試します。`);
+    return generateThaiDetails(word, keyIndex + 1); 
   }
 
   // URL、プロンプト、Payload、Optionsは山岡さんの「正解」を1ミリも変えず継承
