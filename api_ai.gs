@@ -10,7 +10,7 @@ function generateThaiDetails(word, keyIndex = 1) {
 
   // --- 【安全装置】無限ループ防止 ---
   // APIキーの最大試行数を設定（例：10個まで）。これを超えたら強制終了します。
-  const MAX_RETRY_LIMIT = 4; 
+  const MAX_RETRY_LIMIT = 10; 
   if (keyIndex > MAX_RETRY_LIMIT) {
     console.error(`🛑 無限ループ防止のため、${MAX_RETRY_LIMIT}個目のキーで停止しました。`);
     return null;
