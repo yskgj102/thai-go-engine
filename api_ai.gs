@@ -10,13 +10,19 @@ function generateThaiDetails(word, keyIndex = 1) {
 
   // --- 【安全装置】無限ループ防止 ---
   // APIキーの最大試行数を設定（例：10個まで）。これを超えたら強制終了します。
-  const MAX_RETRY_LIMIT = 10; 
+const TOTAL_KEYS = 8; // キーの総数
+  const MAX_RETRY_LIMIT = TOTAL_KEYS; // 8回（全キー分）試したら終了
+
+  // 実行時の「秒」を元に、開始地点（オフセット）を計算
+  // これにより、引数を変えずに「毎回ランダムなキーから開始」を実現
+  const offset = Math.floor(new Date().getTime() / 1000) % TOTAL_KEYS;
+  const currentKey = ((keyIndex - 1 + offset) % TOTAL_KEYS) + 1;
   if (keyIndex > MAX_RETRY_LIMIT) {
     console.error(`🛑 無限ループ防止のため、${MAX_RETRY_LIMIT}個目のキーで停止しました。`);
     return null;
   }
 
-  const propName = `GEMINI_API_KEY_${keyIndex}`;
+  const propName = `GEMINI_API_KEY_${currentKey}`;
   const apiKey = PropertiesService.getScriptProperties().getProperty(propName);
   
   // 次のキー設定が空なら、そこで正常終了（ループ終了）
@@ -141,7 +147,7 @@ if (isThai) {
     // Google翻訳の Ja->Th は余計な空白が入ることがあるため除去
     word_th = LanguageApp.translate(meaning_ja, 'ja', 'th').replace(/\s+/g, '');
   }
-  
+
   // 1. 重複チェック
   if (existsInVocabulary(word_th)) {
     const all = getRawVocabulary();
