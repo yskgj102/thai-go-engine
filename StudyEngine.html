@@ -11,7 +11,7 @@ const StudyEngine = {
    * キューから現在の単語を抽出し、ViewControllerを介して画面上の全てのテキスト・色・統計情報を更新する。
    */
   render: function() {
-
+    this.hideTooltip();
     // カードが変わる際、分析パネルをリセット（非表示）にする
     const panel = document.getElementById('analysis-panel');
     if (panel) { panel.classList.add('hidden'); panel.style.display = 'none'; }
