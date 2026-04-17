@@ -10,7 +10,7 @@
  * @return {string|null} AIからの返答テキスト（失敗時はnull）
  */
 function callGeminiApi(prompt, retryCount = 1) {
-  const TOTAL_KEYS = 5; // 真の独立プロジェクト数
+  const TOTAL_KEYS = 6; // 真の独立プロジェクト数
 
   if (retryCount > TOTAL_KEYS) {
     console.error(`🛑 全 ${TOTAL_KEYS} 個のキーが全滅しました。`);
@@ -130,11 +130,11 @@ ${cardDataJson}
 入力内容の「意図」を判断し、以下のルールに従って返答してください。
 
 パターンA：ユーザーが「自分で作ったタイ語の文章」を書いている場合（作文・添削依頼）
-✅ 修正案: （最も自然なタイ語。声調記号付き発音も）
-💡 解説: （なぜ修正したか、単語カードの情報を踏まえた解説）
+修正案: （最も自然なタイ語。声調記号付き発音も）
+解説: （なぜ修正したか、単語カードの情報を踏まえた解説）
 
 パターンB：ユーザーが「日本語で質問」をしている場合
-🎓 AI先生: （単語カードの内容を踏まえ、質問に対する分かりやすい回答）
+（単語カードの内容を踏まえ、質問に対する分かりやすい回答）
 
 ※回答のプレーンテキストのみを出力してください。挨拶や前置きは不要です。`;
 
@@ -351,3 +351,84 @@ function getQuickTranslation(text) {
   const source = target === 'ja' ? 'th' : 'ja';
   return LanguageApp.translate(text, source, target);
 }
+
+
+// メニューから手動実行するためのテスト用関数
+function testAutoFiller() {
+  AutoFiller.run();
+}
+// ==========================================
+// ==========================================
+// 4. 【新規】24時間フル稼働バッチ工場 (10分に1単語)
+// ==========================================
+const AutoFiller = {
+  run: function() {
+    // 🌟 ストッパーは撤去！24時間いつでも動きます
+
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('m_vocabulary'); 
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    
+    // ★ 例文（example_th）を基準にする
+    const idx = {
+      id: headers.indexOf('id'),
+      word: headers.indexOf('word_th'),
+      example_th: headers.indexOf('example_th') 
+    };
+
+    if (idx.id === -1 || idx.word === -1 || idx.example_th === -1) return;
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const targetId = row[idx.id];
+      const word = row[idx.word];
+      const exampleVal = row[idx.example_th] ? row[idx.example_th].toString().trim() : "";
+
+      // 🌟 例文が未生成（空文字 または "---"）のものを探す
+      if (!exampleVal || exampleVal === "---") {
+        console.log(`🏗️ 24時間フル稼働生成: ${word}`);
+        
+        const result = generateThaiDetails(word);
+
+        if (result) {
+          this.updateSheet(sheet, headers, targetId, result);
+          console.log(`✅ 完了: ${word}`);
+        } else {
+          console.error(`❌ 失敗: ${word}`);
+        }
+        
+        break; // 1件終わったら確実に終了
+      }
+    }
+  },
+
+  updateSheet: function(sheet, headers, targetId, aiData) {
+    const data = sheet.getDataRange().getValues();
+    const idColIndex = headers.indexOf("id");
+    
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][idColIndex] === targetId) {
+        const rowIndex = i + 1;
+        const dataMap = {
+          "phonetic": aiData.phonetic,
+          "meaning_ja": aiData.meaning_ja,
+          "meaning_kana": aiData.meaning_kana,
+          "category": aiData.category,
+          "example_th": aiData.example_th,
+          "example_phonetic": aiData.example_phonetic,
+          "example_ja": aiData.example_ja,
+          "explanation": aiData.explanation,
+          "last_update": new Date()
+        };
+
+        const updatedRow = headers.map((header, index) => {
+          return dataMap[header] !== undefined ? dataMap[header] : data[i][index];
+        });
+
+        sheet.getRange(rowIndex, 1, 1, updatedRow.length).setValues([updatedRow]);
+        return;
+      }
+    }
+  }
+};
