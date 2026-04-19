@@ -60,7 +60,7 @@ const prompt = `
     
     ## 依頼内容
     単語「${word}」について、以下の制約を守って解析してください。
-    例文(example_th)は、以下の3つのシーンから、単語の性質に最も合うものを一つ選んで作成してください。言語学習に利用するので、日常でも実践できる簡潔な文とし、専門用語はなるべく使わず、長すぎないようにしてください。以下はシーンの優先順です。
+    例文(example_th)は、以下の3つのシーンから、単語の性質に最も合うものを一つ選んで作成してください。言語学習に利用するので、日常でも実践できる簡潔な文とし、専門用語はなるべく使わず、長すぎないようにしてください。また、単語ごとに空白やハイフンで区切るのは禁止です。以下はシーンの優先順です。
     1. 【日常会話】: 日常で使う必須フレーズ。普段の生活で頻出のやりとり。使用頻度が最も多い使い方を示してください。
     2. 【感情/関係性】: 恋人や親しい友人との親密なコミュニケーション、感情の機微を伝える表現。
     3. 【旅行/文化】: タイや日本の文化や歴史、現地の人々との深い精神的交流、旅でのフレーズ。
@@ -187,8 +187,11 @@ if (isThai) {
   const timestamp = Utilities.formatDate(new Date(), "JST", "yyyyMMddHHmmss");
   const now = new Date();
   
+// ★修正：時間順（昇順）のソートを美しく保つため、英字ではなく「5桁のランダムな数字（00000〜99999）」にする
+  const randomNum = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+
 const dataMap = {
-    "id": "word_" + timestamp,
+"id": "word_" + timestamp + randomNum,
     "word_th": word_th,
     "phonetic": "---", // 翻訳エンジンでは発音記号が取れないため
     "meaning_ja": meaning_ja,
@@ -222,7 +225,7 @@ const dataMap = {
 }
 
 /**
- * スプレッドシート更新ロジック（情報を落とさず継承）
+ * スプレッドシート更新ロジック（行ズレによるID重複バグ完全対策版）
  */
 function reGenerateCardById(targetId) {
   if (!targetId) return null;
@@ -234,22 +237,37 @@ function reGenerateCardById(targetId) {
 
     const idColIndex = headers.indexOf("id");
     const wordThColIndex = headers.indexOf("word_th");
-    let rowIndex = -1;
-    let wordToProcess = "";
 
+    // 1. 【AI生成前】生成対象の「タイ語」だけを先に取得する
+    let wordToProcess = "";
     for (let i = 1; i < data.length; i++) {
       if (data[i][idColIndex] === targetId) {
-        rowIndex = i + 1;
         wordToProcess = data[i][wordThColIndex];
         break;
       }
     }
 
-    if (rowIndex === -1 || !wordToProcess) return null;
+    if (!wordToProcess) return null;
 
+    // 2. AI詳細生成（★ここで5〜10秒の時間がかかる。この間に行がズレる可能性がある）
     const ai = generateThaiDetails(wordToProcess);
     if (!ai) return null;
 
+    // 3. 【AI生成後】★最重要：書き込む直前に「最新のデータ」を再取得し、現在の行番号を探し直す！
+    const newData = sheet.getDataRange().getValues();
+    let finalRowIndex = -1;
+    
+    for (let i = 1; i < newData.length; i++) {
+      if (newData[i][idColIndex] === targetId) {
+        finalRowIndex = i + 1; // 最新の正しい行番号
+        break;
+      }
+    }
+
+    // もしAI生成中に、ユーザーがこの単語自体を「削除」していた場合は、書き込まずに安全に終了
+    if (finalRowIndex === -1) return null;
+
+    // 4. マッピングして上書き
     const dataMap = {
       "id": targetId,
       "word_th": wordToProcess,
@@ -265,10 +283,11 @@ function reGenerateCardById(targetId) {
     };
 
     const updatedRow = headers.map((header, index) => {
-      return dataMap[header] !== undefined ? dataMap[header] : data[rowIndex - 1][index];
+      return dataMap[header] !== undefined ? dataMap[header] : newData[finalRowIndex - 1][index];
     });
 
-    sheet.getRange(rowIndex, 1, 1, updatedRow.length).setValues([updatedRow]);
+    // ズレていない、最新の正しい行に書き込む！
+    sheet.getRange(finalRowIndex, 1, 1, updatedRow.length).setValues([updatedRow]);
     return ai;
 
   } catch (e) {

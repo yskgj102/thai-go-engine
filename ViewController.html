@@ -309,18 +309,28 @@ const ViewController = {
     }
   },
 
-  /**
+/**
    * AppStoreから渡された単語情報をHTML各要素に反映
    */
   updateText: function(item, isThai) {
+    // ★ AIが改行をサボってスペースで繋げた場合、強制的に改行させるパッチ
+    const formatMultiline = (text) => {
+      if (!text) return '---';
+      return String(text).replace(/\s+(?=[2-9]\.)/g, '\n');
+    };
+
+    // 表面と裏面のテキストを変数に一時保存（文字数カウントのため）
+    const frontText = isThai ? (item.word_th || '---') : formatMultiline(item.meaning_ja);
+    const backText  = isThai ? formatMultiline(item.meaning_ja) : (item.word_th || '---');
+
     const mapping = {
-      'word-th': isThai ? (item.word_th || '---') : (item.meaning_ja || '---'),
-      'meaning': isThai ? (item.meaning_ja || '---') : (item.word_th || '---'),
+      'word-th': frontText,
+      'meaning': backText,
       'phonetic': isThai ? (item.phonetic || '---'):(item.meaning_kana || '---'),
-      'category': item.category || '---',
-      'ex-th': item.example_th || '---',
-      'ex-phonetic': item.example_phonetic || '---',
-      'ex-ja':  item.example_ja || '---',
+      'category': formatMultiline(item.category),
+      'ex-th': formatMultiline(item.example_th),
+      'ex-phonetic': formatMultiline(item.example_phonetic),
+      'ex-ja':  formatMultiline(item.example_ja),
       'note': item.explanation || ''
     };
 
@@ -328,11 +338,27 @@ const ViewController = {
       const el = document.getElementById(id);
       if (el) el.innerText = val;
     });
+
+    // --- ★ 追加：メインカード（表面）の文字サイズ自動リサイズ機能 ---
+    const wordEl = document.getElementById('word-th');
+    if (wordEl) {
+      // 改行の数をカウント
+      const lines = frontText.split('\n').length;
+      
+      // 文字数が12文字より多い、または2行以上ある（多義語など）場合
+      if (frontText.length > 12 || lines > 1) {
+        // フォントを少し小さめに自動調整し、画面の圧迫を防ぐ
+        wordEl.style.fontSize = 'clamp(1.4rem, 6vw, 2.2rem)'; 
+      } else {
+        // 短い単語の場合は、インラインスタイルを消して元の「超巨大サイズ」に戻す
+        wordEl.style.fontSize = ''; 
+      }
+    }
+    // -------------------------------------------------------------
     
     const ph = document.getElementById('phonetic');
     if (ph) isThai ? ph.classList.remove('hidden') : ph.classList.add('hidden');
   },
-
   /**
    * 単語の忘却・学習間隔統計を画面に反映
    */
