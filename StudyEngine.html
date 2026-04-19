@@ -254,14 +254,12 @@ this.updateMemoPreview(item); // 共通化して呼び出す
       .filter(line => line.length > 0)
       .join(' / ');
 
-    // 2. ★ JS側で物理的に文字数をカット（見切れ処理）
-    // デバイス幅に合わせて制限値（l）を調整してください
+    // 2. JS側で物理的に文字数をカット（見切れ処理）
     const truncate = (s, l) => (s.length > l) ? s.substring(0, l) + '..' : s;
+    const displayTh = truncate(item.word_th || '', 10); 
+    const displayJa = truncate(rawJa, 18);             
 
-    const displayTh = truncate(item.word_th || '', 10); // タイ語は10文字程度
-    const displayJa = truncate(rawJa, 18);             // 日本語は18文字程度
-
-    // 3. 表示反映
+    // 3. 表示反映と【中央揃えの強制付与】
     if (AppStore.state.isTargetThai) {
       if (th) th.innerText = displayTh;
       if (ja) ja.innerText = displayJa;
@@ -270,12 +268,37 @@ this.updateMemoPreview(item); // 共通化して呼び出す
       if (ja) ja.innerText = displayTh;
     }
 
-    // 4. ★ タップで最上部（カードの先頭）へスクロールする機能
+    // ★ 追加：テキスト自体を確実に中央揃えにする
+    if (th) th.style.textAlign = 'center';
+    if (ja) ja.style.textAlign = 'center';
+
+    // 4. ★ 親枠の中央揃え ＆ タップで最上部へスクロールする機能
     if (wordArea) {
+      // ★ 追加：短い単語が左に寄らないよう、フレックスボックスで強制的に中心に串刺しにする
+      wordArea.style.display = 'flex';
+      wordArea.style.flexDirection = 'column';
+      wordArea.style.alignItems = 'center';
+      wordArea.style.justifyContent = 'center';
+      wordArea.style.width = '100%';
+
+      // スクロール用のおまじない
+      wordArea.style.cursor = 'pointer';
+      wordArea.style.touchAction = 'manipulation';
+      
       wordArea.onclick = function(e) {
+        e.preventDefault();
         e.stopPropagation();
+        
         // 画面をスムーズに一番上まで戻す
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // 【保険】古いスマホなどで smooth スクロールが効かない場合の強制ワープ
+        setTimeout(() => {
+          if (window.scrollY > 0) {
+            document.body.scrollTop = 0;
+            document.documentElement.scrollTop = 0;
+          }
+        }, 350);
       };
     }
   },
