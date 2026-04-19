@@ -117,6 +117,12 @@ this.updateMemoPreview(item); // 共通化して呼び出す
       lang = "ja-JP";
     }
 
+    // --- ★ 音声用テキストクリーニング（箇条書きの数字を消す） ---
+    if (text) {
+      // 「1. 」「2. 」のような行頭の数字とピリオド＋スペースをすべて空文字に置換
+      text = String(text).replace(/\d+\.\s*/g, '');
+    }
+
     // 音声再生の実務を AudioSystem モジュールへ委託
     AudioSystem.play(
       text, 
@@ -511,6 +517,8 @@ renderContextLinks: function(rawText, targetElementId, excludeId) {
   map.forEach((html, placeholder) => {
     text = text.split(placeholder).join(html);
   });
+  // ★ 追加：改行コードを明確なHTMLの改行タグに変換する（より安全で確実な改行対応）
+  text = text.replace(/\n/g, '<br>');
 
   targetEl.innerHTML = text;
 },
