@@ -1069,4 +1069,17 @@ position: fixed;
   transform: scale(0.9) !important;
   background: rgba(255, 255, 255, 0.15) !important;
 }
+
+/* --- ミニヘッダーの長文はみ出し・折り返しを完全防止 --- */
+#header-word-area {
+  min-width: 0; /* これがないとflex子要素の省略が効かない */
+  flex: 1;
+}
+#header-display-th, #header-display-ja {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: block !important;
+  width: 100%;
+}
 </style>
