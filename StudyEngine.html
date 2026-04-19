@@ -240,20 +240,41 @@ this.updateMemoPreview(item); // 共通化して呼び出す
   syncHeader: function() {
     const item = AppStore.state.queue[AppStore.state.currentIndex];
     if (!item) return;
+    
     const th = document.getElementById('header-display-th');
     const ja = document.getElementById('header-display-ja');
+    const wordArea = document.getElementById('header-word-area'); // ★ クリック対象のエリア
 
-    // ★ 意味を1行の「A / B」形式に整形
+    // --- ★ スマホでも絶対に崩れない、最強の1行整形ロジック ---
     const displayMeaning = String(item.meaning_ja || '---')
-      .replace(/\d+\.\s*/g, '')
-      .replace(/[\n\r]+/g, ' / ');
-    
+      .replace(/<br\s*\/?>/gi, '\n')         // 万が一の <br> タグを改行に変換
+      .split(/[\n\r]+/)                      // どんな種類の改行でも容赦なく配列に分割
+      .map(line => line.replace(/^\d+\.\s*/, '').trim()) // 各行の「1. 」と無駄な空白を消去
+      .filter(line => line.length > 0)       // 空っぽの行を消去
+      .join(' / ');                          // 最後に美しいスラッシュで結合
+    // --------------------------------------------------------
+
     if (AppStore.state.isTargetThai) {
-      th.innerText = item.word_th || '---';
-      ja.innerText = displayMeaning;
+      if (th) th.innerText = item.word_th || '---';
+      if (ja) ja.innerText = displayMeaning;
     } else {
-      th.innerText = displayMeaning;
-      ja.innerText = item.word_th || '---';
+      if (th) th.innerText = displayMeaning;
+      if (ja) ja.innerText = item.word_th || '---';
+    }
+
+    // --- ★ 追加：ヘッダーを押したら一番上に戻る機能 ---
+    if (wordArea) {
+      wordArea.style.cursor = 'pointer'; // 押せることを示す（PC用）
+      
+      // クリック（タップ）されたら、画面を一番上までスムーズにスクロール
+      wordArea.onclick = function(e) {
+        e.stopPropagation();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        
+        // （念のため、iOSなどの特殊なスクロール環境にも対応させるおまじない）
+        document.body.scrollTo({ top: 0, behavior: 'smooth' });
+        document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
+      };
     }
   },
 /**
