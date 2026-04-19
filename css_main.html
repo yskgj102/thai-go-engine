@@ -488,17 +488,28 @@ input[type="search"]::-webkit-search-cancel-button:active {
 #word-th {
   word-break: break-word;
   overflow-wrap: break-word;
-  /* 文章が長い場合は少しフォントサイズを自動調整するなら以下（任意） */
   max-width: 100%;
+  white-space: pre-wrap !important; /* ★追加: 表面（日本語出題モード）の改行を反映 */
+  line-height: 1.3 !important;      /* ★追加: 複数行になった時の行間を整える */
 }
 
 /* 意味（意味_ja）が長い時に自動で小さくする */
 #meaning {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  font-size: clamp(1.2rem, 5vw, 1.875rem); /* 画面幅に合わせて可変 */
+  /* 以下の4行を削除・コメントアウト（これが途中で切れる元凶でした） */
+  /* display: -webkit-box; */
+  /* -webkit-line-clamp: 2; */
+  /* -webkit-box-orient: vertical; */
+  /* overflow: hidden; */
+
+  /* ★改行対応 ＋ 箇条書きを美しく見せるための調整 */
+  font-size: clamp(1.1rem, 4.5vw, 1.6rem); /* 複数行に備えて少しだけ文字サイズ上限を抑える */
+  white-space: pre-wrap !important; /* 改行を画面に反映 */
+  line-height: 1.6 !important;      /* 箇条書きが読みやすいように行間を少し空ける */
+  
+  /* ★箇条書き（1. 〇〇\n2. 〇〇）を中央ではなく「左揃え」にしつつ、ブロック全体は中央に置くテクニック */
+  text-align: left;
+  display: inline-block;
+  max-width: 100%;
 }
 
 /* 解説エリアのテキスト整形 */
