@@ -236,6 +236,7 @@ this.updateMemoPreview(item); // 共通化して呼び出す
 
 /**
    * ミニヘッダー（スクロール時出現）の内容を現在の単語と同期
+   * JS側で文字数を制限し、タップで最上部へ戻る機能を付与
    */
   syncHeader: function() {
     const item = AppStore.state.queue[AppStore.state.currentIndex];
@@ -243,37 +244,38 @@ this.updateMemoPreview(item); // 共通化して呼び出す
     
     const th = document.getElementById('header-display-th');
     const ja = document.getElementById('header-display-ja');
-    const wordArea = document.getElementById('header-word-area'); // ★ クリック対象のエリア
+    const wordArea = document.getElementById('header-word-area');
 
-    // --- ★ スマホでも絶対に崩れない、最強の1行整形ロジック ---
-    const displayMeaning = String(item.meaning_ja || '---')
-      .replace(/<br\s*\/?>/gi, '\n')         // 万が一の <br> タグを改行に変換
-      .split(/[\n\r]+/)                      // どんな種類の改行でも容赦なく配列に分割
-      .map(line => line.replace(/^\d+\.\s*/, '').trim()) // 各行の「1. 」と無駄な空白を消去
-      .filter(line => line.length > 0)       // 空っぽの行を消去
-      .join(' / ');                          // 最後に美しいスラッシュで結合
-    // --------------------------------------------------------
+    // 1. 意味の整形ロジック
+    const rawJa = String(item.meaning_ja || '---')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .split(/[\n\r]+/)
+      .map(line => line.replace(/^\d+\.\s*/, '').trim())
+      .filter(line => line.length > 0)
+      .join(' / ');
 
+    // 2. ★ JS側で物理的に文字数をカット（見切れ処理）
+    // デバイス幅に合わせて制限値（l）を調整してください
+    const truncate = (s, l) => (s.length > l) ? s.substring(0, l) + '..' : s;
+
+    const displayTh = truncate(item.word_th || '', 10); // タイ語は10文字程度
+    const displayJa = truncate(rawJa, 18);             // 日本語は18文字程度
+
+    // 3. 表示反映
     if (AppStore.state.isTargetThai) {
-      if (th) th.innerText = item.word_th || '---';
-      if (ja) ja.innerText = displayMeaning;
+      if (th) th.innerText = displayTh;
+      if (ja) ja.innerText = displayJa;
     } else {
-      if (th) th.innerText = displayMeaning;
-      if (ja) ja.innerText = item.word_th || '---';
+      if (th) th.innerText = displayJa;
+      if (ja) ja.innerText = displayTh;
     }
 
-    // --- ★ 追加：ヘッダーを押したら一番上に戻る機能 ---
+    // 4. ★ タップで最上部（カードの先頭）へスクロールする機能
     if (wordArea) {
-      wordArea.style.cursor = 'pointer'; // 押せることを示す（PC用）
-      
-      // クリック（タップ）されたら、画面を一番上までスムーズにスクロール
       wordArea.onclick = function(e) {
         e.stopPropagation();
+        // 画面をスムーズに一番上まで戻す
         window.scrollTo({ top: 0, behavior: 'smooth' });
-        
-        // （念のため、iOSなどの特殊なスクロール環境にも対応させるおまじない）
-        document.body.scrollTo({ top: 0, behavior: 'smooth' });
-        document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
       };
     }
   },
