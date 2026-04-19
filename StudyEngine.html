@@ -234,7 +234,7 @@ this.updateMemoPreview(item); // 共通化して呼び出す
     }, 150);
   },
 
-  /**
+/**
    * ミニヘッダー（スクロール時出現）の内容を現在の単語と同期
    */
   syncHeader: function() {
@@ -242,12 +242,17 @@ this.updateMemoPreview(item); // 共通化して呼び出す
     if (!item) return;
     const th = document.getElementById('header-display-th');
     const ja = document.getElementById('header-display-ja');
+
+    // ★ 意味を1行の「A / B」形式に整形
+    const displayMeaning = String(item.meaning_ja || '---')
+      .replace(/\d+\.\s*/g, '')
+      .replace(/[\n\r]+/g, ' / ');
     
     if (AppStore.state.isTargetThai) {
       th.innerText = item.word_th || '---';
-      ja.innerText = item.meaning_ja || '---';
+      ja.innerText = displayMeaning;
     } else {
-      th.innerText = item.meaning_ja || '---';
+      th.innerText = displayMeaning;
       ja.innerText = item.word_th || '---';
     }
   },
@@ -629,16 +634,26 @@ renderReferences: function(currentWordTh, currentId) {
     return;
   }
 
-  // 小さなチップ（またはリスト）として表示
-  let html = `<div class="text-xs text-gray-500 mt-4 mb-2">この単語が登場する他のカード:</div>`;
+// 小さなチップ（またはリスト）として表示
+  // ★ ラベルの色をテーマ連動の var(--text-sub) に変更し、少し目立たせる
+  let html = `<div class="text-xs mt-5 mb-2 font-bold" style="color: var(--text-sub); opacity: 0.8;">🔗 この単語が登場する他のカード:</div>`;
   html += `<div class="flex flex-wrap gap-2">`;
-refs.forEach(r => {
-  html += `
-    <button onclick="event.stopPropagation(); StudyEngine.jumpToWordFromId('${r.id}')" 
-            class="px-3 py-1.5 rounded-xl bg-white/5 border border-white/5 text-[11px] font-bold text-blue-500/80 hover:bg-blue-500/10 active:scale-95 transition-all">
-      ${r.word_th} <span class="opacity-40 font-normal text-[9px] ml-1">${r.meaning_ja}</span>
-    </button>`;
-});
+  refs.forEach(r => {
+    // チップ表示用に「A / B」の1行に整形
+    const displayMeaning = String(r.meaning_ja || '')
+      .replace(/\d+\.\s*/g, '')
+      .replace(/[\n\r]+/g, ' / ');
+
+    // ★ bg-white/5 などの固定色をやめ、CSS変数を使ってテーマに完全追従させる
+    // ★ 長すぎる意味が来てもチップが壊れないよう truncate（省略）を付与
+    html += `
+      <button onclick="event.stopPropagation(); StudyEngine.jumpToWordFromId('${r.id}')" 
+              class="px-3 py-1.5 rounded-xl border text-[11px] font-bold active:scale-95 transition-all flex items-center max-w-full hover:opacity-70"
+              style="background-color: var(--bg-card); border-color: var(--border); box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
+        <span class="thai-font text-[12px] whitespace-nowrap" style="color: var(--accent);">${r.word_th}</span> 
+        <span class="font-normal text-[9px] ml-2 truncate" style="color: var(--text-sub);">${displayMeaning}</span>
+      </button>`;
+  });
   html += `</div>`;
   
   refListEl.innerHTML = html;

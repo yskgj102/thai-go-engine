@@ -123,11 +123,12 @@ const pointerClass = (isLocked && !isAllowList) ? 'pointer-events-none opacity-5
         const cat = String(v.category || "").toLowerCase();
         
 
-        // 【★強化ポイント1】カテゴリー完全一致なら、超高スコアを与えて最上位へ
-  // ボタンで「動詞」を押した時、他の単語をすべて引き離して「動詞」だけを並べる
-  if (cat === qLower || cat.startsWith(qLower)) {
-    score += 10000; // 桁違いのスコアで最優先
-  }
+// 【★強化ポイント1】カテゴリー完全一致なら、超高スコアを与えて最上位へ
+        // 「1. 動詞 \n 2. 名詞」のように複数入っている場合にも対応して分解チェック
+        const cleanCatsArr = cat.replace(/\d+\.\s*/g, '').split(/[\n\r\/]+/).map(c => c.trim());
+        if (cleanCatsArr.includes(qLower) || cleanCatsArr.some(c => c.startsWith(qLower))) {
+          score += 10000; // 桁違いのスコアで最優先
+        }
         // データ側の発音記号も正規化エンジンに通して比較
         const normPh = this.normalizePhonetic(rawPh);
 const ja   = String(v.meaning_ja || ""); 
@@ -193,14 +194,19 @@ const ja   = String(v.meaning_ja || "");
       // 忘却度に応じたカラーバーをStudyEngineから取得
       const statusColor = StudyEngine.getColor(item); 
       
-      // ★ ブックマーク状態の判定（1,370件のデータ揺れを吸収）
+      // ブックマーク状態の判定
       const isBM = (item.is_bookmark === true || String(item.is_bookmark).toLowerCase() === "true");
 
-      // --- ★追加：リスト表示用のテキスト整形（多義語対応） ---
-      // 箇条書きの「1. 」などを消し、改行を「 / 」に変換して1行にする
+      // --- ★ 意味（meaning_ja）のリスト用整形 ---
       const displayMeaning = String(item.meaning_ja || '')
         .replace(/\d+\.\s*/g, '')      
         .replace(/[\n\r]+/g, ' / ');   
+
+      // --- ★ 品詞（category）のリスト用整形 ---
+      // 「1. 代名詞 2. 名詞」 → 「代名詞 / 名詞」に変換する
+      const displayCategory = String(item.category || '')
+        .replace(/\d+\.\s*/g, '')      
+        .replace(/[\n\r]+/g, ' / ');
       // -------------------------------------------------------
 
       return `
@@ -209,18 +215,20 @@ const ja   = String(v.meaning_ja || "");
           
           <div class="absolute left-0 top-0 bottom-0 w-[2px]" style="background-color: ${statusColor}; opacity: 0.8;"></div>
 
-          <div class="min-w-0 flex-1 pl-2">
+          <div class="min-w-0 flex-1 pl-2 pr-2">
             <div class="flex items-center gap-2 mb-0.5">
               ${isBM ? '<span class="text-[10px] text-[#FFD700] drop-shadow-[0_0_5px_rgba(255,215,0,0.4)] shrink-0">★</span>' : ''}
               
               <span class="thai-font text-[13px] font-bold text-blue-500/90 truncate">${item.word_th}</span>
               <span class="text-[8px] font-mono opacity-20 shrink-0">${item.last_date === 'New' ? 'New' : item.last_date.split(' ')[0]}</span>
             </div>
+            
             <div class="text-[10px] opacity-100 truncate">${displayMeaning}</div>
             <div class="text-[9px] opacity-100 italic font-mono truncate mt-0.5">${item.phonetic || ''}</div>
           </div>
-          <div class="text-right ml-2 shrink-0">
-            <div class="text-[8px] font-black uppercase tracking-tighter opacity-100 mb-1">${item.category}</div>
+          
+          <div class="text-right ml-2 shrink-0 w-[65px] flex flex-col items-end">
+            <div class="text-[8px] font-black uppercase tracking-tighter opacity-100 mb-1 w-full truncate text-right" title="${displayCategory}">${displayCategory}</div>
             <div class="text-[7px] font-mono opacity-100 italic">${item.interval}d</div>
           </div>
         </div>
@@ -281,10 +289,18 @@ const container = document.getElementById('category-filter-bar');
   const currentQ = this.state.currentQuery;
   const allVocab = AppStore.state.allVocab || [];
 
-  // 1. 純粋な日本語名だけを抽出
-  const uniqueCats = [...new Set(
-    allVocab.map(v => v.category?.replace(/[^\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF].*$/, '') || '')
-  )].filter(c => c && c !== "未分類");
+// 1. 純粋な日本語名だけを抽出（★多義語の「1. 動詞 \n 2. 名詞」にも完全対応）
+  const allExtractedCats = [];
+  allVocab.forEach(v => {
+    if (!v.category) return;
+    // 数字とピリオドを消し、改行やスラッシュで分割して配列にする
+    const cleanStr = String(v.category).replace(/\d+\.\s*/g, '');
+    const parts = cleanStr.split(/[\n\r\/]+/).map(c => 
+      c.trim().replace(/[^\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF].*$/, '') // 括弧などのノイズを除去
+    );
+    allExtractedCats.push(...parts);
+  });
+  const uniqueCats = [...new Set(allExtractedCats)].filter(c => c && c !== "未分類");
 
   // 2. 【一般的・高頻度順】の定義
   const commonOrder = ["名詞", "動詞", "形容詞", "副詞", "助動詞", "前置詞", "接続詞", "代名詞", "文末詞"];
