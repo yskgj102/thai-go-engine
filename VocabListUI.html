@@ -188,7 +188,6 @@ const ja   = String(v.meaning_ja || "");
         </div>
       `;
     }
-    // --- HTML生成（各単語カードの構築） ---
 // --- HTML生成（各単語カードの構築） ---
     html += limitedData.map(item => {
       // 忘却度に応じたカラーバーをStudyEngineから取得
@@ -196,6 +195,13 @@ const ja   = String(v.meaning_ja || "");
       
       // ★ ブックマーク状態の判定（1,370件のデータ揺れを吸収）
       const isBM = (item.is_bookmark === true || String(item.is_bookmark).toLowerCase() === "true");
+
+      // --- ★追加：リスト表示用のテキスト整形（多義語対応） ---
+      // 箇条書きの「1. 」などを消し、改行を「 / 」に変換して1行にする
+      const displayMeaning = String(item.meaning_ja || '')
+        .replace(/\d+\.\s*/g, '')      
+        .replace(/[\n\r]+/g, ' / ');   
+      // -------------------------------------------------------
 
       return `
         <div onclick="StudyEngine.jumpToWordFromId('${item.id}');ViewController.toggleVocabPanel()" 
@@ -210,7 +216,7 @@ const ja   = String(v.meaning_ja || "");
               <span class="thai-font text-[13px] font-bold text-blue-500/90 truncate">${item.word_th}</span>
               <span class="text-[8px] font-mono opacity-20 shrink-0">${item.last_date === 'New' ? 'New' : item.last_date.split(' ')[0]}</span>
             </div>
-            <div class="text-[10px] opacity-100 truncate">${item.meaning_ja}</div>
+            <div class="text-[10px] opacity-100 truncate">${displayMeaning}</div>
             <div class="text-[9px] opacity-100 italic font-mono truncate mt-0.5">${item.phonetic || ''}</div>
           </div>
           <div class="text-right ml-2 shrink-0">

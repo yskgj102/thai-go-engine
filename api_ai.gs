@@ -71,6 +71,7 @@ const prompt = `
     - category: 意味に対応する品詞を必ず次のフォーマット（1. 〇〇 2. 〇〇 3.・・・）で記載する。名詞の場合は類別詞も含めること。
     - example_th, example_phonetic, example_ja: それぞれの意味に対する例文を、必ず箇条書き（1. 〇〇\\n2. 〇〇\\n3.・・・）で複数生成し、改行（\\n）で繋いで一つの文字列として出力する。example_thの生成ルールは依頼内容に従ってください。
     - explanation: それぞれの意味の使い分けや文脈の判断方法を網羅する。
+    - 複数ある項目（category,meaning_ja,example_th,example_phonetic,example_ja）の番号は必ず対応させてください。
 
     ## 出力制約
     - JSONオブジェクトのみを返してください。装飾や前置きは一切不要です。
