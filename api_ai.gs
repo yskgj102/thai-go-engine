@@ -386,47 +386,56 @@ function testAutoFiller() {
   AutoFiller.run();
 }
 // ==========================================
-// ==========================================
-// 4. 【新規】24時間フル稼働バッチ工場 (10分に1単語)
+// 4. 【更新】24時間フル稼働バッチ工場 (10分に1単語)
 // ==========================================
 const AutoFiller = {
   run: function() {
-    // 🌟 ストッパーは撤去！24時間いつでも動きます
-
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName('m_vocabulary'); 
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
     
-    // ★ 例文（example_th）を基準にする
     const idx = {
       id: headers.indexOf('id'),
       word: headers.indexOf('word_th'),
-      example_th: headers.indexOf('example_th') 
+      example_th: headers.indexOf('example_th'),
+      last_update: headers.indexOf('last_update') // ★ last_updateの列を追加
     };
 
-    if (idx.id === -1 || idx.word === -1 || idx.example_th === -1) return;
+    if (idx.id === -1 || idx.word === -1 || idx.example_th === -1 || idx.last_update === -1) return;
+
+    // 条件判定用の基準日（2026/04/18）
+    const thresholdDate = new Date('2026/04/19 15:00:00');
 
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
       const targetId = row[idx.id];
       const word = row[idx.word];
       const exampleVal = row[idx.example_th] ? row[idx.example_th].toString().trim() : "";
+      
+      // last_updateの値を取得し、Dateオブジェクトに変換
+      const lastUpdateVal = row[idx.last_update] ? new Date(row[idx.last_update]) : null;
 
-      // 🌟 例文が未生成（空文字 または "---"）のものを探す
-      if (!exampleVal || exampleVal === "---") {
-        console.log(`🏗️ 24時間フル稼働生成: ${word}`);
+      // 🌟 条件A: 例文が未生成（空文字 または "---"）
+      const isMissing = !exampleVal || exampleVal === "---";
+      
+      // 🌟 条件B: last_updateが2026/04/18以下
+      //（日付が存在しない場合も古いものとして扱う場合は !lastUpdateVal も含める）
+      const isOld = lastUpdateVal && lastUpdateVal <= thresholdDate;
+
+      if (isMissing || isOld) {
+        console.log(`🏗️ 24時間フル稼働生成開始: ${word} (理由: ${isMissing ? "データ不足" : "旧仕様データ"})`);
         
         const result = generateThaiDetails(word);
 
         if (result) {
           this.updateSheet(sheet, headers, targetId, result);
-          console.log(`✅ 完了: ${word}`);
+          console.log(`✅ 更新完了: ${word}`);
         } else {
           console.error(`❌ 失敗: ${word}`);
         }
         
-        break; // 1件終わったら確実に終了
+        break; // 1件終わったら確実に終了（トリガーによる負荷分散のため）
       }
     }
   },
@@ -447,7 +456,7 @@ const AutoFiller = {
           "example_phonetic": aiData.example_phonetic,
           "example_ja": aiData.example_ja,
           "explanation": aiData.explanation,
-          "last_update": new Date()
+          "last_update": new Date() // ここで実行時の日付に更新されるため、次はスキップされる
         };
 
         const updatedRow = headers.map((header, index) => {
