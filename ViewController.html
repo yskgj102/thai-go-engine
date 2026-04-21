@@ -345,7 +345,7 @@ const ViewController = {
     if (ph) isThai ? ph.classList.remove('hidden') : ph.classList.add('hidden');
 
     // ==========================================
-    // ★ 意味(meaning)と品詞(category)の中央揃え描画（完全版）
+    // ★ 意味(meaning)と品詞(category)の強制中央揃え（Tailwind無視の物理CSS版）
     // ==========================================
     const categoryEl = document.getElementById('category');
     const meaningEl = document.getElementById('meaning');
@@ -354,12 +354,14 @@ const ViewController = {
 
     if (meaningEl) {
       meaningEl.innerHTML = '';
-      meaningEl.className = 'w-full flex flex-col items-center gap-6 text-center'; 
+      // Tailwindに頼らず、直接CSSで「縦並び・中央揃え・隙間あり」を強制指定
+      meaningEl.style.cssText = 'width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; text-align: center;';
 
       let rawCat = item.category || '---';
       rawCat = rawCat.replace(/(名詞\s*（類別詞:\s*)+/g, '名詞（類別詞: ');
 
       if (backText.includes('1.')) {
+        // --- パターンA: 複数意味がある場合 ---
         const meaningParts = backText.split(/(?=\d+\.)/).filter(p => p.trim() !== '');
         const catParts = /(?:^|\s)\d+\./.test(rawCat) 
           ? rawCat.split(/(?=\d+\.)/).filter(p => p.trim() !== '') 
@@ -378,24 +380,26 @@ const ViewController = {
           }
 
           const block = document.createElement('div');
-          block.className = 'flex flex-col items-center gap-2 w-full';
+          // ブロック自体も強制中央揃え
+          block.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 0.5rem; width: 100%;';
           
-          let headerHtml = `<div class="flex items-center justify-center gap-3 w-full">
-                              <span class="text-blue-500/70 text-2xl font-black">${num}.</span>`;
+          // 「数字＋バッジ」の行も強制横並び中央揃え
+          let headerHtml = `<div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; width: 100%;">
+                              <span class="text-blue-500/70 font-black" style="font-size: 1.5rem;">${num}.</span>`;
           if (cleanCat && cleanCat !== '---') {
             headerHtml += `<span class="text-[10px] font-black tracking-widest px-3 py-1 rounded-full border border-blue-500/40 text-blue-500/90 bg-blue-500/10 shadow-sm">${cleanCat}</span>`;
           }
           headerHtml += `</div>`;
           
-          // ★複数意味のテキストも強制中央揃え
-          const textHtml = `<div class="text-2xl font-bold text-center w-full" style="color: var(--text-main)">${cleanMeaning}</div>`;
+          // テキストも強制中央揃え
+          const textHtml = `<div class="font-bold text-center" style="font-size: 1.5rem; color: var(--text-main); width: 100%;">${cleanMeaning}</div>`;
           
           block.innerHTML = headerHtml + textHtml;
           meaningEl.appendChild(block);
         });
+
       } else {
-        // --- パターンB: 単一の意味の場合 ---
-        meaningEl.className = 'w-full flex flex-col items-center justify-center gap-3 text-center';
+        // --- パターンB: 意味が1個だけの場合 ---
         let cleanCat = rawCat.replace(/[\r\n]+/g, ' ').trim();
         
         if (cleanCat && cleanCat !== '---') {
@@ -405,10 +409,10 @@ const ViewController = {
           meaningEl.appendChild(badge);
         }
         
-        // ★修正：単一の意味のテキストに `text-center w-full` を追加して絶対にはみ出させない
         const textDiv = document.createElement('div');
-        textDiv.className = 'text-3xl font-black text-center w-full';
-        textDiv.style.color = 'var(--text-main)';
+        // ここもTailwindを使わずに絶対中央揃えを物理指定
+        textDiv.className = 'font-black text-center';
+        textDiv.style.cssText = 'font-size: 1.875rem; color: var(--text-main); width: 100%; text-align: center;';
         textDiv.innerText = backText.trim();
         meaningEl.appendChild(textDiv);
       }
