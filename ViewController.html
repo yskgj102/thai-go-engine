@@ -345,7 +345,7 @@ const ViewController = {
     if (ph) isThai ? ph.classList.remove('hidden') : ph.classList.add('hidden');
 
     // ==========================================
-    // ★ 意味(meaning)と品詞(category)の中央揃え描画
+    // ★ 意味(meaning)と品詞(category)の中央揃え描画（完全版）
     // ==========================================
     const categoryEl = document.getElementById('category');
     const meaningEl = document.getElementById('meaning');
@@ -354,7 +354,6 @@ const ViewController = {
 
     if (meaningEl) {
       meaningEl.innerHTML = '';
-      // ★修正：親コンテナを「中央揃え（items-center text-center）」に変更
       meaningEl.className = 'w-full flex flex-col items-center gap-6 text-center'; 
 
       let rawCat = item.category || '---';
@@ -379,34 +378,36 @@ const ViewController = {
           }
 
           const block = document.createElement('div');
-          // ★修正：各意味のブロックも中央揃えに
           block.className = 'flex flex-col items-center gap-2 w-full';
           
-          // ★修正：数字とバッジの行を中央に配置（justify-center）
-          let headerHtml = `<div class="flex items-center justify-center gap-3">
+          let headerHtml = `<div class="flex items-center justify-center gap-3 w-full">
                               <span class="text-blue-500/70 text-2xl font-black">${num}.</span>`;
           if (cleanCat && cleanCat !== '---') {
             headerHtml += `<span class="text-[10px] font-black tracking-widest px-3 py-1 rounded-full border border-blue-500/40 text-blue-500/90 bg-blue-500/10 shadow-sm">${cleanCat}</span>`;
           }
           headerHtml += `</div>`;
           
-          // ★修正：意味のテキストを中央揃えに
-          const textHtml = `<div class="text-2xl font-bold text-center" style="color: var(--text-main)">${cleanMeaning}</div>`;
+          // ★複数意味のテキストも強制中央揃え
+          const textHtml = `<div class="text-2xl font-bold text-center w-full" style="color: var(--text-main)">${cleanMeaning}</div>`;
           
           block.innerHTML = headerHtml + textHtml;
           meaningEl.appendChild(block);
         });
       } else {
+        // --- パターンB: 単一の意味の場合 ---
         meaningEl.className = 'w-full flex flex-col items-center justify-center gap-3 text-center';
         let cleanCat = rawCat.replace(/[\r\n]+/g, ' ').trim();
+        
         if (cleanCat && cleanCat !== '---') {
           const badge = document.createElement('span');
           badge.className = 'text-[10px] font-black tracking-widest px-3 py-1 rounded-full border border-blue-500/40 text-blue-500/90 bg-blue-500/10 shadow-sm inline-block';
           badge.innerText = cleanCat;
           meaningEl.appendChild(badge);
         }
+        
+        // ★修正：単一の意味のテキストに `text-center w-full` を追加して絶対にはみ出させない
         const textDiv = document.createElement('div');
-        textDiv.className = 'text-3xl font-black';
+        textDiv.className = 'text-3xl font-black text-center w-full';
         textDiv.style.color = 'var(--text-main)';
         textDiv.innerText = backText.trim();
         meaningEl.appendChild(textDiv);
