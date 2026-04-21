@@ -308,29 +308,21 @@ const ViewController = {
       }, 100);
     }
   },
-
 /**
    * AppStoreから渡された単語情報をHTML各要素に反映
    */
   updateText: function(item, isThai) {
-    // ★ AIが改行をサボってスペースで繋げた場合、強制的に改行させるパッチ
     const formatMultiline = (text) => {
       if (!text) return '---';
       return String(text).replace(/\s+(?=[2-9]\.)/g, '\n');
     };
 
-    // 表面と裏面のテキストを変数に一時保存（文字数カウントのため）
     const frontText = isThai ? (item.word_th || '---') : formatMultiline(item.meaning_ja);
     const backText  = isThai ? formatMultiline(item.meaning_ja) : (item.word_th || '---');
 
     const mapping = {
       'word-th': frontText,
-      'meaning': backText,
       'phonetic': isThai ? (item.phonetic || '---'):(item.meaning_kana || '---'),
-      'category': formatMultiline(item.category),
-      'ex-th': formatMultiline(item.example_th),
-      'ex-phonetic': formatMultiline(item.example_phonetic),
-      'ex-ja':  formatMultiline(item.example_ja),
       'note': item.explanation || ''
     };
 
@@ -339,25 +331,143 @@ const ViewController = {
       if (el) el.innerText = val;
     });
 
-    // --- ★ 追加：メインカード（表面）の文字サイズ自動リサイズ機能 ---
     const wordEl = document.getElementById('word-th');
     if (wordEl) {
-      // 改行の数をカウント
       const lines = frontText.split('\n').length;
-      
-      // 文字数が12文字より多い、または2行以上ある（多義語など）場合
       if (frontText.length > 12 || lines > 1) {
-        // フォントを少し小さめに自動調整し、画面の圧迫を防ぐ
         wordEl.style.fontSize = 'clamp(1.4rem, 6vw, 2.2rem)'; 
       } else {
-        // 短い単語の場合は、インラインスタイルを消して元の「超巨大サイズ」に戻す
         wordEl.style.fontSize = ''; 
       }
     }
-    // -------------------------------------------------------------
-    
+
     const ph = document.getElementById('phonetic');
     if (ph) isThai ? ph.classList.remove('hidden') : ph.classList.add('hidden');
+
+    // ==========================================
+    // ★ 意味(meaning)と品詞(category)の中央揃え描画
+    // ==========================================
+    const categoryEl = document.getElementById('category');
+    const meaningEl = document.getElementById('meaning');
+    
+    if (categoryEl) categoryEl.style.display = 'none'; 
+
+    if (meaningEl) {
+      meaningEl.innerHTML = '';
+      // ★修正：親コンテナを「中央揃え（items-center text-center）」に変更
+      meaningEl.className = 'w-full flex flex-col items-center gap-6 text-center'; 
+
+      let rawCat = item.category || '---';
+      rawCat = rawCat.replace(/(名詞\s*（類別詞:\s*)+/g, '名詞（類別詞: ');
+
+      if (backText.includes('1.')) {
+        const meaningParts = backText.split(/(?=\d+\.)/).filter(p => p.trim() !== '');
+        const catParts = /(?:^|\s)\d+\./.test(rawCat) 
+          ? rawCat.split(/(?=\d+\.)/).filter(p => p.trim() !== '') 
+          : [];
+
+        meaningParts.forEach((part, index) => {
+          const numMatch = part.match(/^(\d+)\./);
+          const num = numMatch ? numMatch[1] : (index + 1);
+          const cleanMeaning = part.replace(/^\d+\.\s*/, '').trim();
+          
+          let cleanCat = '';
+          if (catParts[index]) {
+             cleanCat = catParts[index].replace(/^\d+\.\s*/, '').trim();
+          } else if (index === 0 && !/(?:^|\s)\d+\./.test(rawCat)) {
+             cleanCat = rawCat.replace(/[\r\n]+/g, ' ').trim();
+          }
+
+          const block = document.createElement('div');
+          // ★修正：各意味のブロックも中央揃えに
+          block.className = 'flex flex-col items-center gap-2 w-full';
+          
+          // ★修正：数字とバッジの行を中央に配置（justify-center）
+          let headerHtml = `<div class="flex items-center justify-center gap-3">
+                              <span class="text-blue-500/70 text-2xl font-black">${num}.</span>`;
+          if (cleanCat && cleanCat !== '---') {
+            headerHtml += `<span class="text-[10px] font-black tracking-widest px-3 py-1 rounded-full border border-blue-500/40 text-blue-500/90 bg-blue-500/10 shadow-sm">${cleanCat}</span>`;
+          }
+          headerHtml += `</div>`;
+          
+          // ★修正：意味のテキストを中央揃えに
+          const textHtml = `<div class="text-2xl font-bold text-center" style="color: var(--text-main)">${cleanMeaning}</div>`;
+          
+          block.innerHTML = headerHtml + textHtml;
+          meaningEl.appendChild(block);
+        });
+      } else {
+        meaningEl.className = 'w-full flex flex-col items-center justify-center gap-3 text-center';
+        let cleanCat = rawCat.replace(/[\r\n]+/g, ' ').trim();
+        if (cleanCat && cleanCat !== '---') {
+          const badge = document.createElement('span');
+          badge.className = 'text-[10px] font-black tracking-widest px-3 py-1 rounded-full border border-blue-500/40 text-blue-500/90 bg-blue-500/10 shadow-sm inline-block';
+          badge.innerText = cleanCat;
+          meaningEl.appendChild(badge);
+        }
+        const textDiv = document.createElement('div');
+        textDiv.className = 'text-3xl font-black';
+        textDiv.style.color = 'var(--text-main)';
+        textDiv.innerText = backText.trim();
+        meaningEl.appendChild(textDiv);
+      }
+    }
+
+    // ==========================================
+    // ★ 例文（複数対応）と角丸・青文字リンクの完全版
+    // ==========================================
+    const examplesContainer = document.getElementById('examples-container');
+    if (examplesContainer) {
+      examplesContainer.innerHTML = ''; 
+
+      const exThArray = formatMultiline(item.example_th).split('\n');
+      const exPhArray = formatMultiline(item.example_phonetic).split('\n');
+      const exJaArray = formatMultiline(item.example_ja).split('\n');
+
+      exThArray.forEach((thText, index) => {
+        if (thText.trim() === '' || thText === '---') return;
+
+        const cleanTh = thText.replace(/^\d+\.\s*/, '');
+        const cleanPh = (exPhArray[index] || '').replace(/^\d+\.\s*/, '');
+        const cleanJa = (exJaArray[index] || '').replace(/^\d+\.\s*/, '');
+
+        const targetText = isThai ? cleanTh : cleanJa;
+        const targetLang = isThai ? 'th-TH' : 'ja-JP';
+
+        const dynamicExId = `dynamic-ex-${item.id}-${index}`;
+
+        const block = document.createElement('div');
+        block.className = `relative overflow-hidden cursor-pointer ${index > 0 ? 'pt-4 border-t border-[var(--border)]' : ''}`;
+        
+        block.onclick = (e) => {
+          e.stopPropagation();
+          StudyEngine.speakSpecificText(targetText, targetLang);
+        };
+
+        block.innerHTML = `
+          <div class="flex justify-between items-center mb-2">
+            <p class="text-[10px] font-black uppercase tracking-widest text-blue-500">Context ${exThArray.length > 1 ? index + 1 : ''}</p>
+            <div class="flex items-center gap-3">
+              <button onclick="event.stopPropagation(); StudyEngine.speakSpecificText('${targetText.replace(/'/g, "\\'")}', '${targetLang}')" class="text-[16px] opacity-80 hover:opacity-100 active:scale-125 transition-transform text-blue-500"></button>
+              <button onclick="event.stopPropagation(); StudyEngine.copyTextSpecific('${targetText.replace(/'/g, "\\'")}')" class="text-[14px] opacity-100 hover:opacity-100 active:scale-125 transition-all">⧉</button>
+            </div>
+          </div>
+          <div class="relative inline-block pr-6 mb-2">
+            <p id="${dynamicExId}" class="thai-font text-xl font-bold leading-relaxed text-[var(--text-main)]">${cleanTh}</p>
+            ${cleanPh && cleanPh !== '---' ? `<p class="text-[13px] italic mt-1 text-[var(--text-sub)]">${cleanPh}</p>` : ''}
+          </div>
+          <p class="text-sm font-bold opacity-70 text-[var(--text-main)]">${cleanJa}</p>
+        `;
+        
+        examplesContainer.appendChild(block);
+
+        setTimeout(() => {
+          if (typeof StudyEngine !== 'undefined') {
+            StudyEngine.renderContextLinks(cleanTh, dynamicExId, item.id);
+          }
+        }, 10);
+      });
+    }
   },
   /**
    * 単語の忘却・学習間隔統計を画面に反映

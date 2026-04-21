@@ -134,6 +134,28 @@ this.updateMemoPreview(item); // 共通化して呼び出す
     );
   },
 
+/**
+   * 特定の文字列だけを強制的に読み上げる（言語指定対応版）
+   */
+  speakSpecificText: function(textToSpeak, lang = 'th-TH') {
+    if (!textToSpeak || textToSpeak === '---') return;
+    
+    AudioSystem.play(
+      textToSpeak, 
+      lang, // ★ 決め打ちをやめて引数から受け取る
+      AppStore.state.isSlowMode ? 0.5 : 0.9
+    );
+  },
+
+  /**
+   * (追加) 特定の文字列だけを強制的にコピーする
+   */
+  copyTextSpecific: function(textToCopy) {
+    if (!textToCopy || textToCopy === '---') return;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      ViewController.showToast("Copied to clipboard!");
+    });
+  },
   /**
    * 再生速度（スローモード）のトグル切り替え
    * UI上のアイコン(🐢/🐌)と再生速度パラメータを同時に更新する。

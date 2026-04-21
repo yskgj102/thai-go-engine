@@ -10,6 +10,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
 </head>
 
 <body class="min-h-screen font-sans antialiased overflow-x-hidden">
@@ -181,45 +182,29 @@
           </div>
 
 
+<div id="details-area" class="reveal-target hidden space-y-4">
+  
+  <div id="examples-container" class="space-y-4 p-6 shadow-xl rounded-[2.5rem] overflow-hidden" style="background-color: var(--bg-card); border: 1px solid var(--border);">
+  </div>
 
-        <div id="details-area" class="reveal-target hidden">
-  <div onclick="StudyEngine.speak(true)"
-       class="p-6 shadow-xl space-y-4 rounded-[2rem] cursor-pointer"
-       style="background-color: var(--bg-card); border: 1px solid var(--border);">
-              <div class="flex justify-between items-center mb-1">
-                <p class="text-[10px] font-black uppercase tracking-widest text-blue-500">Context</p>
-                <button onclick="event.stopPropagation(); StudyEngine.copyText('ex-th')" class="text-[14px] opacity-100 hover:opacity-100 active:scale-125 transition-all">⧉</button>
-              </div>
-              <div class="relative inline-block pr-6">
-                <p id="ex-th" class="thai-font text-xl font-bold leading-relaxed"></p>
-                <button onclick="event.stopPropagation(); StudyEngine.speak(true)" class="absolute top-0 -right-2 text-[12px] opacity-100 p-1 active:scale-125 transition-transform"></button>
-                <p id="ex-phonetic" class="text-[13px] italic mb-1" style="color: var(--text-sub)"></p>
-              </div>
-
-              <p id="ex-ja" class="text-sm font-bold opacity-70"></p>
-              <div class="pt-4 border-t" style="border-color: var(--border)">
-                <p id="note" class="text-[14px] leading-relaxed whitespace-pre-wrap"></p>
-                <div id="reference-list" class="mt-4 pt-4 border-t border-white/5"></div>
-<div class="flex justify-start gap-3 pt-6">
-  <button id="delete-word-btn" 
-          data-confirm="false"
-          onclick="ViewController.requestDeleteCurrentWord(event)" 
-          class="text-[9px] font-black uppercase tracking-tighter text-red-500/30 border border-current px-3 py-2 rounded-full transition-all duration-300">
-    × Destruct
-  </button>
-
-  <div class="flex-1"></div> <button id="re-gen-btn" 
-          onclick="event.stopPropagation(); Bridge.reGenerate(AppStore.getCurrentItem().id)" 
-          class="text-[9px] font-black uppercase tracking-tighter opacity-30 hover:opacity-100 px-3 py-2 rounded-full border border-current transition-all">
-    AI Re-Generate
-  </button>
+  <div class="p-6 shadow-xl rounded-[2.5rem]" style="background-color: var(--bg-card); border: 1px solid var(--border);">
+    <div class="flex justify-between items-center mb-4">
+      <p class="text-[10px] font-black uppercase tracking-widest text-blue-500">Explanation</p>
+    </div>
+    <p id="note" class="text-[14px] leading-relaxed whitespace-pre-wrap" style="color: var(--text-main)"></p>
+    <div id="reference-list" class="mt-4 pt-4 border-t border-white/5"></div>
+    
+    <div class="flex justify-start gap-3 pt-6 mt-4 border-t" style="border-color: var(--border)">
+      <button id="delete-word-btn" data-confirm="false" onclick="ViewController.requestDeleteCurrentWord(event)" class="text-[9px] font-black uppercase tracking-tighter text-red-500/30 border border-current px-3 py-2 rounded-full transition-all duration-300">
+        × Destruct
+      </button>
+      <div class="flex-1"></div> 
+      <button id="re-gen-btn" onclick="event.stopPropagation(); Bridge.reGenerate(AppStore.getCurrentItem().id)" class="text-[9px] font-black uppercase tracking-tighter opacity-30 hover:opacity-100 px-3 py-2 rounded-full border border-current transition-all">
+        AI Re-Generate
+      </button>
+    </div>
+  </div>
 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
 
     </main>
 
