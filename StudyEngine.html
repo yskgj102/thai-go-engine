@@ -1147,11 +1147,11 @@ parseSyllables: function(text, dbEntry = null) {
   },
 
   // --- コア解析エンジン（文字を左から舐めて吸い込む） ---
+// --- コア解析エンジン（文字を左から舐めて吸い込む） ---
   _parseCore: function(text) {
-    // symbols を繋げて判定用の文字列を作る
-  const vMarks = ThaiMasterData.vowelRules
-    .filter(r => r.symbols.length === 1 && !'เแโใไ'.includes(r.symbols))
-    .map(r => r.symbols).join('');
+    const vMarks = ThaiMasterData.vowelRules
+      .filter(r => r.symbols.length === 1 && !'เแโใไ'.includes(r.symbols))
+      .map(r => r.symbols).join('');
     const leadingV = "เแโใไ";
     const toneMarks = "่้๊๋์";
     const chars = Array.from(text);
@@ -1161,124 +1161,128 @@ parseSyllables: function(text, dbEntry = null) {
     while (i < chars.length) {
       let syl = { full: '', leadingV: '', mainC: '', marks: [], lastC: '', isRoHan: false };
 
-// --- ★ Step 0. 逆転パターンの先読み (修正版) ---
+      // Step 0. 逆転パターンの先読み
       if (i + 1 < chars.length) {
         const combo = chars[i] + chars[i+1];
-
-        // 【重要】もし今の2文字が clusters マスタにあるなら、絶対に分裂させない！
-        // ここで continue せずに、下の Step 2 (正規の clusters 処理) へ流します。
         if (ThaiMasterData.clusters[combo]) {
-          // 何もしない（下の Step 1, 2 へ進む）
+          // 何もしない（後で処理）
         } 
-        // clusters にない場合のみ、従来の「子音 + 前置母音」の分離を行う (例: แมลง)
         else if (leadingV.indexOf(chars[i]) === -1 && leadingV.indexOf(chars[i+1]) !== -1) {
           syl.mainC = chars[i]; syl.full = chars[i]; i++;
           syllables.push(syl);
           continue; 
         }
       }
-      // Step 1. 前置母音 (เแโใไ) の回収
+      
+      // Step 1. 前置母音
       if (i < chars.length && leadingV.indexOf(chars[i]) !== -1) {
         syl.leadingV = chars[i]; syl.full += chars[i]; i++;
       }
-// Step 2. 核子音の回収 (マスタによるクラスタ・ห引導・ฤ の処理)
+
+      // Step 2. 核子音
       if (i < chars.length) {
         const c1 = chars[i];
         const c2 = chars[i+1];
-        const nextMark = chars[i+2]; // 3文字目（รร判定用）
+        const nextMark = chars[i+2]; 
         const combo = c1 + c2;
 
-        // 1. 二重子音マスタ (ThaiMasterData.clusters) にあるかチェック
-        // 例: 'ตร' がマスタにあれば、2文字まとめて mainC に入れる
         if (c2 && ThaiMasterData.clusters[combo]) {
-          // ★重要: c2が 'ร' で次も 'ร' (รร) なら Ro Han 優先のため、ここでは吸わない
           if (c2 === 'ร' && nextMark === 'ร') {
             syl.mainC = c1; syl.full += c1; i++;
           } else {
             syl.mainC = combo; syl.full += combo; i += 2;
           }
         } 
-        // 2. 引導子音 (ห + 低級単独子音) の判定
         else if (c1 === 'ห' && c2 && "งญนมรลวยว".indexOf(c2) !== -1) {
           syl.mainC = combo; syl.full += combo; i += 2;
         } 
-        // 3. ฤ (Rue) または 単独子音
         else {
           syl.mainC = c1; syl.full += c1; i++;
         }
       }
 
-      // Step 3. Ro Han (รร) の物理検知
+      // Step 3. Ro Han (รร)
       if (i + 1 < chars.length && chars[i] === 'ร' && chars[i+1] === 'ร') {
         const next = chars[i+2];
-        // 次の文字が母音記号でない場合のみ Ro Han として扱う
         if (!next || (vMarks.indexOf(next) === -1 && leadingV.indexOf(next) === -1)) {
           syl.isRoHan = true; syl.marks.push('รร'); syl.full += 'รร'; i += 2;
         }
       }
 
-// Step 4. 母音記号と「母音として機能する子音」の回収
+      // Step 4. 母音記号と「母音として機能する子音」の厳格な回収
       while (i < chars.length) {
         const c = chars[i];
         const next = chars[i+1];
         
         if (next === '์') break;
 
-        // A. 明らかな記号類
         if (vMarks.indexOf(c) !== -1 || toneMarks.indexOf(c) !== -1 || c === '์') {
           syl.marks.push(c); syl.full += c; i++;
           continue;
         }
 
-        // B. 子音兼母音 (ย, ว, อ) の判定強化
-        // 前置母音がない場合でも、これらが「核」になるケースを救済
         const hasMainVowel = syl.marks.some(m => vMarks.indexOf(m) !== -1);
-        const isVowelPart = 
-          (c === 'ย' && (syl.leadingV === 'เ' || hasMainVowel)) || 
-          (c === 'ว' && (syl.marks.includes('ั') || !hasMainVowel)) || // -ัว または 単独の ว
-          (c === 'อ' && !hasMainVowel); // 単独の อ (ของ 等)
+        let isVowelPart = false;
+
+        // ★完全修正： ย, ว, อ の「母音化」判定をタイ語の文法に100%準拠させる
+        if (c === 'อ') {
+          // อ は เ-ือ, เ-อ, もしくは単独の -อ の時だけ母音パーツになる
+          if (syl.marks.includes('ื') || syl.marks.includes('๊') || syl.marks.includes('๋')) {
+            isVowelPart = true;
+          } else if (syl.leadingV === 'เ' && !hasMainVowel) {
+            isVowelPart = true;
+          } else if (!hasMainVowel && !syl.leadingV) {
+            isVowelPart = true;
+          }
+        } 
+        else if (c === 'ย') {
+          // ย は เ-ีย の時「のみ」母音パーツになる（เ-ือย や เ-ย の時は末子音！）
+          if (syl.leadingV === 'เ' && syl.marks.includes('ี')) {
+            isVowelPart = true;
+          }
+        } 
+        else if (c === 'ว') {
+          // ว は -ัว もしくは単独の -ว- (สวย等) の時だけ母音パーツになる
+          if (syl.marks.includes('ั')) {
+            isVowelPart = true;
+          } else if (!hasMainVowel && !syl.leadingV) {
+            isVowelPart = true;
+          }
+        }
 
         if (isVowelPart) {
           syl.marks.push(c); syl.full += c; i++;
           continue;
         }
-        break;
+        break; // 母音パーツじゃなければ末子音候補としてループを抜ける！
       }
 
-      // Step 5. 末子音と、それに連なる黙字(์)セットの回収
-// --- Step 5. 末子音の回収（先読みロジック搭載） ---
+      // Step 5. 末子音の回収
       while (i < chars.length) {
         const c = chars[i];
         const next = chars[i+1];
-        const afterNext = chars[i+2]; // ★一歩先を見る
+        const afterNext = chars[i+2]; 
 
-        // A. 次が前置母音なら、今の文字は確実に次音節の頭子音
         if (leadingV.indexOf(c) !== -1) break;
 
-        // B. 【重要】先読みブレーキ
-        // 今の文字(c)を末子音として飲み込む前に、次(next)が「母音を伴った頭文字」かチェック
         if (next) {
           const nextHasVowel = (vMarks.indexOf(next) !== -1 || toneMarks.indexOf(next) !== -1 || leadingV.indexOf(next) !== -1);
           const afterNextHasVowel = afterNext && (vMarks.indexOf(afterNext) !== -1 || toneMarks.indexOf(afterNext) !== -1);
           
-          // 次の文字が母音を持っている、あるいは「次＋その次」が「子音＋母音」のセットなら
-          // 今の文字(c)は末子音ではなく、次音節の頭文字（またはその一部）である可能性が高い
           if (nextHasVowel && next !== '์') break; 
-          if (afterNextHasVowel) break; // これで ช-นะ (cha-na) を守る
+          if (afterNextHasVowel) break; 
         }
 
-        // C. 条件をクリアした文字を末子音(lastC)として吸い込む
         syl.lastC = c; 
         syl.full += c; 
         i++;
 
-        // 直後の ์ (黙字) 等の付随記号を回収
         while (i < chars.length && (vMarks.indexOf(chars[i]) !== -1 || toneMarks.indexOf(chars[i]) !== -1 || chars[i] === '์')) {
           syl.marks.push(chars[i]); 
           syl.full += chars[i]; 
           i++;
         }
-        break; // 末子音は1つまで
+        break; 
       }
       
       syllables.push(syl);
