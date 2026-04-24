@@ -399,13 +399,29 @@ renderHeatmap: function() {
   },
 
 renderToneRules: function() {
-const container = document.getElementById('tone-rules-container');
+    const container = document.getElementById('tone-rules-container');
     if (!container || !ThaiMasterData.consonants) return;
 
-    // --- 1. 子音クラスの動的グルーピング ---
+    // --- 1. 子音クラスの動的グルーピング（読み方付きチップ生成） ---
     const groups = { 'Mid': [], 'High': [], 'Low': [] };
+    const finalGroups = {}; // ★追加：末子音のグループ分け用
+
     Object.entries(ThaiMasterData.consonants).forEach(([char, info]) => {
-      if (groups[info.class]) groups[info.class].push(char);
+      // 頭子音のグループ分け
+      if (groups[info.class]) {
+        const sound = info.sound || '-';
+        const chip = `
+          <div class="flex items-baseline gap-1 bg-black/5 dark:bg-white/5 px-2 py-1 rounded-md border border-black/10 dark:border-white/10">
+            <span class="thai-font font-bold text-[14px] leading-none">${char}</span>
+            <span class="text-[9px] opacity-60 font-mono text-blue-600 dark:text-blue-300 leading-none">${sound}</span>
+          </div>`;
+        groups[info.class].push(chip);
+      }
+      // ★追加：末子音(final)のグループ分け
+      if (info.final && info.final !== '-' && info.final !== '?') {
+        if (!finalGroups[info.final]) finalGroups[info.final] = [];
+        finalGroups[info.final].push(char);
+      }
     });
 
     let html = '<div class="mt-8 space-y-8 text-[10px] pb-40">';
@@ -414,24 +430,23 @@ const container = document.getElementById('tone-rules-container');
     // --- A. 子音クラス (Consonants from DB) ---
     html += '<section class="bg-white/5 rounded-2xl p-4 border border-white/10">';
     html += '<p class="font-bold mb-3 text-cyan-400 flex items-center"><span class="text-lg mr-2">A</span>Consonant Classes</p>';
-    html += '<div class="grid grid-cols-1 gap-2">';
+    html += '<div class="flex flex-col gap-3">';
     
     const classInfo = [
-      { id: 'Mid', label: '中級', color: 'text-green-400', bg: 'bg-green-500/10' },
-      { id: 'High', label: '高級', color: 'text-purple-400', bg: 'bg-purple-500/10' },
-      { id: 'Low', label: '低級', color: 'text-rose-400', bg: 'bg-rose-500/10' }
+      { id: 'Mid', label: '中級', color: 'text-green-500 dark:text-green-400', bg: 'bg-green-500/10' },
+      { id: 'High', label: '高級', color: 'text-purple-500 dark:text-purple-400', bg: 'bg-purple-500/10' },
+      { id: 'Low', label: '低級', color: 'text-rose-500 dark:text-rose-400', bg: 'bg-rose-500/10' }
     ];
 
     classInfo.forEach(c => {
-      html += `<div class="p-2 ${c.bg} rounded-lg border border-white/5 flex items-start gap-2">`;
-      html += `<span class="font-black ${c.color} min-w-[40px]">${c.label}</span>`;
-      html += `<span class="opacity-70 break-all leading-relaxed">${groups[c.id].join(' ')}</span>`;
+      html += `<div class="p-3 ${c.bg} rounded-xl border border-white/5 flex flex-col gap-2">`;
+      html += `  <div class="font-black ${c.color} text-[11px] border-b border-black/5 dark:border-white/10 pb-1.5">${c.label}</div>`;
+      html += `  <div class="flex flex-wrap gap-1.5 pt-1">${groups[c.id].join('')}</div>`;
       html += `</div>`;
     });
     html += '</div></section>';
 
     // --- B. 主要母音 (Vowels from DB) ---
-    // 重複を避け、代表的なもの（symbolsが短いものや基本形）を表示
     html += '<section class="bg-white/5 rounded-2xl p-4 border border-white/10">';
     html += '<p class="font-bold mb-3 text-green-400 flex items-center"><span class="text-lg mr-2">B</span>Vowel Rules</p>';
     html += '<div class="max-h-60 overflow-y-auto pr-2 custom-scrollbar">';
@@ -439,7 +454,6 @@ const container = document.getElementById('tone-rules-container');
     html += '<thead><tr class="opacity-50 border-b border-white/10 text-[8px]"><th class="py-1">Symbol</th><th class="py-1">Sound</th><th class="py-1">Type</th></tr></thead>';
     html += '<tbody class="divide-y divide-white/5 font-mono">';
     
-    // 全て出すと長いので、主要なルールをスライスまたはフィルタリング
     ThaiMasterData.vowelRules.slice(0, 30).forEach(rule => {
       const typeColor = rule.length === 'long' ? 'text-green-300' : 'text-rose-300';
       html += `<tr>`;
@@ -451,6 +465,60 @@ const container = document.getElementById('tone-rules-container');
     
     html += '</tbody></table></div>';
     html += '<p class="mt-2 text-center opacity-30 text-[7px]">Showing top 30 rules from DB</p></section>';
+
+    // ==========================================
+    // ★追加: C. 二重子音・特殊な頭子音 (Clusters from DB)
+    // ==========================================
+    if (ThaiMasterData.clusters) {
+      html += '<section class="bg-white/5 rounded-2xl p-4 border border-white/10">';
+      html += '<p class="font-bold mb-3 text-orange-400 flex items-center"><span class="text-lg mr-2">C</span>Clusters & Special Initials</p>';
+      html += '<div class="flex flex-wrap gap-1.5">';
+      
+      Object.entries(ThaiMasterData.clusters).forEach(([combo, info]) => {
+        // クラスによって文字色を変える
+        const cColor = info.class === 'Mid' ? 'text-green-500 dark:text-green-400' :
+                       info.class === 'High' ? 'text-purple-500 dark:text-purple-400' :
+                       'text-rose-500 dark:text-rose-400';
+
+        // トリック子音（ทร = s など）は発音記号を赤くして目立たせる
+        const isTrick = (combo[0] !== info.sound[0] && !['khr','khl','khw','phr','phl'].includes(info.sound));
+        const soundColor = isTrick ? 'text-rose-500 dark:text-rose-400 font-black' : 'text-blue-600 dark:text-blue-300';
+
+        html += `
+          <div class="flex items-baseline gap-1 bg-black/5 dark:bg-white/5 px-2 py-1 rounded-md border border-black/10 dark:border-white/10">
+            <span class="thai-font font-bold text-[14px] ${cColor} leading-none">${combo}</span>
+            <span class="text-[9px] opacity-80 font-mono ${soundColor} leading-none">${info.sound}</span>
+          </div>`;
+      });
+      html += '</div></section>';
+    }
+
+    // ==========================================
+    // ★追加: D. 末子音の変化ルール (Final Consonants)
+    // ==========================================
+    html += '<section class="bg-white/5 rounded-2xl p-4 border border-white/10">';
+    html += '<p class="font-bold mb-3 text-pink-400 flex items-center"><span class="text-lg mr-2">D</span>Final Consonants</p>';
+    html += '<div class="grid grid-cols-2 gap-2">';
+    
+    // 定番の6つの末子音の並び順を指定
+    const order = ['k', 't', 'p', 'ng', 'n', 'm'];
+    
+    order.forEach(sound => {
+      if (finalGroups[sound]) {
+        // k, t, p は「死音(Dead)」、ng, n, m は「生音(Live)」
+        const isDead = ['k', 't', 'p'].includes(sound);
+        const bgClass = isDead ? 'bg-rose-500/5 border-rose-500/20' : 'bg-green-500/5 border-green-500/20';
+        const txtClass = isDead ? 'text-rose-500 dark:text-rose-400' : 'text-green-500 dark:text-green-400';
+        
+        html += `<div class="p-2.5 rounded-xl border ${bgClass} flex flex-col gap-1.5 shadow-sm">`;
+        html += `  <div class="font-mono font-black text-[12px] flex justify-between items-center ${txtClass}">`;
+        html += `    <span>- ${sound}</span> <span class="text-[9px] opacity-70 border border-current px-1.5 rounded">${isDead ? 'Dead (死)' : 'Live (生)'}</span>`;
+        html += `  </div>`;
+        html += `  <div class="thai-font text-[13px] opacity-80 leading-relaxed break-all">${finalGroups[sound].join(' ')}</div>`;
+        html += `</div>`;
+      }
+    });
+    html += '</div></section>';
     // --- 1. 声調記号がある場合 (With Marks) ---
     html += '<div class="bg-white/5 rounded-2xl p-4 border border-blue-500/20 shadow-lg">';
     html += '<p class="font-bold mb-3 text-blue-400 flex items-center"><span class="text-lg mr-2">①</span>有記号 (With Tone Marks)</p>';
@@ -1191,7 +1259,10 @@ parseSyllables: function(text, dbEntry = null) {
             syl.mainC = combo; syl.full += combo; i += 2;
           }
         } 
-        else if (c1 === 'ห' && c2 && "งญนมรลวยว".indexOf(c2) !== -1) {
+        else if (
+          (c1 === 'ห' && c2 && "งญนมรลวยว".indexOf(c2) !== -1) || 
+          (c1 === 'อ' && c2 === 'ย' && (nextMark === 'า' || nextMark === '่' || nextMark === 'ู'))
+        ) {
           syl.mainC = combo; syl.full += combo; i += 2;
         } 
         else {
@@ -1307,7 +1378,9 @@ parseSyllables: function(text, dbEntry = null) {
 
         // 属性伝染・引導子音(ห/อ)の判定
         if (syl.mainC.startsWith('ห') && syl.mainC.length > 1) {
-            syl.finalClass = 'High'; syl.isOverridden = true; syl.ruleLabel = "ห引導";
+        syl.finalClass = 'High'; syl.isOverridden = true; syl.ruleLabel = "ห引導";
+        } else if (syl.mainC === 'อย') {
+            syl.finalClass = 'Mid'; syl.isOverridden = true; syl.ruleLabel = "อ引導"; // ← ★追加
         } else if (i > 0) {
             const prev = syllables[i-1];
             const isPrevOpenA = (!prev.lastC && !prev.leadingV && prev.marks.length === 0) || prev.isRoHan;
