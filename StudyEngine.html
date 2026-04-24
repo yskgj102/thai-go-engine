@@ -1148,7 +1148,7 @@ parseSyllables: function(text, dbEntry = null) {
 
 // --- コア解析エンジン（文字を左から舐めて吸い込む） ---
   _parseCore: function(text) {
-    const vMarks = "ะาำิีึืุูั็"; 
+    const vMarks = "ะาำิีึืุูั็ฤๅ"; 
     const leadingV = "เแโใไ";
     const toneMarks = "่้๊๋์";
     
@@ -1293,8 +1293,14 @@ parseSyllables: function(text, dbEntry = null) {
     // パス1: クラス判定と声調計算
     syllables.forEach((syl, i) => {
         const headChar = syl.mainC[0];
-        const cObj = ThaiMasterData.consonants[headChar] || { class: '不明' };
-        
+        // ★修正：ฤ が頭文字の時は、一時的に「ร (Low)」と同じクラスとして扱う
+        let cObj = ThaiMasterData.consonants[headChar];
+        if (headChar === 'ฤ') {
+            cObj = { class: 'Low' }; // 音(sound)は空でOK。母音側で鳴らすため。
+        } else if (!cObj) {
+            cObj = { class: '不明' };
+        }
+
         syl.finalClass = cObj.class;
         syl.isOverridden = false;
         syl.ruleLabel = "標準";
@@ -1605,6 +1611,24 @@ const ThaiValidator = {
         type: (syl.sType === 'Dead') ? 'dead' : 'live' 
       };
     }
+
+    // ==========================================
+    // ★追加： ฤ / ฤๅ (Rue) のキメラ割り込み処理
+    // ==========================================
+    const hasRueMark = syl.marks.includes('ฤ');
+    const isRueMain = syl.mainC === 'ฤ';
+
+    if (hasRueMark || isRueMain) {
+      const isLong = syl.marks.includes('ๅ') || syl.full.includes('ฤๅ');
+      return {
+        // ฤ は「ร＋母音」のキメラなので、母音側に r の音を仕込んでおく
+        sound: 'rɯ', 
+        length: isLong ? 'long' : 'short',
+        // 短母音（ฤ）単独の場合は dead（死音）として扱う
+        type: syl.lastC ? (ThaiMasterData.terminalGroups[syl.lastC] || 'Dead') : (isLong ? 'live' : 'dead')
+      };
+    }
+    // ==========================================
 
     // --- 1. マスタ照合用の純粋なベース文字列を作成 ---
     // 声調記号(่้๊๋)と黙字記号(์)を徹底除去して、母音だけの構成にする
