@@ -520,13 +520,12 @@ renderToneRules: function() {
     });
     html += '</div></section>';
 
-    // ==========================================
+ // ==========================================
     // ★追加: E. 特殊な末子音 (例外リスト・UI表示専用)
     // ==========================================
     html += '<section class="bg-rose-500/5 rounded-2xl p-4 border border-rose-500/20 mt-4 shadow-sm">';
     html += '<p class="font-bold mb-2 text-rose-400 flex items-center"><span class="text-lg mr-2">E</span>Special Finals (Exceptions)</p>';
     html += '<p class="text-[9px] opacity-70 mb-3 leading-relaxed text-rose-200/80">※以下の綴りは歴史的な例外（サンスクリット由来など）です。Custom Split機能を使って、右側の「発音」通りに入力してください。</p>';
-    
     html += '<div class="flex flex-col gap-2">';
     
     // UI表示用に直接定義したデータ（DBには影響しません）
@@ -538,27 +537,23 @@ renderToneRules: function() {
     ];
 
     specialFinals.forEach(sf => {
-      html += `<div class="bg-black/20 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl p-2.5 flex flex-col gap-1.5">`;
-      html += `  <div class="flex justify-between items-center font-bold">`;
-      html += `    <span class="thai-font text-[13px] text-rose-500 dark:text-rose-300">${sf.pattern}</span>`;
-      html += `    <span class="text-[9px] bg-rose-500/20 text-rose-600 dark:text-rose-300 px-1.5 py-0.5 rounded font-mono">${sf.sound}</span>`;
-      html += `  </div>`;
-      html += `  <div class="text-[9px] opacity-80 font-bold">${sf.desc}</div>`;
-      html += `  <div class="text-[10px] text-slate-500 dark:text-white/40 thai-font mt-0.5">例: ${sf.ex}</div>`;
-      html += `</div>`;
+      html += '<div class="bg-black/20 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl p-2.5 flex flex-col gap-1.5">';
+      html += '  <div class="flex justify-between items-center font-bold">';
+      html += '    <span class="thai-font text-[13px] text-rose-500 dark:text-rose-300">' + sf.pattern + '</span>';
+      html += '    <span class="text-[9px] bg-rose-500/20 text-rose-600 dark:text-rose-300 px-1.5 py-0.5 rounded font-mono">' + sf.sound + '</span>';
+      html += '  </div>';
+      html += '  <div class="text-[9px] opacity-80 font-bold">' + sf.desc + '</div>';
+      html += '  <div class="text-[10px] text-slate-500 dark:text-white/40 thai-font mt-0.5">例: ' + sf.ex + '</div>';
+      html += '</div>';
     });
     html += '</div></section>';
 
-    // ==========================================
-    // ★追加: F. 引導子音・特殊な頭子音 (UI表示専用)
-    // ==========================================
+    // --- F. 引導子音・特殊な頭子音 (UI表示専用) ---
     html += '<section class="bg-purple-500/5 rounded-2xl p-4 border border-purple-500/20 mt-4 shadow-sm mb-6">';
     html += '<p class="font-bold mb-2 text-purple-400 flex items-center"><span class="text-lg mr-2">F</span>Leading Consonants & Exceptions</p>';
     html += '<p class="text-[9px] opacity-70 mb-3 leading-relaxed text-purple-200/80">※エンジンが内部で「全自動計算」する声調引き上げルールと、個別対応が必要な例外です。</p>';
-    
     html += '<div class="flex flex-col gap-2">';
     
-    // UI表示用に直接定義したデータ（DBには影響しません）
     const specialInitials = [
       { 
         pattern: 'ห・อ 引導 (อักษรนำ)', 
@@ -581,14 +576,14 @@ renderToneRules: function() {
     ];
 
     specialInitials.forEach(si => {
-      html += `<div class="bg-black/20 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl p-2.5 flex flex-col gap-1.5">`;
-      html += `  <div class="flex flex-wrap justify-between items-center font-bold gap-1">`;
-      html += `    <span class="thai-font text-[13px] text-purple-500 dark:text-purple-300">${si.pattern}</span>`;
-      html += `    <span class="text-[9px] bg-purple-500/20 text-purple-600 dark:text-purple-300 px-1.5 py-0.5 rounded font-mono">${si.sound}</span>`;
-      html += `  </div>`;
-      html += `  <div class="text-[9px] opacity-80 font-bold">${si.desc}</div>`;
-      html += `  <div class="text-[10px] text-slate-500 dark:text-white/40 thai-font mt-0.5">例: ${si.ex}</div>`;
-      html += `</div>`;
+      html += '<div class="bg-black/20 dark:bg-white/5 border border-black/5 dark:border-white/5 rounded-xl p-2.5 flex flex-col gap-1.5">';
+      html += '  <div class="flex flex-wrap justify-between items-center font-bold gap-1">';
+      html += '    <span class="thai-font text-[13px] text-purple-500 dark:text-purple-300">' + si.pattern + '</span>';
+      html += '    <span class="text-[9px] bg-purple-500/20 text-purple-600 dark:text-purple-300 px-1.5 py-0.5 rounded font-mono">' + si.sound + '</span>';
+      html += '  </div>';
+      html += '  <div class="text-[9px] opacity-80 font-bold">' + si.desc + '</div>';
+      html += '  <div class="text-[10px] text-slate-500 dark:text-white/40 thai-font mt-0.5">例: ' + si.ex + '</div>';
+      html += '</div>';
     });
     html += '</div></section>';
     // --- 1. 声調記号がある場合 (With Marks) ---
