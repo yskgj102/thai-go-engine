@@ -1,18 +1,33 @@
 <script>
 const ChatSystem = {
+  isWaiting: false, // ★ 連投防止用のロックフラグ
+
+  // チャットを送信する処理
   sendMessage: function() {
+    if (this.isWaiting) return; // ★ 思考中なら連投をブロック
+
     const inputEl = document.getElementById('chat-input');
     const text = inputEl.value.trim();
     if (!text) return;
 
     inputEl.value = '';
+    this.isWaiting = true; // ★ ロックオン
     
+    // ★ 待機中のUI制御（入力不可にする）
+    inputEl.disabled = true;
+    inputEl.placeholder = "AIが思考中...";
+    const btn = document.getElementById('chat-send-btn');
+    if (btn) btn.classList.add('opacity-50', 'pointer-events-none');
+
+    // 1. ユーザーの入力を画面に表示
     this.appendMessage('user', text);
     this.showLoading();
 
+    // 2. GASのAPIを呼び出す
     google.script.run
       .withSuccessHandler(response => {
         this.hideLoading();
+        this.resetInput(); // ★ ロック解除
         if (response) {
           this.appendMessage('ai', response);
           this.extractAndRenderVocab(response);
@@ -22,11 +37,25 @@ const ChatSystem = {
       })
       .withFailureHandler(err => {
         this.hideLoading();
+        this.resetInput(); // ★ ロック解除
         this.appendMessage('error', '通信エラーが発生しました。');
       })
       .askTranslationTeacher(text);
   },
 
+  // ★ ロックを解除して入力欄を元に戻す処理
+  resetInput: function() {
+    this.isWaiting = false;
+    const inputEl = document.getElementById('chat-input');
+    inputEl.disabled = false;
+    inputEl.placeholder = "こういう時なんていう？...";
+    const btn = document.getElementById('chat-send-btn');
+    if (btn) btn.classList.remove('opacity-50', 'pointer-events-none');
+    // すぐに次の質問ができるよう、自動でフォーカスを戻す（スマホの場合はソフトウェアキーボードが出ないよう適宜調整）
+    // setTimeout(() => inputEl.focus(), 100); 
+  },
+
+  // 画面にメッセージを追加するUI処理
   appendMessage: function(role, text) {
     const container = document.getElementById('chat-messages-container');
     if (!container) return;
@@ -36,20 +65,43 @@ const ChatSystem = {
     
     if (role === 'user') {
       div.className = "text-right mb-4 animate-in slide-in-from-right-4 fade-in duration-200";
-      // ユーザーは青固定
       div.innerHTML = `<span class="bg-blue-600 text-white px-4 py-2 rounded-2xl rounded-tr-sm inline-block max-w-[80%] text-sm text-left shadow-sm">${formattedText}</span>`;
     } else {
       div.className = "text-left mb-4 animate-in slide-in-from-left-4 fade-in duration-200";
-      // AIはアプリのテーマ変数に完全連動
-      div.innerHTML = `<span class="px-4 py-2 rounded-2xl rounded-tl-sm inline-block max-w-[90%] text-sm shadow-sm border" style="background: var(--bg-card); color: var(--text-main); border-color: var(--border);">${formattedText}</span>`;
+      div.innerHTML = `<span class="bg-white dark:bg-white/10 text-slate-800 dark:text-white px-4 py-2 rounded-2xl rounded-tl-sm inline-block max-w-[90%] text-sm shadow-sm border border-slate-200 dark:border-white/5">${formattedText}</span>`;
     }
     container.appendChild(div);
-    // スクロールを一番下に
-    setTimeout(() => container.scrollTop = container.scrollHeight, 50);
+    container.scrollTop = container.scrollHeight;
   },
 
-  showLoading: function() { /* 必要に応じて実装 */ },
-  hideLoading: function() { /* 必要に応じて実装 */ },
+  // ★ LINE風の「考え中...」アニメーションを表示
+  showLoading: function() {
+    const container = document.getElementById('chat-messages-container');
+    if (!container) return;
+    
+    const div = document.createElement('div');
+    div.id = "chat-typing-indicator";
+    div.className = "text-left mb-4 animate-in slide-in-from-left-4 fade-in duration-200";
+    
+    // Tailwindの標準機能(animate-bounce)をズラして適用することで、3つの点が順番に跳ねる
+    div.innerHTML = `
+      <span class="bg-white dark:bg-white/10 px-4 py-3 rounded-2xl rounded-tl-sm inline-flex items-center gap-1 shadow-sm border border-slate-200 dark:border-white/5">
+        <span class="w-1.5 h-1.5 bg-slate-400 dark:bg-white/50 rounded-full animate-bounce" style="animation-delay: 0ms;"></span>
+        <span class="w-1.5 h-1.5 bg-slate-400 dark:bg-white/50 rounded-full animate-bounce" style="animation-delay: 150ms;"></span>
+        <span class="w-1.5 h-1.5 bg-slate-400 dark:bg-white/50 rounded-full animate-bounce" style="animation-delay: 300ms;"></span>
+      </span>
+    `;
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+  },
+
+  // ★ 回答が来たら「考え中...」を消す
+  hideLoading: function() {
+    const indicator = document.getElementById('chat-typing-indicator');
+    if (indicator) {
+      indicator.remove();
+    }
+  },
 
   extractAndRenderVocab: function(markdownText) {
     const tableRegex = /\|([^|]+)\|([^|]+)\|([^|]+)\|/g;
@@ -77,7 +129,6 @@ const ChatUI = {
     const container = document.getElementById('chat-action-panel');
     if (!container) return;
 
-    // ★ 修正ポイント: 完全に消すのではなく、リスト部分（ios-word-list）の表示/非表示を切り替えるアコーディオン式に変更
     let html = `
       <div class="rounded-2xl p-4 shadow-xl border flex flex-col mb-2 animate-in slide-in-from-bottom-5 transition-all" style="background: var(--bg-card); border-color: var(--border);">
         <div class="flex justify-between items-center shrink-0 cursor-pointer select-none active:opacity-70 transition-opacity" 
@@ -93,15 +144,23 @@ const ChatUI = {
     `;
 
     words.forEach((w, index) => {
+      // 💡 音声読み上げ時にエラーが出ないよう、タイ語内のクォーテーションをエスケープ
+      const safeTh = w.th.replace(/'/g, "\\'");
+
+      // 💡 追加: onclick="StudyEngine.speakSpecificText(...)" をカード全体に設定
+      // 💡 追加: cursor-pointer と active:scale-[0.98] でタップできる感を演出
       html += `
-        <div class="flex justify-between items-center p-3.5 rounded-2xl border shadow-sm" style="background: var(--input-bg); border-color: var(--border);">
+        <div onclick="StudyEngine.speakSpecificText('${safeTh}')" 
+             class="flex justify-between items-center p-3.5 rounded-2xl border shadow-sm cursor-pointer active:scale-[0.98] transition-transform" 
+             style="background: var(--input-bg); border-color: var(--border);">
+          
           <div class="flex-1 pr-3">
             <div class="text-base font-bold text-blue-500 thai-font mb-0.5">${w.th}</div>
             <div class="text-xs" style="color: var(--text-sub);">${w.ja} <span class="text-[10px] opacity-60 ml-1 font-mono">${w.phonetic}</span></div>
           </div>
           
           <button id="add-btn-${index}" 
-                  onclick="event.stopPropagation(); ChatUI.handleAddWord('${w.th}', '${w.ja}', '${w.phonetic}', ${index})"
+                  onclick="event.stopPropagation(); ChatUI.handleAddWord('${safeTh}', '${w.ja}', '${w.phonetic}', ${index})"
                   class="bg-blue-600 active:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-md transition-all active:scale-95 flex items-center justify-center min-w-[75px]">
             <svg class="w-4 h-4 mr-1 animate-spin hidden" id="spinner-${index}" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>

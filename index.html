@@ -300,8 +300,8 @@
                 style="color: var(--text-main);"
                 oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"></textarea>
       
-      <button onclick="ChatSystem.sendMessage()" 
-              class="bg-blue-600 text-white p-2 rounded-xl active:scale-90 transition-transform shadow-md flex-shrink-0 h-9 w-9 flex items-center justify-center">
+      <button id="chat-send-btn" onclick="ChatSystem.sendMessage()" 
+        class="bg-blue-600 text-white p-2 rounded-xl active:scale-90 transition-transform shadow-md flex-shrink-0 h-9 w-9 flex items-center justify-center">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
         </svg>
