@@ -263,16 +263,18 @@
 <div id="chat-open-btn"
      onclick="event.stopPropagation(); document.getElementById('chat-sheet-container').classList.remove('translate-y-full'); document.getElementById('chat-overlay').classList.remove('hidden');" 
      class="floating-action-btn left-5">
-  <span class="text-xl">💬</span>
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+  </svg>
 </div>
 
 <div id="chat-overlay" 
      onclick="document.getElementById('chat-sheet-container').classList.add('translate-y-full'); this.classList.add('hidden');"
-     class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] transition-opacity"></div>
+     class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-[9998] transition-opacity"></div>
 
 <div id="chat-sheet-container" 
      class="fixed bottom-0 left-0 right-0 max-w-md mx-auto h-[85vh] rounded-t-3xl shadow-2xl z-[9999] flex flex-col translate-y-full transition-transform duration-300 ease-out border-t"
-     style="background-color: var(--bg-main); border-color: var(--border);">
+     style="background-color: var(--bg-card); border-color: var(--border);">
   
   <div class="flex-shrink-0 pt-3 pb-2 flex flex-col items-center border-b relative rounded-t-3xl" style="background-color: var(--bg-card); border-color: var(--border);">
     <div class="w-12 h-1.5 rounded-full mb-3" style="background-color: var(--text-sub); opacity: 0.3;"></div>
