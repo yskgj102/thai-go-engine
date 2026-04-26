@@ -77,16 +77,19 @@ const ChatUI = {
     const container = document.getElementById('chat-action-panel');
     if (!container) return;
 
-    // 高さ制限(max-h-[40vh])とスクロール(overflow-y-auto)、閉じるボタンを追加
+    // ★ 修正ポイント: 完全に消すのではなく、リスト部分（ios-word-list）の表示/非表示を切り替えるアコーディオン式に変更
     let html = `
-      <div class="rounded-2xl p-4 shadow-xl border flex flex-col max-h-[40vh] mb-2 animate-in slide-in-from-bottom-5" style="background: var(--bg-card); border-color: var(--border);">
-        <div class="flex justify-between items-center mb-3 shrink-0">
+      <div class="rounded-2xl p-4 shadow-xl border flex flex-col mb-2 animate-in slide-in-from-bottom-5 transition-all" style="background: var(--bg-card); border-color: var(--border);">
+        <div class="flex justify-between items-center shrink-0 cursor-pointer select-none active:opacity-70 transition-opacity" 
+             onclick="const list = document.getElementById('ios-word-list'); list.classList.toggle('hidden'); const btn = document.getElementById('toggle-list-btn'); btn.innerText = list.classList.contains('hidden') ? '開く ▼' : '閉じる ▲';">
           <h3 class="font-bold text-sm flex items-center gap-2" style="color: var(--text-main);">
             <span>📝</span> 抽出された単語
           </h3>
-          <button onclick="document.getElementById('chat-action-panel').innerHTML=''" class="text-[10px] font-bold opacity-60 active:scale-90 px-3 py-1.5 rounded-lg border transition-all" style="background: var(--input-bg); color: var(--text-main); border-color: var(--border);">閉じる ×</button>
+          <div id="toggle-list-btn" class="text-[10px] font-bold opacity-60 px-3 py-1.5 rounded-lg border transition-all flex items-center justify-center" style="background: var(--input-bg); color: var(--text-main); border-color: var(--border);">
+            閉じる ▲
+          </div>
         </div>
-        <div class="space-y-2 overflow-y-auto custom-scrollbar pr-1 pb-1" id="ios-word-list">
+        <div class="space-y-2 overflow-y-auto custom-scrollbar pr-1 mt-3 max-h-[35vh]" id="ios-word-list">
     `;
 
     words.forEach((w, index) => {
@@ -98,7 +101,7 @@ const ChatUI = {
           </div>
           
           <button id="add-btn-${index}" 
-                  onclick="ChatUI.handleAddWord('${w.th}', '${w.ja}', '${w.phonetic}', ${index})"
+                  onclick="event.stopPropagation(); ChatUI.handleAddWord('${w.th}', '${w.ja}', '${w.phonetic}', ${index})"
                   class="bg-blue-600 active:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-md transition-all active:scale-95 flex items-center justify-center min-w-[75px]">
             <svg class="w-4 h-4 mr-1 animate-spin hidden" id="spinner-${index}" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
