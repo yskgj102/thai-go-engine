@@ -260,6 +260,58 @@
   </div>
 </div>
 
+<div id="chat-open-btn"
+     onclick="event.stopPropagation(); document.getElementById('chat-sheet-container').classList.remove('translate-y-full'); document.getElementById('chat-overlay').classList.remove('hidden');" 
+     class="floating-action-btn left-5" style="bottom: 80px;">
+  <span class="text-xl">💬</span>
+</div>
+
+<div id="chat-overlay" 
+     onclick="document.getElementById('chat-sheet-container').classList.add('translate-y-full'); this.classList.add('hidden');"
+     class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] transition-opacity"></div>
+
+<div id="chat-sheet-container" 
+     class="fixed bottom-0 left-0 right-0 max-w-md mx-auto h-[85vh] rounded-t-3xl shadow-2xl z-[9999] flex flex-col translate-y-full transition-transform duration-300 ease-out border-t"
+     style="background-color: var(--bg-main); border-color: var(--border);">
+  
+  <div class="flex-shrink-0 pt-3 pb-2 flex flex-col items-center border-b relative rounded-t-3xl" style="background-color: var(--bg-card); border-color: var(--border);">
+    <div class="w-12 h-1.5 rounded-full mb-3" style="background-color: var(--text-sub); opacity: 0.3;"></div>
+    <h3 class="font-bold text-sm tracking-widest uppercase flex items-center gap-1" style="color: var(--text-main);">
+      <span class="text-blue-500">✨ AI</span> Translation
+    </h3>
+    <button onclick="document.getElementById('chat-sheet-container').classList.add('translate-y-full'); document.getElementById('chat-overlay').classList.add('hidden');" 
+            class="absolute right-4 top-4 text-xs font-bold active:scale-90" style="color: var(--text-sub);">Close ×</button>
+  </div>
+
+  <div id="chat-messages-container" class="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+    <div class="text-left">
+      <span class="px-4 py-2 rounded-2xl rounded-tl-sm inline-block max-w-[90%] text-xs leading-relaxed shadow-sm border" style="background: var(--bg-card); color: var(--text-main); border-color: var(--border);">
+        「とりあえず生ビールで」や「お会計お願いします」など、知りたいフレーズを日本語で聞いてください🍺
+      </span>
+    </div>
+  </div>
+
+  <div id="chat-action-panel" class="flex-shrink-0 px-2 relative z-50"></div>
+
+  <div class="flex-shrink-0 p-4 border-t pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.05)]" style="background-color: var(--bg-card); border-color: var(--border);">
+    <div class="flex items-end gap-2 p-1.5 rounded-2xl border transition-colors focus-within:border-blue-500/50" style="background-color: var(--input-bg); border-color: var(--border);">
+      <textarea id="chat-input" rows="1" placeholder="こういう時なんていう？..."
+                class="flex-1 bg-transparent text-sm px-3 py-2 focus:outline-none resize-none max-h-[100px]"
+                style="color: var(--text-main);"
+                oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"></textarea>
+      
+      <button onclick="ChatSystem.sendMessage()" 
+              class="bg-blue-600 text-white p-2 rounded-xl active:scale-90 transition-transform shadow-md flex-shrink-0 h-9 w-9 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+
+
 <footer id="footer-ui"
   class="p-6 pb-12 border-t flex gap-4 fixed bottom-0 left-0 right-0 max-w-md mx-auto z-50 pointer-events-none translate-y-full transition-all">
   <button onclick="StudyEngine.answer(3)" class="flex-1 bg-transparent text-blue-500 py-5 rounded-2xl font-black text-[10px] border border-blue-500/30 active:scale-95 transition-all">簡単</button>
@@ -274,6 +326,7 @@
   <?!= include('AudioSystem'); ?>
   <?!= include('VocabListUI'); ?>
   <?!= include('StudyEngine'); ?>
+  <?!= include('ChatSystem'); ?>
 
   <script>
     window.onload = () => {

@@ -1334,9 +1334,33 @@ parseSyllables: function(text, dbEntry = null) {
         const nextMark = chars[i+2]; 
         const combo = c1 + c2;
 
+        // ★ 追加: 「ว」の強欲吸着バグを防ぐ先読みロジック
+        let isW_Cluster = true; 
+        if (c2 === 'ว') {
+          let hasVowel = !!syl.leadingV; // 前置母音（เ แ โ ฯลฯ）があればOK
+          let tempI = i + 2;
+          while (tempI < chars.length) {
+            const lookC = chars[tempI];
+            if (toneMarks.indexOf(lookC) !== -1) {
+              tempI++; // 声調記号ならさらに次を見る
+              continue;
+            }
+            if (vMarks.indexOf(lookC) !== -1) {
+              hasVowel = true; // 母音記号を発見！
+            }
+            break; // 母音でも声調でもなければ終了
+          }
+          // 母音記号が一切ない場合、この「ว」は二重子音ではなく母音（ua）である
+          if (!hasVowel) {
+            isW_Cluster = false;
+          }
+        }
+
         if (c2 && ThaiMasterData.clusters[combo]) {
           if (c2 === 'ร' && nextMark === 'ร') {
             syl.mainC = c1; syl.full += c1; i++;
+          } else if (c2 === 'ว' && !isW_Cluster) {
+            syl.mainC = c1; syl.full += c1; i++; // ★合体キャンセル！
           } else {
             syl.mainC = combo; syl.full += combo; i += 2;
           }
@@ -1345,7 +1369,11 @@ parseSyllables: function(text, dbEntry = null) {
           (c1 === 'ห' && c2 && "งญนมรลวยว".indexOf(c2) !== -1) || 
           (c1 === 'อ' && c2 === 'ย' && (nextMark === 'า' || nextMark === '่' || nextMark === 'ู'))
         ) {
-          syl.mainC = combo; syl.full += combo; i += 2;
+          if (c2 === 'ว' && !isW_Cluster) {
+            syl.mainC = c1; syl.full += c1; i++; // ★合体キャンセル！
+          } else {
+            syl.mainC = combo; syl.full += combo; i += 2;
+          }
         } 
         else {
           syl.mainC = c1; syl.full += c1; i++;

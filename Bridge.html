@@ -151,7 +151,41 @@ VocabListUI.renderCategoryBar()
       })
       .quickAddAutoFill(val);
   },
+/**
+   * チャット画面からの単語追加（バックグラウンド処理版）
+   * 画面全体をロックせず、AppStoreの同期だけを完璧に行う
+   */
+  addFromChat: function(wordTh, callback) {
+    if (!wordTh || AppStore.state.isProcessing) {
+      if (callback) callback(false, false);
+      return;
+    }
 
+    google.script.run
+      .withSuccessHandler(res => {
+        if (res && res.status === "duplicate") {
+          if (callback) callback(false, true); // 失敗, 重複あり
+        } else if (res && res.status === "success") {
+          // ==========================================
+          // 🌟 既存のQuickAddと全く同じ完璧な同期ロジック
+          // ==========================================
+          AppStore.state.allVocab.unshift(res.data);
+          AppStore.state.queue.splice(AppStore.state.currentIndex + 1, 0, res.data);
+          ViewController.updateTotalCount(AppStore.state.allVocab.length);
+          if (typeof VocabListUI !== 'undefined') {
+            VocabListUI.update();
+            VocabListUI.renderCategoryBar();
+          }
+          if (callback) callback(true, false); // 成功, 重複なし
+        } else {
+          if (callback) callback(false, false); // その他エラー
+        }
+      })
+      .withFailureHandler(() => {
+        if (callback) callback(false, false);
+      })
+      .quickAddAutoFill(wordTh);
+  },
   // /**
   //  * AIによるカード詳細情報の再生成
   //  * 既存の単語IDに対して、AIが例文や解説を新しく作り直す。
