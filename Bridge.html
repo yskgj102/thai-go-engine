@@ -606,7 +606,7 @@ const AutoPlayEngine = {
     }
   },
 
-  // ★ プレイリスト（再生キュー）の構築と開始
+// ★ プレイリスト（再生キュー）の構築と開始
   playSequence: function() {
     if (!this.active) return;
     const item = AppStore.state.queue[AppStore.state.currentIndex];
@@ -617,20 +617,49 @@ const AutoPlayEngine = {
     const playlist = [];
 
     // ① 表面 (単語)
-    playlist.push({ text: isThaiMode ? item.word_th : item.meaning_ja, lang: isThaiMode ? 'th-TH' : 'ja-JP', rate: isThaiMode ? rate : 1.0, delayAfter: 1000 });
-    // ② 裏面 (意味)
-    playlist.push({ text: isThaiMode ? item.meaning_ja : item.word_th, lang: isThaiMode ? 'ja-JP' : 'th-TH', rate: isThaiMode ? 1.0 : rate, delayAfter: 1200 });
+    playlist.push({ 
+      text: isThaiMode ? item.word_th : item.meaning_ja.replace(/^\d+[\.\)）]\s*/, ''), 
+      lang: isThaiMode ? 'th-TH' : 'ja-JP', 
+      rate: isThaiMode ? rate : 1.0, 
+      delayAfter: 1000 
+    });
+
+    // ② 裏面 (意味：複数ある場合は分割して全て追加！)
+    const rawMeaning = isThaiMode ? item.meaning_ja : item.word_th;
+    const meaningLang = isThaiMode ? 'ja-JP' : 'th-TH';
+    const mRate = isThaiMode ? 1.0 : rate;
+
+    // 「1. 意味1 2. 意味2」のような形式を分割
+    const meanings = rawMeaning.split(/(?=\d+[\.\)）])/).map(s => s.replace(/^\d+[\.\)）]\s*/, '').trim()).filter(Boolean);
+    
+    meanings.forEach(text => {
+      playlist.push({ text: text, lang: meaningLang, rate: mRate, delayAfter: 1000 });
+    });
 
     // ③ 例文群の構築 (AIの箇条書き番号「1. 」などを自動カット)
     if (item.example_th && item.example_th !== "---") {
-      const exThArr = item.example_th.split('\n').map(s => s.replace(/^\d+[\.\)）]\s*/, '').trim()).filter(Boolean);
-      const exJaArr = item.example_ja ? item.example_ja.split('\n').map(s => s.replace(/^\d+[\.\)）]\s*/, '').trim()).filter(Boolean) : [];
+      const splitRegex = /\n|(?=\d+[\.\)）])/;
+      const cleanRegex = /^\d+[\.\)）]\s*/;
+
+      const exThArr = item.example_th.split(splitRegex).map(s => s.replace(cleanRegex, '').trim()).filter(Boolean);
+      const exJaArr = item.example_ja ? item.example_ja.split(splitRegex).map(s => s.replace(cleanRegex, '').trim()).filter(Boolean) : [];
       
       const maxEx = Math.min(exThArr.length, exJaArr.length);
       for (let i = 0; i < maxEx; i++) {
-        // 例文TH → 例文JA の順でプレイリストに追加
-        playlist.push({ text: isThaiMode ? exThArr[i] : exJaArr[i], lang: isThaiMode ? 'th-TH' : 'ja-JP', rate: isThaiMode ? rate : 1.0, delayAfter: 800 });
-        playlist.push({ text: isThaiMode ? exJaArr[i] : exThArr[i], lang: isThaiMode ? 'ja-JP' : 'th-TH', rate: isThaiMode ? 1.0 : rate, delayAfter: 1200 });
+        // タイ語例文
+        playlist.push({ 
+          text: isThaiMode ? exThArr[i] : exJaArr[i], 
+          lang: isThaiMode ? 'th-TH' : 'ja-JP', 
+          rate: isThaiMode ? rate : 1.0, 
+          delayAfter: 800 
+        });
+        // 日本語訳
+        playlist.push({ 
+          text: isThaiMode ? exJaArr[i] : exThArr[i], 
+          lang: isThaiMode ? 'ja-JP' : 'th-TH', 
+          rate: isThaiMode ? 1.0 : rate, 
+          delayAfter: 1200 
+        });
       }
     }
 
