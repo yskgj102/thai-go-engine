@@ -335,18 +335,14 @@ jumpToWordFromId: function(id) {
     let targetIndex = AppStore.state.queue.findIndex(v => v.id === id);
 
     if (targetIndex === -1) {
-      // 🚨 現在のキュー（STARモード等）には存在しない場合！
-      // 1. 全単語マスタから対象を探し出す
+      // 🚨 現在のキュー（STARモード等）には存在しない場合
       const wordInMaster = AppStore.state.allVocab.find(v => v.id === id);
       
       if (wordInMaster) {
-        // 2. 今表示しているカードの「真後ろ」に強制的に挿入する
+        // 今表示しているカードの「真後ろ」に強制的に挿入する
         targetIndex = AppStore.state.currentIndex + 1;
         AppStore.state.queue.splice(targetIndex, 0, wordInMaster);
-        
-        // 💡 これによりSTARモードを解除することなく、対象の単語だけを一時的に確認できます
       } else {
-        // マスタにも無ければ諦める
         return; 
       }
     }
@@ -355,9 +351,14 @@ jumpToWordFromId: function(id) {
     AppStore.update('currentIndex', targetIndex);
     this.render();
     
-    // パネルが開いていれば閉じる
+    // ==========================================
+    // ★ ここを修正！「すでに開いている時だけ」閉じる処理を呼ぶ
+    // ==========================================
     if (typeof ViewController !== 'undefined') {
-      ViewController.toggleVocabPanel(false);
+      const panel = document.getElementById('vocab-panel');
+      if (panel && !panel.classList.contains('hidden')) {
+        ViewController.toggleVocabPanel();
+      }
     }
   },
   /**
