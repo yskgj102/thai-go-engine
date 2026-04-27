@@ -473,6 +473,23 @@ updateText: function(item, isThai) {
         }, 10);
       });
     }
+    const safeWordEl = document.getElementById('word-th');
+    if (safeWordEl) {
+      // 実際の画面上の文字数をカウント（改行も考慮）
+      const textLen = safeWordEl.innerText.length;
+      
+      // 文字数に応じてCSSのサイズを上書き
+      if (textLen > 20) {
+        // 小: 長文フレーズ
+        safeWordEl.style.setProperty('font-size', 'clamp(1.5rem, 6vw, 2.2rem)', 'important'); 
+      } else if (textLen > 10) {
+        // 中: 少し長い単語
+        safeWordEl.style.setProperty('font-size', 'clamp(2.5rem, 8vw, 3.5rem)', 'important'); 
+      } else {
+        // 大（デフォルト）: 元の text-6xl (3.75rem) 〜 PC用 (5rem) を完全再現！
+        safeWordEl.style.setProperty('font-size', 'clamp(3.75rem, 12vw, 5rem)', 'important'); 
+      }
+    }
   },
   /**
    * 単語の忘却・学習間隔統計を画面に反映
