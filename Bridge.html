@@ -607,7 +607,7 @@ const AutoPlayEngine = {
   },
 
 // ★ プレイリスト（再生キュー）の構築と開始
-  playSequence: function() {
+playSequence: function() {
     if (!this.active) return;
     const item = AppStore.state.queue[AppStore.state.currentIndex];
     if (!item) return this.stop();
@@ -616,27 +616,73 @@ const AutoPlayEngine = {
     const rate = AppStore.state.isSlowMode ? 0.7 : 0.9;
     const playlist = [];
 
-    // ① 表面 (単語)
-    playlist.push({ 
-      text: isThaiMode ? item.word_th : item.meaning_ja.replace(/^\d+[\.\)）]\s*/, ''), 
-      lang: isThaiMode ? 'th-TH' : 'ja-JP', 
-      rate: isThaiMode ? rate : 1.0, 
-      delayAfter: 1000 
-    });
+    // ==================================================
+    // 日本語（意味）の読み上げ内容を「1、品詞、意味」の形に構築する関数
+    // ==================================================
+    const getJaPlaylistItems = (delay) => {
+      const items = [];
+      let rawCat = item.category || '---';
+      rawCat = rawCat.replace(/(名詞\s*（類別詞:\s*)+/g, '名詞（類別詞: ');
+      const jaText = item.meaning_ja || '';
 
-    // ② 裏面 (意味：複数ある場合は分割して全て追加！)
-    const rawMeaning = isThaiMode ? item.meaning_ja : item.word_th;
-    const meaningLang = isThaiMode ? 'ja-JP' : 'th-TH';
-    const mRate = isThaiMode ? 1.0 : rate;
+      if (jaText.includes('1.')) {
+        // 多義語パターンの場合
+        const meaningParts = jaText.split(/(?=\d+[\.\)）])/).filter(p => p.trim() !== '');
+        const catParts = /(?:^|\s)\d+\./.test(rawCat) 
+          ? rawCat.split(/(?=\d+\.)/).filter(p => p.trim() !== '') 
+          : [];
 
-    // 「1. 意味1 2. 意味2」のような形式を分割
-    const meanings = rawMeaning.split(/(?=\d+[\.\)）])/).map(s => s.replace(/^\d+[\.\)）]\s*/, '').trim()).filter(Boolean);
-    
-    meanings.forEach(text => {
-      playlist.push({ text: text, lang: meaningLang, rate: mRate, delayAfter: 1000 });
-    });
+        meaningParts.forEach((part, index) => {
+          const numMatch = part.match(/^(\d+)[\.\)）]/);
+          const num = numMatch ? numMatch[1] : (index + 1);
+          const cleanMeaning = part.replace(/^\d+[\.\)）]\s*/, '').trim();
+          
+          let cleanCat = '';
+          if (catParts[index]) {
+             cleanCat = catParts[index].replace(/^\d+\.\s*/, '').trim();
+          } else if (index === 0 && !/(?:^|\s)\d+\./.test(rawCat)) {
+             cleanCat = rawCat.replace(/[\r\n]+/g, ' ').trim();
+          }
 
-    // ③ 例文群の構築 (AIの箇条書き番号「1. 」などを自動カット)
+          // 「1、品詞、意味」の形にテキストを結合する
+          let textToSpeak = `${num}、`;
+          if (cleanCat && cleanCat !== '---') {
+            // カッコ記号などは読み上げエラーを防ぐために消す
+            textToSpeak += `${cleanCat.replace(/[（）()]/g, '')}、`;
+          }
+          textToSpeak += cleanMeaning;
+          
+          items.push({ text: textToSpeak, lang: 'ja-JP', rate: 1.0, delayAfter: delay });
+        });
+      } else {
+        // 意味が1つの場合
+        let cleanCat = rawCat.replace(/[\r\n]+/g, ' ').trim();
+        let textToSpeak = '';
+        if (cleanCat && cleanCat !== '---') {
+           textToSpeak += `${cleanCat.replace(/[（）()]/g, '')}、`;
+        }
+        textToSpeak += jaText.trim();
+        items.push({ text: textToSpeak, lang: 'ja-JP', rate: 1.0, delayAfter: delay });
+      }
+      return items;
+    };
+
+    // ==================================================
+    // ① と ②：言語出題モードに合わせて順番をセット
+    // ==================================================
+    if (isThaiMode) {
+      // タイ語 -> 日本語（1、品詞、意味...）
+      playlist.push({ text: item.word_th, lang: 'th-TH', rate: rate, delayAfter: 1000 });
+      playlist.push(...getJaPlaylistItems(1200));
+    } else {
+      // 日本語（1、品詞、意味...） -> タイ語
+      playlist.push(...getJaPlaylistItems(1000));
+      playlist.push({ text: item.word_th, lang: 'th-TH', rate: rate, delayAfter: 1200 });
+    }
+
+    // ==================================================
+    // ③ 例文群の構築
+    // ==================================================
     if (item.example_th && item.example_th !== "---") {
       const splitRegex = /\n|(?=\d+[\.\)）])/;
       const cleanRegex = /^\d+[\.\)）]\s*/;
@@ -646,14 +692,12 @@ const AutoPlayEngine = {
       
       const maxEx = Math.min(exThArr.length, exJaArr.length);
       for (let i = 0; i < maxEx; i++) {
-        // タイ語例文
         playlist.push({ 
           text: isThaiMode ? exThArr[i] : exJaArr[i], 
           lang: isThaiMode ? 'th-TH' : 'ja-JP', 
           rate: isThaiMode ? rate : 1.0, 
           delayAfter: 800 
         });
-        // 日本語訳
         playlist.push({ 
           text: isThaiMode ? exJaArr[i] : exThArr[i], 
           lang: isThaiMode ? 'ja-JP' : 'th-TH', 
@@ -665,7 +709,6 @@ const AutoPlayEngine = {
 
     // プレイリストの実行開始
     this.runPlaylist(playlist, 0, () => {
-      // 全て終わったら次のカードへ
       if (!this.active) return;
       const nextIdx = (AppStore.state.currentIndex + 1) % AppStore.state.queue.length;
       AppStore.update('currentIndex', nextIdx);
