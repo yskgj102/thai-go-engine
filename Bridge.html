@@ -564,7 +564,7 @@ const AutoPlayEngine = {
         .catch(err => console.log('WakeLock Error:', err));
     }
 
-    this.executeStep(0); 
+    this.playSequence(); 
   },
 
   stop: function() {
@@ -606,79 +606,70 @@ const AutoPlayEngine = {
     }
   },
 
-  executeStep: function(step) {
+  // ★ プレイリスト（再生キュー）の構築と開始
+  playSequence: function() {
     if (!this.active) return;
     const item = AppStore.state.queue[AppStore.state.currentIndex];
     if (!item) return this.stop();
     
     const isThaiMode = AppStore.state.isTargetThai;
     const rate = AppStore.state.isSlowMode ? 0.7 : 0.9;
+    const playlist = [];
 
-    switch (step) {
-      case 0: // ① 表面の読み上げ ＋ めくり
-        // 二重再生防止のため元の声帯を奪う
-        const originalSpeak = StudyEngine.speak;
-        StudyEngine.speak = function() {}; 
-        
-        StudyEngine.revealAll(); 
-        
-        // 0.5秒後に声帯を返す
-        setTimeout(() => { StudyEngine.speak = originalSpeak; }, 500); 
+    // ① 表面 (単語)
+    playlist.push({ text: isThaiMode ? item.word_th : item.meaning_ja, lang: isThaiMode ? 'th-TH' : 'ja-JP', rate: isThaiMode ? rate : 1.0, delayAfter: 1000 });
+    // ② 裏面 (意味)
+    playlist.push({ text: isThaiMode ? item.meaning_ja : item.word_th, lang: isThaiMode ? 'ja-JP' : 'th-TH', rate: isThaiMode ? 1.0 : rate, delayAfter: 1200 });
 
-        const t0 = isThaiMode ? item.word_th : item.meaning_ja;
-        this.timer = setTimeout(() => {
-          AudioSystem.play(t0, isThaiMode ? 'th-TH' : 'ja-JP', isThaiMode ? rate : 1.0, () => {
-            // 単語（1回目）が終わったら、すぐに裏面（日本語）へ
-            if (this.active) this.timer = setTimeout(() => this.executeStep(1), 1000);
-          });
-        }, 100);
-        break;
-
-      case 1: // ② 裏面（意味）の読み上げ
-        const t1 = isThaiMode ? item.meaning_ja : item.word_th;
-        AudioSystem.play(t1, isThaiMode ? 'ja-JP' : 'th-TH', isThaiMode ? 1.0 : rate, () => {
-          if (this.active) this.timer = setTimeout(() => this.executeStep(2), 1200);
-        });
-        break;
-
-      case 2: // ③ 例文問い（1回目）
-        const t2 = isThaiMode ? item.example_th : item.example_ja;
-        if (t2 && t2 !== "---") {
-          AudioSystem.play(t2, isThaiMode ? 'th-TH' : 'ja-JP', isThaiMode ? rate : 1.0, () => {
-            if (this.active) this.timer = setTimeout(() => this.executeStep(3), 800);
-          });
-        } else {
-          // 例文がない場合はスキップして次へ
-          this.executeStep(4);
-        }
-        break;
-
-      case 3: // ④ 例文問い（2回目リピート）
-        const t3 = isThaiMode ? item.example_th : item.example_ja;
-        AudioSystem.play(t3, isThaiMode ? 'th-TH' : 'ja-JP', isThaiMode ? rate : 1.0, () => {
-          if (this.active) this.timer = setTimeout(() => this.executeStep(4), 1200);
-        });
-        break;
-
-      case 4: // ⑤ 例文答え（日本語） ＋ 次のカードへ
-        const t4 = isThaiMode ? item.example_ja : item.example_th;
-        const nextWord = () => {
-          if (!this.active) return;
-          const nextIdx = (AppStore.state.currentIndex + 1) % AppStore.state.queue.length;
-          AppStore.update('currentIndex', nextIdx);
-          StudyEngine.render(); 
-          this.timer = setTimeout(() => this.executeStep(0), 2000); // 2秒待って次の単語へ
-        };
-        
-        if (t4 && t4 !== "---") {
-          AudioSystem.play(t4, isThaiMode ? 'ja-JP' : 'th-TH', isThaiMode ? 1.0 : rate, nextWord);
-        } else {
-          nextWord();
-        }
-        break;
+    // ③ 例文群の構築 (AIの箇条書き番号「1. 」などを自動カット)
+    if (item.example_th && item.example_th !== "---") {
+      const exThArr = item.example_th.split('\n').map(s => s.replace(/^\d+[\.\)）]\s*/, '').trim()).filter(Boolean);
+      const exJaArr = item.example_ja ? item.example_ja.split('\n').map(s => s.replace(/^\d+[\.\)）]\s*/, '').trim()).filter(Boolean) : [];
+      
+      const maxEx = Math.min(exThArr.length, exJaArr.length);
+      for (let i = 0; i < maxEx; i++) {
+        // 例文TH → 例文JA の順でプレイリストに追加
+        playlist.push({ text: isThaiMode ? exThArr[i] : exJaArr[i], lang: isThaiMode ? 'th-TH' : 'ja-JP', rate: isThaiMode ? rate : 1.0, delayAfter: 800 });
+        playlist.push({ text: isThaiMode ? exJaArr[i] : exThArr[i], lang: isThaiMode ? 'ja-JP' : 'th-TH', rate: isThaiMode ? 1.0 : rate, delayAfter: 1200 });
+      }
     }
+
+    // プレイリストの実行開始
+    this.runPlaylist(playlist, 0, () => {
+      // 全て終わったら次のカードへ
+      if (!this.active) return;
+      const nextIdx = (AppStore.state.currentIndex + 1) % AppStore.state.queue.length;
+      AppStore.update('currentIndex', nextIdx);
+      StudyEngine.render(); 
+      this.timer = setTimeout(() => this.playSequence(), 2000);
+    });
   },
 
+  // ★ プレイリストを順番に消化する再帰関数
+  runPlaylist: function(playlist, index, onComplete) {
+    if (!this.active) return;
+    if (index >= playlist.length) {
+      onComplete();
+      return;
+    }
+
+    const track = playlist[index];
+
+    // 再生開始時（index === 0）にカードをめくる
+    if (index === 0) {
+      const originalSpeak = StudyEngine.speak;
+      StudyEngine.speak = function() {}; 
+      StudyEngine.revealAll(); 
+      setTimeout(() => { StudyEngine.speak = originalSpeak; }, 500); 
+    }
+
+    AudioSystem.play(track.text, track.lang, track.rate, () => {
+      if (!this.active) return;
+      this.timer = setTimeout(() => {
+        this.runPlaylist(playlist, index + 1, onComplete);
+      }, track.delayAfter);
+    });
+  }
 };
 
 // ★追加：2. バックグラウンド（別アプリ切り替えや画面オフ）を検知して自動一時停止

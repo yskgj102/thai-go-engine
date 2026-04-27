@@ -311,7 +311,7 @@ const ViewController = {
 /**
    * AppStoreから渡された単語情報をHTML各要素に反映
    */
-  updateText: function(item, isThai) {
+updateText: function(item, isThai) {
     const formatMultiline = (text) => {
       if (!text) return '---';
       return String(text).replace(/\s+(?=[2-9]\.)/g, '\n');
@@ -331,30 +331,42 @@ const ViewController = {
       if (el) el.innerText = val;
     });
 
+    // ==========================================
+    // 🌟 修正ポイント1: 表面（メイン）の段階的リサイズ
+    // ==========================================
     const wordEl = document.getElementById('word-th');
     if (wordEl) {
+      const len = frontText.length;
       const lines = frontText.split('\n').length;
-      if (frontText.length > 12 || lines > 1) {
-        wordEl.style.fontSize = 'clamp(1.4rem, 6vw, 2.2rem)'; 
+      const effectiveLen = Math.max(len, lines * 8); // 改行がある場合は長めに判定
+
+      // 5段階でなめらかにサイズを落とす（clampを使ってスマホ〜PCまで美しく連動）
+      if (effectiveLen <= 6) {
+        wordEl.style.fontSize = 'clamp(3rem, 10vw, 4.5rem)';     // 超特大 (短い単語)
+      } else if (effectiveLen <= 12) {
+        wordEl.style.fontSize = 'clamp(2.5rem, 8vw, 3.5rem)';    // 特大
+      } else if (effectiveLen <= 20) {
+        wordEl.style.fontSize = 'clamp(2rem, 6vw, 2.8rem)';      // 大 (中くらいのフレーズ)
+      } else if (effectiveLen <= 40) {
+        wordEl.style.fontSize = 'clamp(1.5rem, 5vw, 2.2rem)';    // 中 (長めのフレーズ)
       } else {
-        wordEl.style.fontSize = ''; 
+        wordEl.style.fontSize = 'clamp(1.2rem, 4vw, 1.6rem)';    // 小 (長文)
       }
     }
 
     const ph = document.getElementById('phonetic');
     if (ph) isThai ? ph.classList.remove('hidden') : ph.classList.add('hidden');
 
-    // ==========================================
-    // ★ 意味(meaning)と品詞(category)の強制中央揃え（Tailwind無視の物理CSS版）
-    // ==========================================
     const categoryEl = document.getElementById('category');
     const meaningEl = document.getElementById('meaning');
     
     if (categoryEl) categoryEl.style.display = 'none'; 
 
+    // ==========================================
+    // 🌟 修正ポイント2: 裏面（意味）の段階的リサイズ
+    // ==========================================
     if (meaningEl) {
       meaningEl.innerHTML = '';
-      // Tailwindに頼らず、直接CSSで「縦並び・中央揃え・隙間あり」を強制指定
       meaningEl.style.cssText = 'width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem; text-align: center;';
 
       let rawCat = item.category || '---';
@@ -380,10 +392,8 @@ const ViewController = {
           }
 
           const block = document.createElement('div');
-          // ブロック自体も強制中央揃え
           block.style.cssText = 'display: flex; flex-direction: column; align-items: center; gap: 0.5rem; width: 100%;';
           
-          // 「数字＋バッジ」の行も強制横並び中央揃え
           let headerHtml = `<div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; width: 100%;">
                               <span class="text-blue-500/70 font-black" style="font-size: 1.5rem;">${num}.</span>`;
           if (cleanCat && cleanCat !== '---') {
@@ -391,8 +401,12 @@ const ViewController = {
           }
           headerHtml += `</div>`;
           
-          // テキストも強制中央揃え
-          const textHtml = `<div class="font-bold text-center" style="font-size: 1.5rem; color: var(--text-main); width: 100%;">${cleanMeaning}</div>`;
+          // 意味の長さでサイズ調整（多義語パターン）
+          const partLen = cleanMeaning.length;
+          let partSize = 'clamp(1.3rem, 4.5vw, 1.6rem)';
+          if (partLen > 20) partSize = 'clamp(1.1rem, 4vw, 1.3rem)';
+          
+          const textHtml = `<div class="font-bold text-center" style="font-size: ${partSize}; color: var(--text-main); width: 100%; white-space: pre-wrap; line-height: 1.4;">${cleanMeaning}</div>`;
           
           block.innerHTML = headerHtml + textHtml;
           meaningEl.appendChild(block);
@@ -410,9 +424,15 @@ const ViewController = {
         }
         
         const textDiv = document.createElement('div');
-        // ここもTailwindを使わずに絶対中央揃えを物理指定
         textDiv.className = 'font-black text-center';
-        textDiv.style.cssText = 'font-size: 1.875rem; color: var(--text-main); width: 100%; text-align: center;';
+        
+        // 意味の長さでサイズ調整（単一意味パターン）
+        const backLen = backText.trim().length;
+        let backSize = 'clamp(1.8rem, 6vw, 2.5rem)';
+        if (backLen > 15) backSize = 'clamp(1.5rem, 5vw, 2rem)';
+        if (backLen > 30) backSize = 'clamp(1.2rem, 4vw, 1.5rem)';
+
+        textDiv.style.cssText = `font-size: ${backSize}; color: var(--text-main); width: 100%; text-align: center; white-space: pre-wrap; line-height: 1.4;`;
         textDiv.innerText = backText.trim();
         meaningEl.appendChild(textDiv);
       }
