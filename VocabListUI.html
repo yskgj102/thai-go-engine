@@ -7,7 +7,8 @@ const VocabListUI = {
   state: {
     displayLimit: 80, // 初回表示件数（2万件を一度に出さず、描画負荷を軽減）
     currentQuery: "",  // 現在の検索文字列
-    onlyBookmark: false // ★ここを真偽値で持つ
+    onlyBookmark: false, // ★ここを真偽値で持つ
+    currentFilteredList: [], // 現在リストに表示されている単語の配列
   },
 
   /**
@@ -171,12 +172,16 @@ const ja   = String(v.meaning_ja || "");
 
     // --- HTML生成（各単語カードの構築） ---
     let html = "";
-// ★追加：星フィルタがONで、かつデータがある場合にシャッフル学習ボタンを表示
-// ★修正：プロセス中(isLocked)はボタンを無効化する
-    if (this.state.onlyBookmark && displayData.length > 0) {
+// ★修正：星フィルタがON、または検索キーワードが入っている時（何かで絞り込まれている時）にボタンを表示
+    if ((this.state.onlyBookmark || q !== '') && displayData.length > 0) {
       const btnClass = isLocked 
-        ? "opacity-30 pointer-events-none cursor-not-allowed" // ロック時：薄くして触らせない
-        : "opacity-100 active:scale-95 cursor-pointer";    // 通常時：くっきり、押し心地あり
+        ? "opacity-30 pointer-events-none cursor-not-allowed" 
+        : "opacity-100 active:scale-95 cursor-pointer";    
+
+      // ★追加：ボタンのテキストを「⭐ (STAR)」か「🔍 (FILTERED)」かで出し分ける
+      const btnLabel = this.state.onlyBookmark && q === '' 
+        ? `START STAR STUDY (${displayData.length})`
+        : `START FILTERED STUDY (${displayData.length})`;
 
       html += `
         <div class="p-2 mb-4">
@@ -184,7 +189,7 @@ const ja   = String(v.meaning_ja || "");
                   ${isLocked ? 'disabled' : ''} 
                   class="w-full p-4 bg-[#FFD700]/10 border border-[#FFD700]/30 rounded-2xl text-[#FFD700] text-[12px] font-black uppercase tracking-[0.2em] shadow-[0_0_15px_rgba(255,215,0,0.1)] transition-all flex items-center justify-center gap-3 ${btnClass}">
             <span class="text-[14px]">${isLocked ? '⌛' : '▶️'}</span> 
-            ${isLocked ? 'PROCESSING...' : `START STAR STUDY (${displayData.length})`}
+            ${isLocked ? 'PROCESSING...' : btnLabel}
           </button>
         </div>
       `;
@@ -256,26 +261,24 @@ const ja   = String(v.meaning_ja || "");
     this.initObserver();
   },
   
-  /**
-   * 星付き単語のみを抽出して学習を開始（シャッフルなし）
+/**
+   * 現在リストに表示されている単語を抽出して学習を開始（シャッフルなし）
    */
   startBookmarkStudy: function() {
-    // 1. 星付きだけを抽出
-    const stars = AppStore.state.allVocab.filter(v => 
-      v.is_bookmark === true || String(v.is_bookmark).toLowerCase() === "true"
-    );
+    // 1. 先ほどStateに保存しておいた「絞り込み済みの配列」を取得
+    const targetList = this.state.currentFilteredList;
 
-    if (stars.length === 0) return;
+    if (!targetList || targetList.length === 0) return;
 
-    // 2. AppStore のキューを「星付き（元の順番）」に差し替え
-    AppStore.state.queue = stars;
+    // 2. AppStore のキューをそれに差し替え
+    AppStore.state.queue = [...targetList]; // コピーを渡す
     AppStore.update('currentIndex', 0);
 
     // 3. 学習画面へ遷移して描画
-    ViewController.toggleVocabPanel(); // リストを閉じる
+    ViewController.toggleVocabPanel(false); // リストを閉じる
     StudyEngine.render();              // 最初のカードを表示
     
-    ViewController.showToast(`Started Star Study: ${stars.length} words`, "success");
+    ViewController.showToast(`Started Study: ${targetList.length} words`, "success");
     if (window.navigator.vibrate) window.navigator.vibrate([10, 30, 10]);
   },
 

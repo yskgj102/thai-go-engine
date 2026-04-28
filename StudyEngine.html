@@ -17,7 +17,15 @@ const StudyEngine = {
     const panel = document.getElementById('analysis-panel');
     if (panel) { panel.classList.add('hidden'); panel.style.display = 'none'; }
     const list = AppStore.state.queue;
-    if (!list || list.length === 0) return;
+    // ★ リストが空になった場合、UIをクリアして「完了」状態を作る
+    if (!list || list.length === 0) {
+      ViewController.resetCardUI();
+      document.getElementById('word-th').innerText = "All Done!";
+      document.getElementById('meaning').innerHTML = "現在のキューに単語はありません。";
+      document.getElementById('phonetic').innerText = "---";
+      document.getElementById('footer-ui').classList.add('translate-y-full', 'pointer-events-none');
+      return;
+    }
     
     // カード描画のたびに「めくり状態」を未読(false)にリセット
     AppStore.update('revealed', false);
