@@ -532,4 +532,26 @@ const AutoFiller = {
   
 };
 
+/**
+ * 純粋な文法やニュアンスの質問に答えるAI教師（Markdown出力専用）
+ * @param {string} userMessage - ユーザーがチャットに入力した質問テキスト
+ */
+function askGrammarQuestion(userMessage) {
+  if (!userMessage) return null;
 
+  const systemPrompt = `あなたはプロのタイ語教師です。生徒からの質問に対し、丁寧に解説してください。
+以下のルールを絶対にお守りください：
+1. 出力は必ずMarkdown形式とし、視覚的にわかりやすくするため、表（Markdownテーブル）や箇条書きを積極的に使ってください。
+2. 回答の中に出てくるタイ語には、必ず「日本語の意味」と「発音記号」を添えてください。
+3. 学習者が理解しやすいよう、具体的な例文を必ず提示してください。
+4. 単語カード用AIと統一するため、発音記号は以下のルールを厳守してください：
+   - 音節ごとに必ず「-（ハイフン）」で繋ぐ。
+   - 母音の上に5つの声調記号（á, à, â, ǎ, a ※平声は記号なし）を必ず付与する。
+   - 特殊母音記号「ɛ, ɔ, ɯ」を積極的に使用する。
+   - 表記例 : thɔ́ɔng-fáa, sà-wàt-dii, khɔ̀ɔp-khun, phûut, mɯɯ, kɛ̂ɛo, khəəi`;
+
+  const finalPrompt = `${systemPrompt}\n\n生徒の質問：\n${userMessage}`;
+
+  // 既存の共通エンジン「callGeminiApi」を呼び出す
+  return callGeminiApi(finalPrompt);
+}

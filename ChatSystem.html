@@ -1,61 +1,101 @@
 <script>
 const ChatSystem = {
-  isWaiting: false, // ★ 連投防止用のロックフラグ
+  isWaiting: false,
+  mode: 'translate', // ★追加: 初期モードは「翻訳」
 
-  // チャットを送信する処理
+  // ★追加: モード切替UIの制御
+  toggleMode: function(newMode) {
+    if (this.isWaiting) return; // 思考中は切り替え不可
+    this.mode = newMode;
+    
+    const transBtn = document.getElementById('mode-translate-btn');
+    const askBtn = document.getElementById('mode-ask-btn');
+    const input = document.getElementById('chat-input');
+    
+    if (newMode === 'translate') {
+      transBtn.className = "text-[10px] font-bold px-3 py-1.5 rounded-full bg-blue-600 text-white shadow-sm transition-all";
+      askBtn.className = "text-[10px] font-bold px-3 py-1.5 rounded-full bg-slate-500/10 text-slate-500 dark:text-slate-400 transition-all";
+      input.placeholder = "こういう時なんていう？...";
+    } else {
+      transBtn.className = "text-[10px] font-bold px-3 py-1.5 rounded-full bg-slate-500/10 text-slate-500 dark:text-slate-400 transition-all";
+      askBtn.className = "text-[10px] font-bold px-3 py-1.5 rounded-full bg-purple-600 text-white shadow-sm transition-all";
+      input.placeholder = "文法やニュアンスを質問する...";
+    }
+  },
+
   sendMessage: function() {
-    if (this.isWaiting) return; // ★ 思考中なら連投をブロック
+    if (this.isWaiting) return;
 
     const inputEl = document.getElementById('chat-input');
     const text = inputEl.value.trim();
     if (!text) return;
 
     inputEl.value = '';
-    this.isWaiting = true; // ★ ロックオン
+    this.isWaiting = true;
     
-    // ★ 待機中のUI制御（入力不可にする）
     inputEl.disabled = true;
     inputEl.placeholder = "AIが思考中...";
     const btn = document.getElementById('chat-send-btn');
     if (btn) btn.classList.add('opacity-50', 'pointer-events-none');
 
-    // 1. ユーザーの入力を画面に表示
     this.appendMessage('user', text);
     this.showLoading();
 
-    // 2. GASのAPIを呼び出す
-    google.script.run
-      .withSuccessHandler(response => {
-        this.hideLoading();
-        this.resetInput(); // ★ ロック解除
-        if (response) {
-          this.appendMessage('ai', response);
-          this.extractAndRenderVocab(response);
-        } else {
-          this.appendMessage('error', 'エラーが発生しました。');
-        }
-      })
-      .withFailureHandler(err => {
-        this.hideLoading();
-        this.resetInput(); // ★ ロック解除
-        this.appendMessage('error', '通信エラーが発生しました。');
-      })
-      .askTranslationTeacher(text);
+    // ==========================================
+    // 🌟 モードによって呼び出すGAS関数と後処理を分岐
+    // ==========================================
+    if (this.mode === 'translate') {
+      // --- 既存ルート：翻訳して単語抽出 ---
+      google.script.run
+        .withSuccessHandler(response => {
+          this.hideLoading();
+          this.resetInput();
+          if (response) {
+            this.appendMessage('ai', response);
+            this.extractAndRenderVocab(response); // テーブル解析してカード化UIを出す
+          } else {
+            this.appendMessage('error', 'エラーが発生しました。');
+          }
+        })
+        .withFailureHandler(err => {
+          this.hideLoading();
+          this.resetInput();
+          this.appendMessage('error', '通信エラーが発生しました。');
+        })
+        .askTranslationTeacher(text); // 既存の翻訳用関数
+        
+    } else {
+      // --- 新規ルート：純粋な質問（解説のみ） ---
+      google.script.run
+        .withSuccessHandler(response => {
+          this.hideLoading();
+          this.resetInput();
+          if (response) {
+            this.appendMessage('ai', response);
+            // 質問モードの時はテーブル解析（extractAndRenderVocab）は呼ばない
+          } else {
+            this.appendMessage('error', 'エラーが発生しました。');
+          }
+        })
+        .withFailureHandler(err => {
+          this.hideLoading();
+          this.resetInput();
+          this.appendMessage('error', '通信エラーが発生しました。');
+        })
+        .askGrammarQuestion(text); // ★新しく作るGAS関数
+    }
   },
 
-  // ★ ロックを解除して入力欄を元に戻す処理
   resetInput: function() {
     this.isWaiting = false;
     const inputEl = document.getElementById('chat-input');
     inputEl.disabled = false;
-    inputEl.placeholder = "こういう時なんていう？...";
+    // モードに応じてプレースホルダーを戻す
+    inputEl.placeholder = this.mode === 'translate' ? "こういう時なんていう？..." : "文法やニュアンスを質問する...";
     const btn = document.getElementById('chat-send-btn');
     if (btn) btn.classList.remove('opacity-50', 'pointer-events-none');
-    // すぐに次の質問ができるよう、自動でフォーカスを戻す（スマホの場合はソフトウェアキーボードが出ないよう適宜調整）
-    // setTimeout(() => inputEl.focus(), 100); 
   },
 
-  // 画面にメッセージを追加するUI処理
   appendMessage: function(role, text) {
     const container = document.getElementById('chat-messages-container');
     if (!container) return;
@@ -66,15 +106,18 @@ const ChatSystem = {
     if (role === 'user') {
       div.className = "text-right mb-4 animate-in slide-in-from-right-4 fade-in duration-200";
       div.innerHTML = `<span class="bg-blue-600 text-white px-4 py-2 rounded-2xl rounded-tr-sm inline-block max-w-[80%] text-sm text-left shadow-sm">${formattedText}</span>`;
-    } else {
+    } else if (role === 'ai') {
       div.className = "text-left mb-4 animate-in slide-in-from-left-4 fade-in duration-200";
-      div.innerHTML = `<span class="bg-white dark:bg-white/10 text-slate-800 dark:text-white px-4 py-2 rounded-2xl rounded-tl-sm inline-block max-w-[90%] text-sm shadow-sm border border-slate-200 dark:border-white/5">${formattedText}</span>`;
+      // 質問モードの場合、回答が長文・箇条書きになる可能性が高いため markdown-body 系のクラスを当てるか、パディングを広めに取る
+      div.innerHTML = `<span class="bg-white dark:bg-white/10 text-slate-800 dark:text-white px-4 py-3 rounded-2xl rounded-tl-sm inline-block max-w-[95%] text-sm shadow-sm border border-slate-200 dark:border-white/5 leading-relaxed">${formattedText}</span>`;
+    } else {
+      div.className = "text-center mb-4 animate-in fade-in duration-200";
+      div.innerHTML = `<span class="bg-red-500/10 text-red-500 px-4 py-2 rounded-xl inline-block text-xs">${formattedText}</span>`;
     }
     container.appendChild(div);
     container.scrollTop = container.scrollHeight;
   },
 
-  // ★ LINE風の「考え中...」アニメーションを表示
   showLoading: function() {
     const container = document.getElementById('chat-messages-container');
     if (!container) return;
@@ -82,8 +125,6 @@ const ChatSystem = {
     const div = document.createElement('div');
     div.id = "chat-typing-indicator";
     div.className = "text-left mb-4 animate-in slide-in-from-left-4 fade-in duration-200";
-    
-    // Tailwindの標準機能(animate-bounce)をズラして適用することで、3つの点が順番に跳ねる
     div.innerHTML = `
       <span class="bg-white dark:bg-white/10 px-4 py-3 rounded-2xl rounded-tl-sm inline-flex items-center gap-1 shadow-sm border border-slate-200 dark:border-white/5">
         <span class="w-1.5 h-1.5 bg-slate-400 dark:bg-white/50 rounded-full animate-bounce" style="animation-delay: 0ms;"></span>
@@ -95,12 +136,9 @@ const ChatSystem = {
     container.scrollTop = container.scrollHeight;
   },
 
-  // ★ 回答が来たら「考え中...」を消す
   hideLoading: function() {
     const indicator = document.getElementById('chat-typing-indicator');
-    if (indicator) {
-      indicator.remove();
-    }
+    if (indicator) indicator.remove();
   },
 
   extractAndRenderVocab: function(markdownText) {
@@ -121,128 +159,6 @@ const ChatSystem = {
     if (words.length > 0) {
       ChatUI.renderVocabularyList(words); 
     }
-  }
-};
-
-const ChatUI = {
-  renderVocabularyList: function(words) {
-    const container = document.getElementById('chat-action-panel');
-    if (!container) return;
-
-    let html = `
-      <div class="rounded-2xl p-4 shadow-xl border flex flex-col mb-2 animate-in slide-in-from-bottom-5 transition-all" style="background: var(--bg-card); border-color: var(--border);">
-        <div class="flex justify-between items-center shrink-0 cursor-pointer select-none active:opacity-70 transition-opacity" 
-             onclick="const list = document.getElementById('ios-word-list'); list.classList.toggle('hidden'); const btn = document.getElementById('toggle-list-btn'); btn.innerText = list.classList.contains('hidden') ? '開く ▼' : '閉じる ▲';">
-          <h3 class="font-bold text-sm flex items-center gap-2" style="color: var(--text-main);">
-            <span>📝</span> 抽出された単語
-          </h3>
-          <div id="toggle-list-btn" class="text-[10px] font-bold opacity-60 px-3 py-1.5 rounded-lg border transition-all flex items-center justify-center" style="background: var(--input-bg); color: var(--text-main); border-color: var(--border);">
-            閉じる ▲
-          </div>
-        </div>
-        <div class="space-y-2 overflow-y-auto custom-scrollbar pr-1 mt-3 max-h-[35vh]" id="ios-word-list">
-    `;
-
-    words.forEach((w, index) => {
-      // 💡 音声読み上げ時にエラーが出ないよう、タイ語内のクォーテーションをエスケープ
-      const safeTh = w.th.replace(/'/g, "\\'");
-
-      // 💡 追加: onclick="StudyEngine.speakSpecificText(...)" をカード全体に設定
-      // 💡 追加: cursor-pointer と active:scale-[0.98] でタップできる感を演出
-      html += `
-        <div onclick="StudyEngine.speakSpecificText('${safeTh}')" 
-             class="flex justify-between items-center p-3.5 rounded-2xl border shadow-sm cursor-pointer active:scale-[0.98] transition-transform" 
-             style="background: var(--input-bg); border-color: var(--border);">
-          
-          <div class="flex-1 pr-3">
-            <div class="flex items-center gap-2 mb-0.5">
-              <div class="text-base font-bold text-blue-500 thai-font">${w.th}</div>
-              <button onclick="event.stopPropagation(); navigator.clipboard.writeText('${safeTh}').then(() => typeof ViewController !== 'undefined' && ViewController.showToast('Copied!', 'success'))" 
-                      class="text-[12px] opacity-40 hover:opacity-100 active:scale-125 transition-all text-blue-500" style="padding: 4px;">⧉</button>
-            </div>
-            <div class="text-xs" style="color: var(--text-sub);">${w.ja} <span class="text-[10px] opacity-60 ml-1 font-mono">${w.phonetic}</span></div>
-          </div>
-          
-          <button id="add-btn-${index}" 
-                  onclick="event.stopPropagation(); ChatUI.handleAddWord('${safeTh}', '${w.ja}', '${w.phonetic}', ${index})"
-                  class="bg-blue-600 active:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-md transition-all active:scale-95 flex items-center justify-center min-w-[75px]">
-            <svg class="w-4 h-4 mr-1 animate-spin hidden" id="spinner-${index}" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span id="btn-text-${index}">追加</span>
-          </button>
-        </div>
-      `;
-    });
-
-    html += `</div></div>`;
-    container.innerHTML = html;
-
-    words.forEach((w, index) => this.checkDuplicate(w.th, index));
-  },
-
-  checkDuplicate: function(wordTh, index) {
-    const btn = document.getElementById(`add-btn-${index}`);
-    const btnText = document.getElementById(`btn-text-${index}`);
-    const spinner = document.getElementById(`spinner-${index}`);
-
-    spinner.classList.remove('hidden');
-    btnText.innerText = "";
-    btn.classList.add('opacity-80', 'pointer-events-none');
-
-    google.script.run
-      .withSuccessHandler((isDuplicate) => {
-        spinner.classList.add('hidden');
-        if (isDuplicate) {
-          // 登録済みカラー（CSS変数化）
-          btn.className = "px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center min-w-[75px] pointer-events-none opacity-50 border";
-          btn.style.background = "var(--bg-card)";
-          btn.style.color = "var(--text-sub)";
-          btn.style.borderColor = "var(--border)";
-          btnText.innerText = "登録済";
-        } else {
-          btn.classList.remove('opacity-80', 'pointer-events-none');
-          btnText.innerText = "追加";
-        }
-      })
-      .withFailureHandler(() => {
-        spinner.classList.add('hidden');
-        btn.classList.remove('opacity-80', 'pointer-events-none');
-        btnText.innerText = "追加";
-      })
-      .existsInVocabulary(wordTh);
-  },
-
-  handleAddWord: function(th, ja, phonetic, index) {
-    const btn = document.getElementById(`add-btn-${index}`);
-    const btnText = document.getElementById(`btn-text-${index}`);
-    const spinner = document.getElementById(`spinner-${index}`);
-
-    btn.classList.add('pointer-events-none');
-    spinner.classList.remove('hidden');
-    btnText.innerText = "";
-
-    if (navigator.vibrate) navigator.vibrate(15); 
-
-    Bridge.addFromChat(th, function(isSuccess, isDuplicate) {
-        spinner.classList.add('hidden');
-        
-        if (isSuccess) {
-            btn.className = "bg-emerald-500/10 text-emerald-500 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center min-w-[75px] pointer-events-none transition-all duration-300 border border-emerald-500/20";
-            btnText.innerText = "完了！";
-            if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
-        } else if (isDuplicate) {
-            btn.className = "px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center min-w-[75px] pointer-events-none opacity-50 border";
-            btn.style.background = "var(--bg-card)";
-            btn.style.color = "var(--text-sub)";
-            btn.style.borderColor = "var(--border)";
-            btnText.innerText = "登録済";
-        } else {
-            btn.classList.remove('pointer-events-none');
-            btnText.innerText = "エラー";
-        }
-    });
   }
 };
 </script>

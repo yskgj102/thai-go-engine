@@ -77,8 +77,8 @@
 
   <div class="flex items-center gap-2 sm:gap-4 shrink-0 pl-0.5 sm:pl-1">
     <div class="flex items-center gap-1.5 sm:gap-3 pr-1.5 sm:pr-3 border-r border-white/10">
-    <button id="tts-mode-btn" onclick="AudioSystem.toggleTTSMode()" class="text-xl opacity-30 hover:opacity-100 transition-opacity">
-  🤖 </button>
+    <button id="tts-mode-btn" onclick="AudioSystem.toggleTTSMode()" class="text-xl opacity-100 hover:opacity-100 transition-opacity">
+  ☁️ </button>
       <button onclick="StudyEngine.toggleTargetLanguage()" id="target-toggle-btn" class="text-[17px] active:scale-125">🇹🇭</button>
       <button onclick="StudyEngine.toggleMode()" id="mode-btn" class="text-[17px] active:scale-125">🧠</button>
       <button onclick="ViewController.toggleTheme()" id="theme-icon" class="text-[11px]">🌙</button>
@@ -298,6 +298,15 @@
   <div id="chat-action-panel" class="flex-shrink-0 px-2 relative z-50"></div>
 
   <div class="flex-shrink-0 p-4 border-t pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.05)]" style="background-color: var(--bg-card); border-color: var(--border);">
+    
+    <div class="flex items-center gap-2 mb-2 px-1">
+      <button id="mode-translate-btn" onclick="ChatSystem.toggleMode('translate')" class="text-[10px] font-bold px-3 py-1.5 rounded-full bg-blue-600 text-white shadow-sm transition-all">
+        🔁 翻訳・カード化
+      </button>
+      <button id="mode-ask-btn" onclick="ChatSystem.toggleMode('ask')" class="text-[10px] font-bold px-3 py-1.5 rounded-full bg-slate-500/10 text-slate-500 dark:text-slate-400 transition-all">
+        🤖 先生に質問
+      </button>
+    </div>
     <div class="flex items-end gap-2 p-1.5 rounded-2xl border transition-colors focus-within:border-blue-500/50" style="background-color: var(--input-bg); border-color: var(--border);">
       <textarea id="chat-input" rows="1" placeholder="こういう時なんていう？..."
                 class="flex-1 bg-transparent text-sm px-3 py-2 focus:outline-none resize-none max-h-[100px]"
