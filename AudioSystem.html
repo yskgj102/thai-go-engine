@@ -75,12 +75,12 @@ const AudioSystem = {
     if (AppStore.state.isCloudTTS) {
       btn.innerText = "☁️"; // Cloud高音質モード
       btn.classList.add('text-blue-500', 'opacity-100');
-      btn.classList.remove('opacity-30');
+      btn.classList.remove('opacity-100');
       ViewController.showToast("Cloud TTS (High Quality) ON", "success");
     } else {
       btn.innerText = "🤖"; // 標準ロボットモード
       btn.classList.remove('text-blue-500', 'opacity-100');
-      btn.classList.add('opacity-30');
+      btn.classList.add('opacity-100');
       ViewController.showToast("Browser TTS (Standard) ON", "success");
     }
   }

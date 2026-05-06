@@ -2,7 +2,8 @@
 <html>
 <head>
   <base target="_top">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.4/dist/frappe-charts.min.iife.js"></script>
   <?!= include('css_main'); ?>
 
@@ -305,6 +306,18 @@
       </button>
       <button id="mode-ask-btn" onclick="ChatSystem.toggleMode('ask')" class="text-[10px] font-bold px-3 py-1.5 rounded-full bg-slate-500/10 text-slate-500 dark:text-slate-400 transition-all">
         🤖 先生に質問
+      </button>
+    </div>
+
+    <div id="chat-quick-prompts" class="hidden flex gap-2 px-1 mb-2 overflow-x-auto custom-scrollbar pb-1">
+      <button onclick="ChatSystem.insertPrompt('以下のタイ語を自然な表現に添削し、解説と重要単語のリストを作って：\n')" class="shrink-0 bg-blue-500/10 text-blue-500 border border-blue-500/30 text-[10px] font-bold px-3 py-1.5 rounded-xl whitespace-nowrap active:scale-95 transition-all">
+        ✍️ 添削して
+      </button>
+      <button onclick="ChatSystem.insertPrompt('以下のシチュエーションでのリアルな会話文を作って。重要フレーズは単語リストにして：\n')" class="shrink-0 bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 text-[10px] font-bold px-3 py-1.5 rounded-xl whitespace-nowrap active:scale-95 transition-all">
+        🎭 会話文作成
+      </button>
+      <button onclick="ChatSystem.insertPrompt('以下の単語（または概念）のニュアンスの違いを比較して、単語リストにして：\n')" class="shrink-0 bg-amber-500/10 text-amber-600 border border-amber-500/30 text-[10px] font-bold px-3 py-1.5 rounded-xl whitespace-nowrap active:scale-95 transition-all">
+        🔍 違いを比較
       </button>
     </div>
     <div class="flex items-end gap-2 p-1.5 rounded-2xl border transition-colors focus-within:border-blue-500/50" style="background-color: var(--input-bg); border-color: var(--border);">
