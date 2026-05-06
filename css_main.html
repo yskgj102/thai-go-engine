@@ -635,7 +635,7 @@ body:not(.light-mode) .category-btn {
 .light-mode .context-link.is-self.is-confirming {
   color: #ffffff !important;
 }
-/* --- TIPの表示（デザイン維持） --- */
+/* --- TIPの表示（横幅制限と改行を適用） --- */
 .context-link.is-confirming::after {
   content: attr(data-meaning);
   position: absolute;
@@ -644,10 +644,18 @@ body:not(.light-mode) .category-btn {
   transform: translateX(-50%);
   background: rgba(15, 23, 42, 0.95);
   color: #fff;
-  padding: 4px 10px;
-  border-radius: 6px;
+  padding: 6px 12px;      /* 左右に少し余裕を持たせる */
+  border-radius: 8px;
   font-size: 11px;
-  white-space: nowrap;
+  
+  /* 🌟 ここが重要：突き抜け防止の魔法 🌟 */
+  white-space: normal;    /* 1行固定を解除 */
+  width: max-content;     /* 基本は文字に合わせるが... */
+  max-width: 150px;       /* 150pxを超えたら強制改行 */
+  word-wrap: break-word;  /* 長い単語でも枠内で折る */
+  line-height: 1.4;       /* 改行した時に読みやすくする */
+  text-align: center;     /* 中央揃え */
+  
   z-index: 10000;
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
   pointer-events: none;

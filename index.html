@@ -67,9 +67,8 @@
         </button>
       </div>
     </div>
-    <div id="header-word-area" class="absolute inset-0 flex flex-col items-center justify-center opacity-0 pointer-events-none translate-y-4 transition-all duration-300 cursor-pointer max-w-full">
-    <div id="header-display-th" class="thai-font text-[14px] font-bold leading-none text-blue-500/90 mb-1 max-w-[130px] sm:max-w-[150px] break-words"></div>
-    </div>
+    <div id="header-word-area" class="absolute inset-0 flex flex-col items-center justify-center opacity-0 pointer-events-none translate-y-4 transition-all duration-300 cursor-pointer">
+        <div id="header-display-th" class="thai-font text-[14px] font-bold leading-none text-blue-500/90 mb-1"></div>
         <div class="flex items-center gap-2">
             <div id="header-display-ja" class="text-[9px] opacity-40 font-bold"></div>
             <button onclick="event.stopPropagation(); StudyEngine.copyText('header-display-th')" class="text-[12px] opacity-100 shrink-0">⧉</button>
@@ -164,9 +163,9 @@
 </button>
 
             </div>
-            <div class="relative inline-block max-w-full" style="z-index: 60;"> 
-    <div id="word-th" class="thai-font text-6xl font-bold mb-4 text-center cursor-pointer relative z-50 break-words"></div>
-    </div>
+            <div class="relative inline-block" style="z-index: 60;"> <div id="word-th"  
+     class="thai-font text-6xl font-bold mb-4 text-center cursor-pointer relative z-50">
+</div>
               <button onclick="event.stopPropagation(); StudyEngine.speak(false)" class="absolute -top-2 -left-10 text-[14px] opacity-100 p-2 active:scale-125 transition-transform"></button>
             </div>
             <div id="phonetic"  onclick="event.stopPropagation(); StudyEngine.toggleAnalysis();" class="reveal-target hidden text-sm italic mb-6" style="color: var(--text-sub)"></div>
