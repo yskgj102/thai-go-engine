@@ -67,7 +67,39 @@ VocabListUI.renderCategoryBar()
       console.log("[Bridge] Sync Complete.");
     }).getSpacedRepetitionData();
   },
+/**
+   * Cloud TTSの音声を取得（キャッシュ対応版）
+   */
+  fetchCloudAudio: function(text, lang, rate, onComplete) {
+    // キャッシュ判定用のキー（言語＋テキスト）
+    const cacheKey = lang + "_" + text;
 
+    // 1. キャッシュに存在すれば、一切通信せずに即座に再生
+    if (AppStore.state.audioCache && AppStore.state.audioCache[cacheKey]) {
+      // console.log("[TTS] Cache Hit:", text); // デバッグ用
+      AudioSystem.playCloudAudio(AppStore.state.audioCache[cacheKey], rate, onComplete);
+      return;
+    }
+
+    // 2. キャッシュに無ければGAS経由でAPIを叩く
+    google.script.run
+      .withSuccessHandler(base64Audio => {
+        if (base64Audio) {
+          // ★ 取得成功時、次回のためにキャッシュに保存する
+          if (!AppStore.state.audioCache) AppStore.state.audioCache = {};
+          AppStore.state.audioCache[cacheKey] = base64Audio;
+          
+          AudioSystem.playCloudAudio(base64Audio, rate, onComplete);
+        } else {
+          // API制限などのエラー時はブラウザAPIにフォールバック
+          AudioSystem.playBrowserTTS(text, lang, rate, onComplete);
+        }
+      })
+      .withFailureHandler(() => {
+        AudioSystem.playBrowserTTS(text, lang, rate, onComplete);
+      })
+      .getCloudTTSAudio(text, lang);
+  },
   /**
    * 学習結果（自己評価）のサーバー保存
    * @param {string} id - 単語ID

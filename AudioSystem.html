@@ -5,10 +5,96 @@
  */
 
 const AudioSystem = {
+  currentCloudAudio: null, // ★ Cloud TTSの現在再生中のオブジェクトを保持（キャンセルのため）
+
+  /**
+   * 音声再生の司令塔（ルーター）
+   */
   play: function(text, lang, rate, onEnd = null) {
     if (!text || text === '---') {
       if (onEnd) onEnd();
       return;
+    }
+
+    // Cloud TTSモードがONならGAS経由でデータを取得
+    if (AppStore.state.isCloudTTS) {
+      Bridge.fetchCloudAudio(text, lang, rate, onEnd);
+    } else {
+      // OFFなら元の堅牢なブラウザAPIで再生
+      this.playBrowserTTS(text, lang, rate, onEnd);
+    }
+  },
+
+  /**
+   * 高音質：Cloud TTS (MP3 Base64) の再生ロジック
+   */
+  playCloudAudio: function(base64Audio, rate, onEnd) {
+    try {
+      // 1. 前の音が鳴っていれば「キャンセル（中断）」する
+      if (this.currentCloudAudio) {
+        this.currentCloudAudio.pause();
+        this.currentCloudAudio.currentTime = 0;
+        // ★ ブラウザAPIの 'interrupted' 対策と同じ思想。
+        // 強制中断時は、前の音声の onEnd を発火させずにコールバックチェーンをぶった切る。
+        this.currentCloudAudio.onended = null; 
+        this.currentCloudAudio.onerror = null;
+      }
+      
+      // 念のためブラウザTTS側も止める
+      window.speechSynthesis.cancel(); 
+
+      // 2. 新しい音声を準備して再生
+      const audio = new Audio("data:audio/mp3;base64," + base64Audio);
+      this.currentCloudAudio = audio; // キャンセル用に保持
+      audio.playbackRate = rate; 
+      
+      if (onEnd) {
+        audio.onended = () => { 
+          this.currentCloudAudio = null;
+          onEnd(); 
+        };
+        audio.onerror = (e) => { 
+          this.currentCloudAudio = null;
+          onEnd(); 
+        };
+      }
+      
+      audio.play().catch(e => {
+        // ブラウザの自動再生ブロック等への対策
+        this.currentCloudAudio = null;
+        if (onEnd) onEnd();
+      });
+    } catch (e) {
+      if (onEnd) onEnd();
+    }
+  },
+ toggleTTSMode: function() {
+  AppStore.state.isCloudTTS = !AppStore.state.isCloudTTS;
+  const btn = document.getElementById('tts-mode-btn');
+  if (btn) {
+    if (AppStore.state.isCloudTTS) {
+      btn.innerText = "☁️"; // Cloud高音質モード
+      btn.classList.add('text-blue-500', 'opacity-100');
+      btn.classList.remove('opacity-30');
+      ViewController.showToast("Cloud TTS (High Quality) ON", "success");
+    } else {
+      btn.innerText = "🤖"; // 標準ロボットモード
+      btn.classList.remove('text-blue-500', 'opacity-100');
+      btn.classList.add('opacity-30');
+      ViewController.showToast("Browser TTS (Standard) ON", "success");
+    }
+  }
+},
+  /**
+   * 無料・オフライン用：ブラウザ標準 (Web Speech API) の再生ロジック
+   * ★ あなたが構築した堅牢な暴走防止ロジックをそのまま採用
+   */
+  playBrowserTTS: function(text, lang, rate, onEnd = null) {
+    // Cloud側の音が鳴っていたら止める
+    if (this.currentCloudAudio) {
+      this.currentCloudAudio.pause();
+      this.currentCloudAudio.currentTime = 0;
+      this.currentCloudAudio = null;
     }
 
     // 次を鳴らす前に今の音を止める（ここで前回の onerror: interrupted が発生する）

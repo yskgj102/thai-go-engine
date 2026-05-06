@@ -291,3 +291,46 @@ function updateWordMemo(id, memoText) {
     return { status: "error", message: e.toString() };
   }
 }
+
+// --- コード.gs の一番下などに追加 ---
+function getCloudTTSAudio(text, langCode) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty('GCP_API_KEY');
+  if (!apiKey) return null;
+
+  const url = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`;
+  
+  let voiceName = "th-TH-Neural2-C"; 
+  if (langCode && langCode.includes("ja")) {
+    voiceName = "ja-JP-Neural2-B";
+  }
+
+  const payload = {
+    input: { text: text },
+    voice: { languageCode: langCode || "th-TH", name: voiceName },
+    audioConfig: { 
+      audioEncoding: "MP3",
+      speakingRate: 1.0 
+    }
+  };
+
+  const options = {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  try {
+    const res = UrlFetchApp.fetch(url, options);
+    const json = JSON.parse(res.getContentText());
+    if (json.audioContent) {
+      return json.audioContent; 
+    } else {
+      console.error("Cloud TTS Error: ", json);
+      return null;
+    }
+  } catch (e) {
+    console.error("UrlFetchApp Error: ", e);
+    return null;
+  }
+}

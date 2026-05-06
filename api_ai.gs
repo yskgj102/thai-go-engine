@@ -465,7 +465,7 @@ const AutoFiller = {
     if (idx.id === -1 || idx.word === -1 || idx.example_th === -1 || idx.last_update === -1) return;
 
     // 条件判定用の基準日（2026/04/18）
-    const thresholdDate = new Date('2026/04/19 15:00:00');
+    const thresholdDate = new Date('2026/04/21 15:00:00');
 
     for (let i = data.length - 1; i >= 1 ; i--) {
       const row = data[i];
