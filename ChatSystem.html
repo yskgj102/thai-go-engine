@@ -192,7 +192,7 @@ appendMessage: function(role, text) {
       ChatUI.renderVocabularyList(words); 
     }
   },
-  // ChatSystem の中に追加
+  
   sendImage: function(input) {
     const file = input.files[0];
     if (!file || this.isWaiting) return;
@@ -200,10 +200,14 @@ appendMessage: function(role, text) {
     const reader = new FileReader();
     reader.onload = (e) => {
       const base64Data = e.target.result.split(',')[1];
+      const fullBase64 = e.target.result; // 🌟 プレビュー表示用にDataURLを保持
       
       this.isWaiting = true;
       this.showLoading();
-      this.appendMessage('user', '📷 画像を解析中...');
+
+      // 🌟 ここを「文字」から「画像タグ」に変更してメッセージ追加！
+      const imageHtml = `<img src="${fullBase64}" class="rounded-xl max-w-[200px] border border-white/10 shadow-md my-2" alt="upload">`;
+      this.appendMessage('user', imageHtml);
 
       google.script.run
         .withSuccessHandler(response => {
@@ -211,16 +215,16 @@ appendMessage: function(role, text) {
           this.isWaiting = false;
           if (response) {
             this.appendMessage('ai', response);
-            this.extractAndRenderVocab(response); // 解析結果から単語を抽出
+            this.extractAndRenderVocab(response);
           }
-          input.value = ''; // 連続選択できるようにリセット
+          input.value = '';
         })
         .withFailureHandler(err => {
           this.hideLoading();
           this.isWaiting = false;
-          this.appendMessage('error', '画像解析に失敗しました。');
+          this.appendMessage('error', '解析に失敗しました。');
         })
-        .analyzeThaiImage(base64Data); // ★後でGAS側に作る関数名
+        .analyzeThaiImage(base64Data);
     };
     reader.readAsDataURL(file);
   },
