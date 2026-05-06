@@ -2,15 +2,11 @@
  * ファイル名: api_ai.gs
  */
 
-
 /**
- * 共通AI通信エンジン（完全分散ラウンドロビン＆連打ガード搭載）
- * @param {string} prompt - AIに投げる指示
- * @param {number} retryCount - リトライ回数（内部用）
- * @return {string|null} AIからの返答テキスト（失敗時はnull）
+ * 共通AI通信エンジン（Vision対応版）
  */
-function callGeminiApi(prompt, retryCount = 1) {
-  const TOTAL_KEYS = 6; // 真の独立プロジェクト数
+function callGeminiApi(prompt, retryCount = 1, base64Data = null) { // 🌟第3引数を追加
+  const TOTAL_KEYS = 6;
 
   if (retryCount > TOTAL_KEYS) {
     console.error(`🛑 全 ${TOTAL_KEYS} 個のキーが全滅しました。`);
@@ -25,12 +21,24 @@ function callGeminiApi(prompt, retryCount = 1) {
   const propName = `GEMINI_API_KEY_${currentKey}`;
   const apiKey = props.getProperty(propName);
   
-  if (!apiKey) {
-    return callGeminiApi(prompt, retryCount + 1); 
-  }
+  if (!apiKey) return callGeminiApi(prompt, retryCount + 1, base64Data);
 
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
-  const payload = { contents: [{ parts: [{ text: prompt }] }] };
+  // 🌟 モデル名を Vision に強い 1.5-flash に固定（安定のため）
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+  
+  // 🌟 ペイロードの構築
+  let parts = [{ text: prompt }];
+  if (base64Data) {
+    parts.push({
+      inline_data: {
+        mime_type: "image/jpeg",
+        data: base64Data
+      }
+    });
+  }
+  
+  const payload = { contents: [{ parts: parts }] };
+  
   const options = {
     method: 'POST',
     contentType: 'application/json',
@@ -42,14 +50,15 @@ function callGeminiApi(prompt, retryCount = 1) {
   try {
     const response = UrlFetchApp.fetch(url, options);
     if (response.getResponseCode() !== 200) {
-      Utilities.sleep(1500); // スパムガード
-      return callGeminiApi(prompt, retryCount + 1);
+      console.warn(`Key ${currentKey} failed with status ${response.getResponseCode()}`);
+      Utilities.sleep(1500);
+      return callGeminiApi(prompt, retryCount + 1, base64Data);
     }
     const data = JSON.parse(response.getContentText());
     return data['candidates'][0]['content']['parts'][0]['text'];
   } catch (e) {
-    Utilities.sleep(1500); // スパムガード
-    return callGeminiApi(prompt, retryCount + 1);
+    Utilities.sleep(1500);
+    return callGeminiApi(prompt, retryCount + 1, base64Data);
   }
 }
 function generateThaiDetails(word) {
@@ -398,6 +407,15 @@ function deleteWordAndLogs(vocabId) {
   return { status: "success", deletedLogs: logData.length - cleanLogs.length };
 }
 
+/**
+ * 画像からタイ語を抽出するVisionエンジン（共通エンジン相乗り版）
+ */
+function analyzeThaiImage(base64Data) {
+  const prompt = "あなたはプロのタイ語教師です。画像内のタイ語を全て読み取り、単語やフレーズごとに以下のMarkdownテーブル形式でリスト化してください。最後に重要な文法やニュアンスの解説も添えてください。\n\n| タイ語 | 発音記号 | 日本語 |\n|---|---|---|\n| (例: ไป) | (例: pai) | (例: 行く) |";
+  
+  // 🌟 既存の callGeminiApi に「画像データ」も渡せるように拡張して呼び出す
+  return callGeminiApi(prompt, 1, base64Data);
+}
 /**
  * ブックマークの状態を反転させる
  */

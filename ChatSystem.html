@@ -191,7 +191,39 @@ appendMessage: function(role, text) {
     if (words.length > 0) {
       ChatUI.renderVocabularyList(words); 
     }
-  }
+  },
+  // ChatSystem の中に追加
+  sendImage: function(input) {
+    const file = input.files[0];
+    if (!file || this.isWaiting) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64Data = e.target.result.split(',')[1];
+      
+      this.isWaiting = true;
+      this.showLoading();
+      this.appendMessage('user', '📷 画像を解析中...');
+
+      google.script.run
+        .withSuccessHandler(response => {
+          this.hideLoading();
+          this.isWaiting = false;
+          if (response) {
+            this.appendMessage('ai', response);
+            this.extractAndRenderVocab(response); // 解析結果から単語を抽出
+          }
+          input.value = ''; // 連続選択できるようにリセット
+        })
+        .withFailureHandler(err => {
+          this.hideLoading();
+          this.isWaiting = false;
+          this.appendMessage('error', '画像解析に失敗しました。');
+        })
+        .analyzeThaiImage(base64Data); // ★後でGAS側に作る関数名
+    };
+    reader.readAsDataURL(file);
+  },
 };
 
 const ChatUI = {

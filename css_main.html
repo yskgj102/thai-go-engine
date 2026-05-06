@@ -649,12 +649,10 @@ body:not(.light-mode) .category-btn {
   font-size: 11px;
   
   /* 🌟 ここが重要：突き抜け防止の魔法 🌟 */
-  white-space: normal;    /* 1行固定を解除 */
-  width: max-content;     /* 基本は文字に合わせるが... */
-  max-width: 150px;       /* 150pxを超えたら強制改行 */
-  word-wrap: break-word;  /* 長い単語でも枠内で折る */
-  line-height: 1.4;       /* 改行した時に読みやすくする */
-  text-align: center;     /* 中央揃え */
+white-space: normal !important;   /* 強制的に改行を許可 */
+  width: 140px !important;         /* max-contentをやめて、幅を固定する */
+  max-width: 160px !important;
+  word-wrap: break-word !important;
   
   z-index: 10000;
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);

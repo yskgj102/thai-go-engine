@@ -822,30 +822,34 @@ renderContextLinks: function(rawText, targetElementId, excludeId) {
 /**
    * 画面端で見切れない独立ツールチップの生成・表示（スクロール追従版）
    */
-  showTooltip: function(anchorEl, text) {
+showTooltip: function(anchorEl, text) {
     let tooltip = document.getElementById('global-context-tooltip');
     if (!tooltip) {
       tooltip = document.createElement('div');
       tooltip.id = 'global-context-tooltip';
-      // ★ fixed を absolute に変更し、ページ全体に対する絶対配置にする
-      tooltip.className = 'absolute z-[10000] bg-[#1e293b] border border-blue-500/30 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-xl pointer-events-none whitespace-nowrap transition-opacity duration-200';
+      // 🌟 ここを修正：'whitespace-nowrap' を削除し、折り返し用のクラスを追加
+      tooltip.className = 'absolute z-[10000] bg-[#1e293b] border border-blue-500/30 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg shadow-xl pointer-events-none transition-opacity duration-200';
       document.body.appendChild(tooltip);
     }
+
+    // 🌟 ツールチップ自体のスタイルを直接制御して「はみ出し」を封じる
+    tooltip.style.whiteSpace = 'normal';   // 改行を許可
+    tooltip.style.width = '140px';        // 幅を140pxに固定
+    tooltip.style.lineHeight = '1.4';
+    tooltip.style.textAlign = 'center';
 
     tooltip.innerHTML = text;
     tooltip.style.opacity = '0';
     tooltip.style.display = 'block';
 
-    // 描画を待ってからサイズを計算
     requestAnimationFrame(() => {
       const rect = anchorEl.getBoundingClientRect();
       const tooltipWidth = tooltip.offsetWidth;
       
-      // ★ window.scrollY / scrollX を足して、スクロールされても元の単語にピタッと追従させる
       let left = rect.left + window.scrollX + (rect.width / 2) - (tooltipWidth / 2);
       let top = rect.top + window.scrollY - tooltip.offsetHeight - 8; 
 
-      // 画面端の「見切れ」防止ロジック（ここも scrollX を考慮）
+      // 画面端の「見切れ」防止
       const safePadding = 12; 
       if (left < window.scrollX + safePadding) {
         left = window.scrollX + safePadding; 
