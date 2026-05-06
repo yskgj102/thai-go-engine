@@ -70,36 +70,31 @@ VocabListUI.renderCategoryBar()
 /**
    * Cloud TTSの音声を取得（キャッシュ対応版）
    */
-  fetchCloudAudio: function(text, lang, rate, onComplete) {
-    // キャッシュ判定用のキー（言語＋テキスト）
-    const cacheKey = lang + "_" + text;
+// Bridge内の fetchCloudAudio 部分
+fetchCloudAudio: function(text, lang, rate, onComplete) {
+  const cacheKey = lang + "_" + text;
 
-    // 1. キャッシュに存在すれば、一切通信せずに即座に再生
-    if (AppStore.state.audioCache && AppStore.state.audioCache[cacheKey]) {
-      // console.log("[TTS] Cache Hit:", text); // デバッグ用
-      AudioSystem.playCloudAudio(AppStore.state.audioCache[cacheKey], rate, onComplete);
-      return;
-    }
+  if (AppStore.state.audioCache && AppStore.state.audioCache[cacheKey]) {
+    AudioSystem.playCloudAudio(AppStore.state.audioCache[cacheKey], rate, onComplete);
+    return;
+  }
 
-    // 2. キャッシュに無ければGAS経由でAPIを叩く
-    google.script.run
-      .withSuccessHandler(base64Audio => {
-        if (base64Audio) {
-          // ★ 取得成功時、次回のためにキャッシュに保存する
-          if (!AppStore.state.audioCache) AppStore.state.audioCache = {};
-          AppStore.state.audioCache[cacheKey] = base64Audio;
-          
-          AudioSystem.playCloudAudio(base64Audio, rate, onComplete);
-        } else {
-          // API制限などのエラー時はブラウザAPIにフォールバック
-          AudioSystem.playBrowserTTS(text, lang, rate, onComplete);
-        }
-      })
-      .withFailureHandler(() => {
+  google.script.run
+    .withSuccessHandler(base64Audio => {
+      if (base64Audio) {
+        if (!AppStore.state.audioCache) AppStore.state.audioCache = {};
+        AppStore.state.audioCache[cacheKey] = base64Audio;
+        AudioSystem.playCloudAudio(base64Audio, rate, onComplete);
+      } else {
+        // 失敗時は標準に逃がしつつ、完了を通知
         AudioSystem.playBrowserTTS(text, lang, rate, onComplete);
-      })
-      .getCloudTTSAudio(text, lang);
-  },
+      }
+    })
+    .withFailureHandler(() => {
+      AudioSystem.playBrowserTTS(text, lang, rate, onComplete);
+    })
+    .getCloudTTSAudio(text, lang);
+},
   /**
    * 学習結果（自己評価）のサーバー保存
    * @param {string} id - 単語ID
@@ -570,11 +565,14 @@ executeSaveMemo: function(id, text) {
 };
 const AutoPlayEngine = {
   active: false,
-  timer: null,
   wakeLock: null, 
 
+  // 🌟 操作を遮断するブロッカー関数
   _blocker: function(e) {
+    // 再生停止ボタンだけは触れるようにする
     if (e.target.closest('#autoplay-toggle-btn')) return;
+    
+    // それ以外のクリック・タップ・操作をすべて殺す
     e.stopPropagation();
     e.preventDefault();
   },
@@ -584,73 +582,56 @@ const AutoPlayEngine = {
     else this.start();
   },
 
-  start: function() {
+  start: async function() {
     if (this.active) return;
     this.active = true;
     this.updateUI(true);
-    this.updateLock(true);
     
+    // 🌟 操作制限を開始（キャプチャフェーズでイベントを奪い取る）
+    document.addEventListener('click', this._blocker, true);
+    if (document.activeElement) document.activeElement.blur(); // 入力中のキーボードなどを閉じる
+
     if ('wakeLock' in navigator) {
-      navigator.wakeLock.request('screen')
-        .then(lock => { this.wakeLock = lock; })
-        .catch(err => console.log('WakeLock Error:', err));
+      navigator.wakeLock.request('screen').then(lock => { this.wakeLock = lock; }).catch(() => {});
     }
 
-    this.playSequence(); 
+    while (this.active) {
+      await this.playSequence();
+      if (!this.active) break;
+
+      // カード間のインターバル
+      await new Promise(r => setTimeout(r, 2000));
+
+      const nextIdx = (AppStore.state.currentIndex + 1) % AppStore.state.queue.length;
+      AppStore.update('currentIndex', nextIdx);
+      StudyEngine.render();
+    }
   },
 
   stop: function() {
     this.active = false;
-    if (this.timer) clearTimeout(this.timer);
-    window.speechSynthesis.cancel();
-    this.updateUI(false);
-    this.updateLock(false);
     
-    if (this.wakeLock) {
-      this.wakeLock.release().catch(err => console.log(err));
-      this.wakeLock = null;
+    // 🌟 操作制限を解除
+    document.removeEventListener('click', this._blocker, true);
+
+    window.speechSynthesis.cancel();
+    if (AudioSystem.currentCloudAudio) {
+      AudioSystem.currentCloudAudio.pause();
+      AudioSystem.currentCloudAudio = null;
     }
+    this.updateUI(false);
+    if (this.wakeLock) { this.wakeLock.release().catch(() => {}); this.wakeLock = null; }
   },
 
-  updateLock: function(isActive) {
-    if (isActive) {
-      document.addEventListener('click', this._blocker, true);
-      if (document.activeElement) document.activeElement.blur();
-    } else {
-      document.removeEventListener('click', this._blocker, true);
-    }
-  },
-
-  updateUI: function(isActive) {
-    const btn = document.getElementById('autoplay-toggle-btn');
-    const icon = document.getElementById('play-icon');
-    const pulse = document.getElementById('autoplay-pulse');
-    if (!btn || !icon) return;
-
-    if (isActive) {
-      btn.classList.replace('text-blue-500/40', 'text-blue-500');
-      pulse?.classList.remove('hidden');
-      icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 9h6v6H9z" />';
-    } else {
-      btn.classList.replace('text-blue-500', 'text-blue-500/40');
-      pulse?.classList.add('hidden');
-      icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />';
-    }
-  },
-
-// ★ プレイリスト（再生キュー）の構築と開始
-playSequence: function() {
-    if (!this.active) return;
+  playSequence: async function() {
     const item = AppStore.state.queue[AppStore.state.currentIndex];
-    if (!item) return this.stop();
+    if (!item || !this.active) return;
     
     const isThaiMode = AppStore.state.isTargetThai;
     const rate = AppStore.state.isSlowMode ? 0.7 : 0.9;
     const playlist = [];
 
-    // ==================================================
-    // 日本語（意味）の読み上げ内容を「1、品詞、意味」の形に構築する関数
-    // ==================================================
+    // --- 多義語・品詞結合ロジック ---
     const getJaPlaylistItems = (delay) => {
       const items = [];
       let rawCat = item.category || '---';
@@ -658,7 +639,6 @@ playSequence: function() {
       const jaText = item.meaning_ja || '';
 
       if (jaText.includes('1.')) {
-        // 多義語パターンの場合
         const meaningParts = jaText.split(/(?=\d+[\.\)）])/).filter(p => p.trim() !== '');
         const catParts = /(?:^|\s)\d+\./.test(rawCat) 
           ? rawCat.split(/(?=\d+\.)/).filter(p => p.trim() !== '') 
@@ -668,111 +648,67 @@ playSequence: function() {
           const numMatch = part.match(/^(\d+)[\.\)）]/);
           const num = numMatch ? numMatch[1] : (index + 1);
           const cleanMeaning = part.replace(/^\d+[\.\)）]\s*/, '').trim();
-          
           let cleanCat = '';
-          if (catParts[index]) {
-             cleanCat = catParts[index].replace(/^\d+\.\s*/, '').trim();
-          } else if (index === 0 && !/(?:^|\s)\d+\./.test(rawCat)) {
-             cleanCat = rawCat.replace(/[\r\n]+/g, ' ').trim();
-          }
+          if (catParts[index]) cleanCat = catParts[index].replace(/^\d+\.\s*/, '').trim();
+          else if (index === 0 && !/(?:^|\s)\d+\./.test(rawCat)) cleanCat = rawCat.replace(/[\r\n]+/g, ' ').trim();
 
-          // 「1、品詞、意味」の形にテキストを結合する
           let textToSpeak = `${num}、`;
-          if (cleanCat && cleanCat !== '---') {
-            // カッコ記号などは読み上げエラーを防ぐために消す
-            textToSpeak += `${cleanCat.replace(/[（）()]/g, '')}、`;
-          }
+          if (cleanCat && cleanCat !== '---') textToSpeak += `${cleanCat.replace(/[（）()]/g, '')}、`;
           textToSpeak += cleanMeaning;
-          
           items.push({ text: textToSpeak, lang: 'ja-JP', rate: 1.0, delayAfter: delay });
         });
       } else {
-        // 意味が1つの場合
         let cleanCat = rawCat.replace(/[\r\n]+/g, ' ').trim();
         let textToSpeak = '';
-        if (cleanCat && cleanCat !== '---') {
-           textToSpeak += `${cleanCat.replace(/[（）()]/g, '')}、`;
-        }
+        if (cleanCat && cleanCat !== '---') textToSpeak += `${cleanCat.replace(/[（）()]/g, '')}、`;
         textToSpeak += jaText.trim();
         items.push({ text: textToSpeak, lang: 'ja-JP', rate: 1.0, delayAfter: delay });
       }
       return items;
     };
 
-    // ==================================================
-    // ① と ②：言語出題モードに合わせて順番をセット
-    // ==================================================
     if (isThaiMode) {
-      // タイ語 -> 日本語（1、品詞、意味...）
       playlist.push({ text: item.word_th, lang: 'th-TH', rate: rate, delayAfter: 1000 });
       playlist.push(...getJaPlaylistItems(1200));
     } else {
-      // 日本語（1、品詞、意味...） -> タイ語
       playlist.push(...getJaPlaylistItems(1000));
       playlist.push({ text: item.word_th, lang: 'th-TH', rate: rate, delayAfter: 1200 });
     }
 
-    // ==================================================
-    // ③ 例文群の構築
-    // ==================================================
     if (item.example_th && item.example_th !== "---") {
       const splitRegex = /\n|(?=\d+[\.\)）])/;
       const cleanRegex = /^\d+[\.\)）]\s*/;
-
       const exThArr = item.example_th.split(splitRegex).map(s => s.replace(cleanRegex, '').trim()).filter(Boolean);
       const exJaArr = item.example_ja ? item.example_ja.split(splitRegex).map(s => s.replace(cleanRegex, '').trim()).filter(Boolean) : [];
-      
       const maxEx = Math.min(exThArr.length, exJaArr.length);
       for (let i = 0; i < maxEx; i++) {
-        playlist.push({ 
-          text: isThaiMode ? exThArr[i] : exJaArr[i], 
-          lang: isThaiMode ? 'th-TH' : 'ja-JP', 
-          rate: isThaiMode ? rate : 1.0, 
-          delayAfter: 800 
-        });
-        playlist.push({ 
-          text: isThaiMode ? exJaArr[i] : exThArr[i], 
-          lang: isThaiMode ? 'ja-JP' : 'th-TH', 
-          rate: isThaiMode ? 1.0 : rate, 
-          delayAfter: 1200 
-        });
+        playlist.push({ text: isThaiMode ? exThArr[i] : exJaArr[i], lang: isThaiMode ? 'th-TH' : 'ja-JP', rate: isThaiMode ? rate : 1.0, delayAfter: 800 });
+        playlist.push({ text: isThaiMode ? exJaArr[i] : exThArr[i], lang: isThaiMode ? 'ja-JP' : 'th-TH', rate: isThaiMode ? 1.0 : rate, delayAfter: 1200 });
       }
     }
 
-    // プレイリストの実行開始
-    this.runPlaylist(playlist, 0, () => {
+    for (let i = 0; i < playlist.length; i++) {
       if (!this.active) return;
-      const nextIdx = (AppStore.state.currentIndex + 1) % AppStore.state.queue.length;
-      AppStore.update('currentIndex', nextIdx);
-      StudyEngine.render(); 
-      this.timer = setTimeout(() => this.playSequence(), 2000);
-    });
+      const track = playlist[i];
+      if (i === 0) StudyEngine.revealAll();
+      await AudioSystem.playAsync(track.text, track.lang, track.rate);
+      await new Promise(r => setTimeout(r, track.delayAfter));
+    }
   },
 
-  // ★ プレイリストを順番に消化する再帰関数
-  runPlaylist: function(playlist, index, onComplete) {
-    if (!this.active) return;
-    if (index >= playlist.length) {
-      onComplete();
-      return;
+  updateUI: function(isActive) {
+    const btn = document.getElementById('autoplay-toggle-btn');
+    const pulse = document.getElementById('autoplay-pulse');
+    const icon = document.getElementById('play-icon');
+    if (!btn) return;
+    btn.classList.toggle('text-blue-500', isActive);
+    btn.classList.toggle('text-blue-500/40', !isActive);
+    if (pulse) pulse.classList.toggle('hidden', !isActive);
+    if (icon) {
+      icon.innerHTML = isActive 
+        ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 9h6v6H9z" />'
+        : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />';
     }
-
-    const track = playlist[index];
-
-    // 再生開始時（index === 0）にカードをめくる
-    if (index === 0) {
-      const originalSpeak = StudyEngine.speak;
-      StudyEngine.speak = function() {}; 
-      StudyEngine.revealAll(); 
-      setTimeout(() => { StudyEngine.speak = originalSpeak; }, 500); 
-    }
-
-    AudioSystem.play(track.text, track.lang, track.rate, () => {
-      if (!this.active) return;
-      this.timer = setTimeout(() => {
-        this.runPlaylist(playlist, index + 1, onComplete);
-      }, track.delayAfter);
-    });
   }
 };
 
