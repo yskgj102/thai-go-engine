@@ -128,7 +128,7 @@ const ChatSystem = {
             title="Copy your message"
           >
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
             </svg>
           </button>
           `}
@@ -193,30 +193,50 @@ const ChatSystem = {
     if (indicator) indicator.remove();
   },
 
+  // 🌟 完全無欠の抽出エンジン (AIの太字やハイフン対応)
   extractAndRenderVocab: function(markdownText) {
     const words = [];
     
+    // 1. テーブルからの抽出
     const tableRegex = /\|([^|]+)\|([^|]+)\|([^|]+)\|/g;
     let match;
     while ((match = tableRegex.exec(markdownText)) !== null) {
-      const th = match[1].trim();
+      // 太字(**)などを除去
+      const th = match[1].replace(/\*\*/g, '').replace(/__/g, '').trim();
       const phonetic = match[2].trim();
-      const ja = match[3].trim();
-      if (th !== 'タイ語' && !th.includes('---')) {
+      const ja = match[3].replace(/\*\*/g, '').replace(/__/g, '').trim();
+      if (th !== 'タイ語' && th !== '' && !th.includes('---')) {
         words.push({ th, phonetic, ja });
       }
     }
 
-    // 🌟 修正：タイ文字以外の記号（... ～ - ? ! .）を許容し、意味の中の「、」も途切れないようにする完全版の正規表現
-    const listRegex = /([\u0E00-\u0E7F\s\.\…\-\~？！\?!]+)\s*\(([^)]+)\)\s*[:：]\s*([^\n]+)/g;
-    while ((match = listRegex.exec(markdownText)) !== null) {
-      const th = match[1].trim();
-      const phonetic = match[2].trim();
-      const ja = match[3].trim().replace(/[、。]+$/, '');
-      if (th && !words.find(w => w.th === th)) {
-        words.push({ th, phonetic, ja });
+    // 2. リスト形式からの抽出 (行ごとにパース)
+    const lines = markdownText.split('\n');
+    lines.forEach(line => {
+      // リスト記号(1. や - や *) と Markdownの太字(**) をすべて剥ぎ取る
+      let cleanLine = line.replace(/^(?:\d+\.|\-|\*)\s+/, '').replace(/\*\*/g, '').replace(/__/g, '').trim();
+      
+      if (!cleanLine) return;
+
+      // パターン: 「タイ語 (発音) : 意味」 または 「タイ語 : 意味」
+      // 区切り文字としてコロンだけでなく、ハイフン(-)やイコール(=)も許容する
+      const lineRegex = /^([^(:：\-–—=]+?)\s*(?:[\(\[【]([^)\]】]+)[\)\]】])?\s*[:：\-–—=]\s*(.+)$/;
+      const lineMatch = cleanLine.match(lineRegex);
+      
+      if (lineMatch) {
+        const th = lineMatch[1].trim();
+        const phonetic = lineMatch[2] ? lineMatch[2].trim() : '';
+        // 意味の最後にある余計な読点などは消す
+        const ja = lineMatch[3].trim().replace(/[、。]+$/, '');
+        
+        // タイ文字が含まれているかチェックしつつ、長すぎる文章の誤爆を防ぐ
+        if (/[\u0E00-\u0E7F]/.test(th) && th !== 'タイ語' && th.length < 50) {
+          if (!words.find(w => w.th === th)) {
+            words.push({ th, phonetic, ja });
+          }
+        }
       }
-    }
+    });
 
     if (words.length > 0) {
       ChatUI.renderVocabularyList(words); 
