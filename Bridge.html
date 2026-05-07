@@ -191,11 +191,9 @@ fetchCloudAudio: function(text, lang, rate, onComplete) {
     google.script.run
       .withSuccessHandler(res => {
         if (res && res.status === "duplicate") {
-          if (callback) callback(false, true); // 失敗, 重複あり
+          // 🌟 修正：既存のIDをcallbackに渡す
+          if (callback) callback(false, true, res.data ? res.data.id : null); 
         } else if (res && res.status === "success") {
-          // ==========================================
-          // 🌟 既存のQuickAddと全く同じ完璧な同期ロジック
-          // ==========================================
           AppStore.state.allVocab.unshift(res.data);
           AppStore.state.queue.splice(AppStore.state.currentIndex + 1, 0, res.data);
           ViewController.updateTotalCount(AppStore.state.allVocab.length);
@@ -203,9 +201,10 @@ fetchCloudAudio: function(text, lang, rate, onComplete) {
             VocabListUI.update();
             VocabListUI.renderCategoryBar();
           }
-          if (callback) callback(true, false); // 成功, 重複なし
+          // 🌟 修正：新規IDをcallbackに渡す
+          if (callback) callback(true, false, res.data.id); 
         } else {
-          if (callback) callback(false, false); // その他エラー
+          if (callback) callback(false, false);
         }
       })
       .withFailureHandler(() => {
