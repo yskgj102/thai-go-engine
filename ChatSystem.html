@@ -207,11 +207,12 @@ const ChatSystem = {
       }
     }
 
-    const listRegex = /([\u0E00-\u0E7F\s]+)\s*\(([^)]+)\)\s*[:：]\s*([^、,\n]+)/g;
+    // 🌟 修正：タイ文字以外の記号（... ～ - ? ! .）を許容し、意味の中の「、」も途切れないようにする完全版の正規表現
+    const listRegex = /([\u0E00-\u0E7F\s\.\…\-\~？！\?!]+)\s*\(([^)]+)\)\s*[:：]\s*([^\n]+)/g;
     while ((match = listRegex.exec(markdownText)) !== null) {
       const th = match[1].trim();
       const phonetic = match[2].trim();
-      const ja = match[3].trim();
+      const ja = match[3].trim().replace(/[、。]+$/, '');
       if (th && !words.find(w => w.th === th)) {
         words.push({ th, phonetic, ja });
       }
@@ -266,7 +267,6 @@ const ChatUI = {
     const listId = `word-list-${targetId}`;
     const toggleBtnId = `toggle-list-btn-${targetId}`;
 
-    // 🌟 タイトルの文字化け（サロゲートペア分割）を修正し、そのまま出力するように変更
     let html = `
       <div class="rounded-2xl p-4 shadow-xl border flex flex-col mb-2 animate-in slide-in-from-bottom-5 transition-all" style="background: var(--bg-card); border-color: var(--border);">
         <div class="flex justify-between items-center shrink-0 cursor-pointer select-none active:opacity-70 transition-opacity" 
@@ -285,7 +285,6 @@ const ChatUI = {
       const safeTh = w.th.replace(/'/g, "\\'");
       const uniqueIdx = `${targetId}-${index}`; 
       
-      // 🌟 余白、フォントサイズ、flex-wrapを調整し、ネイティブアプリ風の洗練されたUIに変更
       html += `
         <div onclick="StudyEngine.speakSpecificText('${safeTh}')" 
              class="flex justify-between items-center p-3 rounded-xl border shadow-sm cursor-pointer active:scale-[0.98] transition-transform" 
@@ -322,7 +321,6 @@ const ChatUI = {
     words.forEach((w, index) => this.checkDuplicate(w.th, `${targetId}-${index}`));
   },
 
-  // 🌟 修正：GAS通信を廃止し、メモリ上の全単語データから瞬間検索する
   checkDuplicate: function(wordTh, uniqueIdx) {
     const btn = document.getElementById(`add-btn-${uniqueIdx}`);
     const btnText = document.getElementById(`btn-text-${uniqueIdx}`);
@@ -330,14 +328,10 @@ const ChatUI = {
 
     if (!btn || !btnText || !spinner) return;
 
-    // 1. スピナーは出さず、一瞬で判定する
     spinner.classList.add('hidden');
 
-    // 2. メモリ上にある全単語データ (AppStore.state.allVocab) から同一タイ語があるか探す
-    // ※ some は1つでも見つかれば true を返す高速な配列メソッド
     const isDuplicate = AppStore.state.allVocab.some(v => v.word_th === wordTh);
 
-    // 3. 判定結果を即座にUIへ反映
     if (isDuplicate) {
       btn.className = "px-3.5 py-2 rounded-xl text-[10px] font-bold flex items-center justify-center min-w-[65px] h-[32px] pointer-events-none opacity-50 border shadow-inner";
       btn.style.background = "var(--bg-card)";
