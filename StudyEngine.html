@@ -1192,6 +1192,7 @@ const editorPanel = `
     `;
 syllables.forEach((syl) => {
         const tInfo = ThaiMasterData.toneMap[syl.toneNum] || ThaiMasterData.toneMap[0];
+        const toneRuleText = ThaiValidator.getToneExplanation(syl.finalClass, syl.toneMark, syl.sType, syl.vLen);
         const cColor = ThaiMasterData.classColors[syl.finalClass] || 'text-slate-500';
         const cObj = ThaiMasterData.consonants[syl.mainC[0]] || { name: '不明', sound: '?' };
         const finalChar = syl.lastC || "";
@@ -1234,7 +1235,8 @@ syllables.forEach((syl) => {
             <div class="analysis-chip p-4 rounded-3xl w-[130px] text-center flex-shrink-0 relative overflow-hidden transition-all border ${chipBorderClass}
                         bg-[var(--bg-card)]">
                 
-                <div class="mb-3 pb-2 border-b border-[var(--border)]">
+                <div class="mb-3 pb-2 border-b border-[var(--border)] cursor-help active:scale-95 transition-transform"
+                     onclick="event.stopPropagation(); StudyEngine.showTooltip(this, '${toneRuleText}')">
                     <div class="${tInfo.color} text-4xl leading-none font-black">${tInfo.mark || 'ー'}</div>
                     <div class="${tInfo.color} text-[10px] font-black tracking-tighter uppercase">${tInfo.label}</div>
                 </div>
@@ -1556,6 +1558,7 @@ parseSyllables: function(text, dbEntry = null) {
         // Validatorを呼んで母音と基本タイプを取得
         const vRule = ThaiValidator.resolveVowel(syl);
         const tMark = syl.marks.find(m => /[\u0E48-\u0E4B]/.test(m));
+        syl.toneMark = tMark; // 🌟 追加：判定に使った記号を保存しておく
         let sType = syl.lastC ? (ThaiMasterData.terminalGroups[syl.lastC] || 'Dead') : vRule.type;
         
         // ★ Ro Han (รร) の死音化ロジック
@@ -1824,7 +1827,30 @@ for (let i = 0; i < syllables.length - 1; i++) {
  * GS_Validator: 判定ロジック
  */
 const ThaiValidator = {
-
+// --- StudyEngine.html 内 ThaiValidator オブジェクトに追加 ---
+  /**
+   * 声調判定の根拠を文字列で返す (案2用)
+   */
+  getToneExplanation: function(charClass, tMark, sType, vLength) {
+    const clsMap = { 'High': '高級', 'Mid': '中級', 'Low': '低級' };
+    const cls = clsMap[charClass] || charClass;
+    const vLen = (vLength === 'long' ? '長母音' : '短母音');
+    const type = (sType.toLowerCase() === 'live' ? '生音' : '死音');
+    
+    let path = `【${cls}】`;
+    if (tMark) {
+      const markNames = { '่': '第1記号(่)', '้': '第2記号(้)', '๊': '第3記号(๊)', '๋': '第4記号(๋)' };
+      path += ` + ${markNames[tMark] || '声調記号'}`;
+    } else {
+      path += ` + ${type}`;
+      // 低級子音の死音以外は、母音の長さは判定に関係ないが、説明としては含めたほうが親切
+      path += ` + ${vLen}`;
+    }
+    
+    const toneNum = this.getToneNumber(charClass, tMark, sType, vLength);
+    const toneLabel = ThaiMasterData.toneMap[toneNum].label.split(' ')[0];
+    return `${path} ➔ ${toneLabel}`;
+  },
   resolveVowel: function(syl) {
     // デバッグ用: マスタに照合する直前の「ベース文字列」と「末子音」を出力
     console.log(`DEBUG: [${syl.full}] mainC: "${(syl.mainC || '') + syl.marks.filter(m => !/[่้๊๋์]/.test(m)).join('')}" lastC: "${syl.lastC}"`);
