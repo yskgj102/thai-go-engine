@@ -577,6 +577,37 @@ const AutoPlayEngine = {
     e.preventDefault();
   },
 
+// 🌟 ヘルパー：再生中のテキストに対応するDOM要素を「執念深く」探す
+  _findTargetElement: function(text) {
+    if (!text) return null;
+    
+    // 1. ノイズ（空白、数字、「、」などの記号）を消して、純粋な文字を先頭6文字抽出
+    const searchTarget = text.replace(/[\s\d１-９、。,\.\(\)（）\-]/g, '').substring(0, 6);
+    if (searchTarget.length < 2) return null; // 短すぎるテキストは誤爆を防ぐため無視
+
+    // 2. カード内の「すべての要素」を対象にする（クラス名に依存しない）
+    const elements = document.querySelectorAll('#main-content *');
+    let bestMatch = null;
+    let minLength = Infinity;
+
+    // 3. 一致する要素の中で、一番「範囲が狭い（ピンポイントな）」要素を特定する
+    for (let el of elements) {
+      // 画面に表示されていない隠し要素はスキップ
+      if (el.offsetParent === null) continue;
+      
+      const elText = (el.innerText || '').replace(/[\s\d１-９、。,\.\(\)（）\-]/g, '');
+      
+      if (elText.includes(searchTarget)) {
+        // 要素のテキスト長が短いほど、大枠のコンテナではなく「そのテキストズバリの要素」だと判定
+        if (el.innerText.length < minLength) {
+          bestMatch = el;
+          minLength = el.innerText.length;
+        }
+      }
+    }
+    
+    return bestMatch;
+  },
   toggle: function() {
     if (this.active) this.stop();
     else this.start();
@@ -623,7 +654,7 @@ const AutoPlayEngine = {
     if (this.wakeLock) { this.wakeLock.release().catch(() => {}); this.wakeLock = null; }
   },
 
-  playSequence: async function() {
+playSequence: async function() {
     const item = AppStore.state.queue[AppStore.state.currentIndex];
     if (!item || !this.active) return;
     
@@ -631,19 +662,15 @@ const AutoPlayEngine = {
     const rate = AppStore.state.isSlowMode ? 0.7 : 0.9;
     const playlist = [];
 
-    // --- 多義語・品詞結合ロジック ---
+    // --- 多義語・品詞結合ロジック (復元済み) ---
     const getJaPlaylistItems = (delay) => {
       const items = [];
       let rawCat = item.category || '---';
       rawCat = rawCat.replace(/(名詞\s*（類別詞:\s*)+/g, '名詞（類別詞: ');
       const jaText = item.meaning_ja || '';
-
       if (jaText.includes('1.')) {
         const meaningParts = jaText.split(/(?=\d+[\.\)）])/).filter(p => p.trim() !== '');
-        const catParts = /(?:^|\s)\d+\./.test(rawCat) 
-          ? rawCat.split(/(?=\d+\.)/).filter(p => p.trim() !== '') 
-          : [];
-
+        const catParts = /(?:^|\s)\d+\./.test(rawCat) ? rawCat.split(/(?=\d+\.)/).filter(p => p.trim() !== '') : [];
         meaningParts.forEach((part, index) => {
           const numMatch = part.match(/^(\d+)[\.\)）]/);
           const num = numMatch ? numMatch[1] : (index + 1);
@@ -651,46 +678,58 @@ const AutoPlayEngine = {
           let cleanCat = '';
           if (catParts[index]) cleanCat = catParts[index].replace(/^\d+\.\s*/, '').trim();
           else if (index === 0 && !/(?:^|\s)\d+\./.test(rawCat)) cleanCat = rawCat.replace(/[\r\n]+/g, ' ').trim();
-
-          let textToSpeak = `${num}、`;
-          if (cleanCat && cleanCat !== '---') textToSpeak += `${cleanCat.replace(/[（）()]/g, '')}、`;
-          textToSpeak += cleanMeaning;
-          items.push({ text: textToSpeak, lang: 'ja-JP', rate: 1.0, delayAfter: delay });
+          let textToSpeak = `${num}、${cleanCat && cleanCat !== '---' ? cleanCat.replace(/[（）()]/g, '') + '、' : ''}${cleanMeaning}`;
+          items.push({ text: textToSpeak, lang: 'ja-JP', rate: 1.0, delayAfter: delay, rawText: cleanMeaning });
         });
       } else {
-        let cleanCat = rawCat.replace(/[\r\n]+/g, ' ').trim();
-        let textToSpeak = '';
-        if (cleanCat && cleanCat !== '---') textToSpeak += `${cleanCat.replace(/[（）()]/g, '')}、`;
-        textToSpeak += jaText.trim();
-        items.push({ text: textToSpeak, lang: 'ja-JP', rate: 1.0, delayAfter: delay });
+        let cleanCat = (item.category || '---').replace(/[（）()]/g, '').replace(/[\r\n]+/g, ' ').trim();
+        let textToSpeak = `${cleanCat !== '---' ? cleanCat + '、' : ''}${jaText.trim()}`;
+        items.push({ text: textToSpeak, lang: 'ja-JP', rate: 1.0, delayAfter: delay, rawText: jaText.trim() });
       }
       return items;
     };
 
     if (isThaiMode) {
-      playlist.push({ text: item.word_th, lang: 'th-TH', rate: rate, delayAfter: 1000 });
+      playlist.push({ text: item.word_th, lang: 'th-TH', rate: rate, delayAfter: 1000, rawText: item.word_th });
       playlist.push(...getJaPlaylistItems(1200));
     } else {
       playlist.push(...getJaPlaylistItems(1000));
-      playlist.push({ text: item.word_th, lang: 'th-TH', rate: rate, delayAfter: 1200 });
+      playlist.push({ text: item.word_th, lang: 'th-TH', rate: rate, delayAfter: 1200, rawText: item.word_th });
     }
 
     if (item.example_th && item.example_th !== "---") {
       const splitRegex = /\n|(?=\d+[\.\)）])/;
-      const cleanRegex = /^\d+[\.\)）]\s*/;
-      const exThArr = item.example_th.split(splitRegex).map(s => s.replace(cleanRegex, '').trim()).filter(Boolean);
-      const exJaArr = item.example_ja ? item.example_ja.split(splitRegex).map(s => s.replace(cleanRegex, '').trim()).filter(Boolean) : [];
+      const exThArr = item.example_th.split(splitRegex).map(s => s.replace(/^\d+[\.\)）]\s*/, '').trim()).filter(Boolean);
+      const exJaArr = item.example_ja ? item.example_ja.split(splitRegex).map(s => s.replace(/^\d+[\.\)）]\s*/, '').trim()).filter(Boolean) : [];
       const maxEx = Math.min(exThArr.length, exJaArr.length);
       for (let i = 0; i < maxEx; i++) {
-        playlist.push({ text: isThaiMode ? exThArr[i] : exJaArr[i], lang: isThaiMode ? 'th-TH' : 'ja-JP', rate: isThaiMode ? rate : 1.0, delayAfter: 800 });
-        playlist.push({ text: isThaiMode ? exJaArr[i] : exThArr[i], lang: isThaiMode ? 'ja-JP' : 'th-TH', rate: isThaiMode ? 1.0 : rate, delayAfter: 1200 });
+        playlist.push({ text: isThaiMode ? exThArr[i] : exJaArr[i], lang: isThaiMode ? 'th-TH' : 'ja-JP', rate: isThaiMode ? rate : 1.0, delayAfter: 800, rawText: isThaiMode ? exThArr[i] : exJaArr[i] });
+        playlist.push({ text: isThaiMode ? exJaArr[i] : exThArr[i], lang: isThaiMode ? 'ja-JP' : 'th-TH', rate: isThaiMode ? 1.0 : rate, delayAfter: 1200, rawText: isThaiMode ? exJaArr[i] : exThArr[i] });
       }
     }
 
+    // 🌟 再生ループ（自動スクロール・ハイライト実行）
     for (let i = 0; i < playlist.length; i++) {
       if (!this.active) return;
       const track = playlist[i];
-      if (i === 0) StudyEngine.revealAll();
+      if (i === 0) {
+        StudyEngine.revealAll();
+        window.scrollTo({ top: 0, behavior: 'smooth' }); // 最初はトップへ
+      }
+
+      // 🌟 【自動スクロール & ハイライト】
+      const targetEl = this._findTargetElement(track.rawText || track.text);
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetEl.style.transition = 'all 0.3s';
+        targetEl.style.color = '#3b82f6'; // 青色で強調
+        targetEl.style.transform = 'scale(1.02)';
+        setTimeout(() => {
+          targetEl.style.color = '';
+          targetEl.style.transform = '';
+        }, 1500);
+      }
+
       await AudioSystem.playAsync(track.text, track.lang, track.rate);
       await new Promise(r => setTimeout(r, track.delayAfter));
     }
