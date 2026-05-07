@@ -29,7 +29,6 @@ const ViewController = {
     
     document.getElementById('app-container').classList.remove('is-revealed');
     
-
     // フッター（解答ボタン）を隠し、クリックを無効化
     const footer = document.getElementById('footer-ui');
     if (footer) {
@@ -70,8 +69,8 @@ const ViewController = {
     
     document.getElementById('tap-hint').classList.add('hidden');
     
-      const ph = document.getElementById('phonetic');
-      if (ph) ph.classList.remove('hidden');
+    const ph = document.getElementById('phonetic');
+    if (ph) ph.classList.remove('hidden');
   },
 
   /**
@@ -140,7 +139,6 @@ const ViewController = {
     AppStore.state.isProcessing = true;
     if (message) this.showToast(message, "success");
   
-
     // 1. 【聖域化】bodyにクラスを付与（CSSが発動する）
     if (isAllowList) {
       document.body.classList.add('allow-list-active');
@@ -151,7 +149,7 @@ const ViewController = {
     // 2. リスト更新（render内の pointerClass も一応そのまま活かす）
     VocabListUI.update(null, isAllowList); 
 
-// 3. 【入力系】メモ帳と検索窓を除外するロジック
+    // 3. 【入力系】メモ帳と検索窓を除外するロジック
     document.querySelectorAll('input, textarea').forEach(el => {
       // 「メモ帳」または「検索窓」ならロックしない（そのまま通す）
       if (el.id === 'memo-textarea' || el.id === 'list-search') {
@@ -195,8 +193,6 @@ const ViewController = {
 
     VocabListUI.update();
   },
-
-
 
   /**
    * 単語削除のリクエスト（誤操作防止の2段階タップ・安全装置付き）
@@ -269,7 +265,7 @@ const ViewController = {
     }
   },
 
-/**
+  /**
    * ボキャブラリーパネルの開閉（検索フォーカス強制版）
    * 常にフォーカスを当てることで invokeQuickSearch を不要にする。
    */
@@ -308,10 +304,11 @@ const ViewController = {
       }, 100);
     }
   },
-/**
+
+  /**
    * AppStoreから渡された単語情報をHTML各要素に反映
    */
-updateText: function(item, isThai) {
+  updateText: function(item, isThai) {
     const formatMultiline = (text) => {
       if (!text) return '---';
       return String(text).replace(/\s+(?=[2-9]\.)/g, '\n');
@@ -320,10 +317,49 @@ updateText: function(item, isThai) {
     const frontText = isThai ? (item.word_th || '---') : formatMultiline(item.meaning_ja);
     const backText  = isThai ? formatMultiline(item.meaning_ja) : (item.word_th || '---');
 
+    // ==========================================
+    // 🌟 修正：note（解説）の表示・非表示と関連単語の自動抽出
+    // ==========================================
+    const noteText = item.explanation || '';
+    const noteContainer = document.getElementById('note-container');
+    const noteEl = document.getElementById('note');
+    const extractedContainer = document.getElementById('note-extracted-words');
+
+    if (noteEl) noteEl.innerText = noteText;
+    if (noteContainer) {
+      if (noteText && noteText.trim() !== '' && noteText !== '---') {
+        noteContainer.classList.remove('hidden');
+
+        // 🌟 関連単語の自動抽出ロジック（ChatUIを使い回す！）
+        if (extractedContainer) {
+          extractedContainer.innerHTML = ''; // リセット
+          
+          const words = [];
+          const regex = /([\u0E00-\u0E7F\s]+)\s*\(([^)]+)\)\s*[:：]\s*([^、,\n]+)/g;
+          let match;
+
+          while ((match = regex.exec(noteText)) !== null) {
+            words.push({ 
+              th: match[1].trim(), 
+              phonetic: match[2].trim(), 
+              ja: match[3].trim() 
+            });
+          }
+
+          if (words.length > 0) {
+            // 対象のコンテナIDとタイトルを指定して、ChatのUIをそのまま出力！
+            ChatUI.renderVocabularyList(words, 'note-extracted-words', '🔗 関連単語');
+          }
+        }
+      } else {
+        noteContainer.classList.add('hidden');
+        if (extractedContainer) extractedContainer.innerHTML = '';
+      }
+    }
+
     const mapping = {
       'word-th': frontText,
-      'phonetic': isThai ? (item.phonetic || '---'):(item.meaning_kana || '---'),
-      'note': item.explanation || ''
+      'phonetic': isThai ? (item.phonetic || '---'):(item.meaning_kana || '---')
     };
 
     Object.entries(mapping).forEach(([id, val]) => {
@@ -491,6 +527,7 @@ updateText: function(item, isThai) {
       }
     }
   },
+
   /**
    * 単語の忘却・学習間隔統計を画面に反映
    */
@@ -550,7 +587,6 @@ updateText: function(item, isThai) {
       }
     }
   },
-// ViewController の中に追加・差し替え
 
   /**
    * メモシートの開閉 ＆ オートセーブ処理（Doneボタン廃止版）
@@ -602,8 +638,6 @@ updateText: function(item, isThai) {
     }
   },
 
-// （※ 以前の saveAndCloseMemo 関数は不要になったので削除してください）
-
   saveAndCloseMemo: function() {
     const text = document.getElementById('memo-textarea').value;
     const currentItem = AppStore.state.queue[AppStore.state.currentIndex];
@@ -615,7 +649,7 @@ updateText: function(item, isThai) {
       currentItem.memo = text;
     }
     this.toggleMemoSheet(false);
-  },
+  }
 
 };
 
