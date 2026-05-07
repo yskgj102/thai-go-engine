@@ -735,53 +735,63 @@ renderToneRules: function() {
     // ViewController.showToast(`Searching "${word}" on GotThai...`, "success");
   },
 
-
 renderContextLinks: function(rawText, targetElementId, excludeId) {
-  const targetEl = document.getElementById(targetElementId);
-  if (!rawText || !targetEl) return;
+    const targetEl = document.getElementById(targetElementId);
+    if (!rawText || !targetEl) return;
 
-  let text = rawText;
-  const allVocab = AppStore.state.allVocab;
-  const map = new Map();
+    let text = rawText;
+    const allVocab = AppStore.state.allVocab;
+    const map = new Map();
 
-  // 1. 【絶対ルール】自分も他人も混ぜて、とにかく「文字数が長い順」にソートする
-  // これにより「สถานที่」が「ที่」より先に処理され、部分一致によるリンク破壊を防ぎます。
-  const sortedVocab = [...allVocab]
-    .filter(v => v.word_th && v.word_th.length > 1)
-    .sort((a, b) => b.word_th.length - a.word_th.length);
+    // 1. 【絶対ルール】自分も他人も混ぜて、とにかく「文字数が長い順」にソートする
+    // これにより「สถานที่」が「ที่」より先に処理され、部分一致によるリンク破壊を防ぎます。
+    const sortedVocab = [...allVocab]
+      .filter(v => v.word_th && v.word_th.length > 1)
+      .sort((a, b) => b.word_th.length - a.word_th.length);
 
-  // 2. 置換処理の実行
-  sortedVocab.forEach((v, index) => {
-    if (text.includes(v.word_th)) {
-      const placeholder = `__VOCAB_${index}__`;
-      
-      // ツールチップ用に意味を「A / B」の1行に美しく整形
-      const meaning = String(v.meaning_ja || "")
-        .replace(/\d+\.\s*/g, '')
-        .replace(/[\n\r]+/g, ' / ')
-        .replace(/"/g, '&quot;');
+    // 2. 置換処理の実行
+    sortedVocab.forEach((v, index) => {
+      if (text.includes(v.word_th)) {
+        const placeholder = `__VOCAB_${index}__`;
+        
+        // ツールチップ用に意味を「A / B」の1行に美しく整形
+        const meaning = String(v.meaning_ja || "")
+          .replace(/\d+\.\s*/g, '')
+          .replace(/[\n\r]+/g, ' / ')
+          .replace(/"/g, '&quot;');
 
-      // ★ ここで「自分かどうか」を判定し、付けるCSSクラスを切り替える
-      const isSelf = (v.id === excludeId);
-      const linkClass = isSelf ? "context-link is-self" : "context-link";
+        // ★ 変更点：「自分かどうか」を判定し、単語の区切りが視覚的にわかるクラスを付与
+        const isSelf = (v.id === excludeId);
+        
+        // baseClass: 共通のベーススタイル
+        const baseClass = "context-link transition-colors duration-200 inline-block";
+        
+        // styleClass:
+        // 自分自身(isSelf) → 青字＆太字にして「今勉強している主役の単語」であることを強調
+        // 他の登録済単語 → 下にうっすら点線を敷き、左右に1pxの余白(px-[1px] mx-[1px])を入れることで、タイ語特有の「単語の切れ目」を視覚的に浮かび上がらせる
+        const styleClass = isSelf 
+          ? "text-blue-600 dark:text-blue-400 font-bold px-[1px] mx-[1px]" 
+          : "cursor-pointer border-b border-dotted border-blue-400/60 dark:border-blue-500/60 hover:bg-blue-500/10 px-[1px] mx-[1px] rounded-sm";
 
-      const linkHtml = `<span class="${linkClass}" data-meaning="${meaning}" onclick="event.stopPropagation(); StudyEngine.handleContextClick(this, '${v.id}')">${v.word_th}</span>`;
-      
-      map.set(placeholder, linkHtml);
-      text = text.split(v.word_th).join(placeholder);
-    }
-  });
+        const linkClass = `${baseClass} ${styleClass} ${isSelf ? 'is-self' : ''}`;
 
-  // 3. プレースホルダーを実際のHTMLリンクに復元
-  map.forEach((html, placeholder) => {
-    text = text.split(placeholder).join(html);
-  });
-  
-  // 改行コードを明確なHTMLの改行タグに変換する
-  text = text.replace(/\n/g, '<br>');
+        const linkHtml = `<span class="${linkClass}" data-meaning="${meaning}" onclick="event.stopPropagation(); StudyEngine.handleContextClick(this, '${v.id}')">${v.word_th}</span>`;
+        
+        map.set(placeholder, linkHtml);
+        text = text.split(v.word_th).join(placeholder);
+      }
+    });
 
-  targetEl.innerHTML = text;
-},
+    // 3. プレースホルダーを実際のHTMLリンクに復元
+    map.forEach((html, placeholder) => {
+      text = text.split(placeholder).join(html);
+    });
+    
+    // 改行コードを明確なHTMLの改行タグに変換する
+    text = text.replace(/\n/g, '<br>');
+
+    targetEl.innerHTML = text;
+  },
 /**
    * 2クリック遷移のロジック（レイアウト崩れ・端っこ見切れ防止の完全版）
    */
