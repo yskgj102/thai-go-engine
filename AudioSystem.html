@@ -10,11 +10,34 @@ const AudioSystem = {
   /**
    * 🌟 連続再生エンジン専用：再生完了を待機できる非同期関数
    */
+// 🌟【修正】AudioSystem.js の playAsync
   playAsync: function(text, lang, rate) {
     return new Promise((resolve) => {
-      // 実際の発火。終わったら resolve() を呼ぶように仕込む
+      // 1. 空白や記号だけのテキストなら即座にスキップ（これがないとフリーズの元）
+      if (!text || text.replace(/[\s\r\n]/g, '') === '' || text === '---') {
+        resolve();
+        return;
+      }
+
+      let isResolved = false;
+
+      // 2. 🛡️ フェイルセーフ（安全装置）：15秒経っても終わらなければ強制突破
+      // ※例文がとても長い場合は、この15000（15秒）を20000等に伸ばしてくれ
+      const safetyTimer = setTimeout(() => {
+        if (!isResolved) {
+          console.warn("[AudioSystem] 再生タイムアウト。強制的に次へ進みます:", text);
+          isResolved = true;
+          resolve(); 
+        }
+      }, 15000); 
+
+      // 3. 実際の再生処理
       this.play(text, lang, rate, () => {
-        resolve(); 
+        if (!isResolved) {
+          clearTimeout(safetyTimer); // 正常に終わったらタイマー解除
+          isResolved = true;
+          resolve();
+        }
       });
     });
   },
@@ -27,10 +50,11 @@ const AudioSystem = {
       if (onEnd) onEnd();
       return;
     }
-
-    if (AppStore.state.isCloudTTS) {
+// 🌟 【ここが重要】Cloudモード ON かつ「タイ語(th-TH)」の時だけAPIを叩く
+    if (AppStore.state.isCloudTTS && lang === 'th-TH') {
       Bridge.fetchCloudAudio(text, lang, rate, onEnd);
     } else {
+      // 日本語（またはCloudモードOFF）はすべてブラウザ標準TTSで即座に鳴らす
       this.playBrowserTTS(text, lang, rate, onEnd);
     }
   },
@@ -80,6 +104,10 @@ const AudioSystem = {
     window.speechSynthesis.cancel();
 
     const u = new SpeechSynthesisUtterance(text);
+
+
+    window._currentUtterance = u;
+    
     u.lang = lang;
     u.rate = rate;
     

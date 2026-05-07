@@ -577,31 +577,35 @@ const AutoPlayEngine = {
     e.preventDefault();
   },
 
-// 🌟 ヘルパー：再生中のテキストに対応するDOM要素を「執念深く」探す
+// 🌟 ヘルパー：再生中のテキストに対応するDOM要素を「正確に」探す
   _findTargetElement: function(text) {
     if (!text) return null;
     
-    // 1. ノイズ（空白、数字、「、」などの記号）を消して、純粋な文字を先頭6文字抽出
-    const searchTarget = text.replace(/[\s\d１-９、。,\.\(\)（）\-]/g, '').substring(0, 6);
-    if (searchTarget.length < 2) return null; // 短すぎるテキストは誤爆を防ぐため無視
+    // 1. ノイズ（空白、数字、「、」などの記号）を消して純粋な文字にする
+    const cleanText = text.replace(/[\s\d１-９、。,\.\(\)（）\-]/g, '');
+    if (cleanText.length < 2) return null; 
 
-    // 2. カード内の「すべての要素」を対象にする（クラス名に依存しない）
+    // 検索用のターゲット（前方6文字）
+    const searchTarget = cleanText.substring(0, 6);
+
     const elements = document.querySelectorAll('#main-content *');
     let bestMatch = null;
-    let minLength = Infinity;
+    let minDiff = Infinity; // 🌟 追加：「テキスト長の差」の最小値を記録する
 
-    // 3. 一致する要素の中で、一番「範囲が狭い（ピンポイントな）」要素を特定する
     for (let el of elements) {
-      // 画面に表示されていない隠し要素はスキップ
       if (el.offsetParent === null) continue;
       
       const elText = (el.innerText || '').replace(/[\s\d１-９、。,\.\(\)（）\-]/g, '');
       
+      // ターゲットの文字が含まれているか
       if (elText.includes(searchTarget)) {
-        // 要素のテキスト長が短いほど、大枠のコンテナではなく「そのテキストズバリの要素」だと判定
-        if (el.innerText.length < minLength) {
+        // 🌟 修正：「今読んでいるテキストの長さ」と「要素のテキストの長さ」の差を計算
+        const diff = Math.abs(elText.length - cleanText.length);
+        
+        // 差が一番小さい（＝元の例文の長さに一番近い）要素をベストマッチとする
+        if (diff < minDiff) {
           bestMatch = el;
-          minLength = el.innerText.length;
+          minDiff = diff;
         }
       }
     }
@@ -708,21 +712,29 @@ playSequence: async function() {
       }
     }
 
-    // 🌟 再生ループ（自動スクロール・ハイライト実行）
+    // 🌟 再生ループ（自動スクロール・ハイライト・二重発火防止）
     for (let i = 0; i < playlist.length; i++) {
       if (!this.active) return;
       const track = playlist[i];
+      
       if (i === 0) {
+        // 🌟 【復元】revealAllによる自動発話を一時的に無効化し、競合を防ぐ
+        const originalSpeak = StudyEngine.speak;
+        StudyEngine.speak = function() {}; 
+
         StudyEngine.revealAll();
-        window.scrollTo({ top: 0, behavior: 'smooth' }); // 最初はトップへ
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // 0.5秒後に元に戻す
+        setTimeout(() => { StudyEngine.speak = originalSpeak; }, 500);
       }
 
-      // 🌟 【自動スクロール & ハイライト】
+      // 【自動スクロール & ハイライト】
       const targetEl = this._findTargetElement(track.rawText || track.text);
       if (targetEl) {
         targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         targetEl.style.transition = 'all 0.3s';
-        targetEl.style.color = '#3b82f6'; // 青色で強調
+        targetEl.style.color = '#3b82f6'; 
         targetEl.style.transform = 'scale(1.02)';
         setTimeout(() => {
           targetEl.style.color = '';
@@ -730,6 +742,7 @@ playSequence: async function() {
         }, 1500);
       }
 
+      // 音声を再生して「終わるまで待つ」
       await AudioSystem.playAsync(track.text, track.lang, track.rate);
       await new Promise(r => setTimeout(r, track.delayAfter));
     }
