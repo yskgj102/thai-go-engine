@@ -331,23 +331,31 @@ const ViewController = {
         noteContainer.classList.remove('hidden');
 
         // 🌟 関連単語の自動抽出ロジック（ChatUIを使い回す！）
+        // 🌟 真因解決：ChatSystemと同じ「カッコ境界のスナイパー型」に統一
         if (extractedContainer) {
-          extractedContainer.innerHTML = ''; // リセット
-          
+          extractedContainer.innerHTML = ''; 
           const words = [];
-          const regex = /([\u0E00-\u0E7F\s]+)\s*\(([^)]+)\)\s*[:：]\s*([^、,\n]+)/g;
-          let match;
-
-          while ((match = regex.exec(noteText)) !== null) {
-            words.push({ 
-              th: match[1].trim(), 
-              phonetic: match[2].trim(), 
-              ja: match[3].trim() 
-            });
-          }
+          
+          // 解説文を改行で区切って1行ずつ精査
+          noteText.split('\n').forEach(line => {
+            // カッコを境界にして「タイ文字を含む塊」を強欲に取る
+            const m = line.match(/(.*[\u0E00-\u0E7F].*?)\s*[([（【]([^)）】]+)[)）】]\s*[:：\-–—=]\s*(.+)/);
+            if (m) {
+              let thRaw = m[1].trim();
+              const phonetic = m[2].trim();
+              const ja = m[3].trim().replace(/[、。]+$/, '');
+              
+              const thaiStart = thRaw.search(/[\u0E00-\u0E7F]/);
+              if (thaiStart !== -1) {
+                const th = thRaw.substring(thaiStart).trim();
+                if (th && !words.find(w => w.th === th)) {
+                  words.push({ th, phonetic, ja });
+                }
+              }
+            }
+          });
 
           if (words.length > 0) {
-            // 対象のコンテナIDとタイトルを指定して、ChatのUIをそのまま出力！
             ChatUI.renderVocabularyList(words, 'note-extracted-words', '抽出された単語');
           }
         }
