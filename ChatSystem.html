@@ -127,16 +127,28 @@ appendMessage: function(role, text) {
     } else if (role === 'ai') {
       div.className = "text-left mb-4 animate-in slide-in-from-left-4 fade-in duration-200";
       
-      // 🌟 追加：marked.js を使って Markdown を HTML に変換する
-      // ※万が一ライブラリが読み込めなかった時のためのフェールセーフも入れている
       const htmlContent = typeof marked !== 'undefined' ? marked.parse(text) : text.replace(/\n/g, '<br>');
 
-      // 🌟 追加：Tailwind の `prose` クラス群を当てて、見出しやリストを自動で美しく整形する
+      // 🌟 追加：テキストを安全にエンコード（改行やクォートによるHTML崩れを防止）
+      const safeDataText = encodeURIComponent(text);
+
+      // 🌟 追加：親の div に relative group を付け、右下にコピーボタンを配置
       div.innerHTML = `
-        <div class="bg-white dark:bg-white/10 text-slate-800 dark:text-white px-5 py-4 rounded-2xl rounded-tl-sm inline-block max-w-[95%] shadow-sm border border-slate-200 dark:border-white/5">
+        <div class="relative group bg-white dark:bg-white/10 text-slate-800 dark:text-white px-5 py-4 rounded-2xl rounded-tl-sm inline-block max-w-[95%] shadow-sm border border-slate-200 dark:border-white/5 pb-8">
           <div class="prose prose-sm prose-slate dark:prose-invert max-w-none leading-relaxed">
             ${htmlContent}
           </div>
+          
+          <button 
+            data-text="${safeDataText}"
+            onclick="ChatUIHelper.copyText(this)"
+            class="absolute bottom-2 right-2 p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-white/5 active:scale-95 transition-all opacity-60 hover:opacity-100 flex items-center gap-1"
+            title="Copy to clipboard"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+            </svg>
+          </button>
         </div>
       `;
       
@@ -192,7 +204,7 @@ appendMessage: function(role, text) {
       ChatUI.renderVocabularyList(words); 
     }
   },
-  
+
   sendImage: function(input) {
     const file = input.files[0];
     if (!file || this.isWaiting) return;
@@ -343,6 +355,40 @@ const ChatUI = {
             btn.classList.remove('pointer-events-none');
             btnText.innerText = "エラー";
         }
+    });
+  }
+};
+
+const ChatUIHelper = {
+  /**
+   * 属性(data-text)から安全にテキストを取り出してコピーする
+   */
+  copyText: function(buttonElement) {
+    if (!navigator.clipboard) {
+      if (typeof ViewController !== 'undefined') ViewController.showToast("Clipboard API not supported.", "error");
+      return;
+    }
+
+    // 埋め込まれたエンコード済みテキストを復元
+    const textToCopy = decodeURIComponent(buttonElement.getAttribute('data-text'));
+
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      const originalHTML = buttonElement.innerHTML;
+      
+      // コピー完了アイコン（チェックマーク）
+      buttonElement.innerHTML = `<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+      buttonElement.classList.add('text-green-500');
+
+      if (typeof ViewController !== 'undefined') ViewController.showToast("Copied!", "success");
+
+      // 2秒後に元のアイコンに戻す
+      setTimeout(() => {
+        buttonElement.innerHTML = originalHTML;
+        buttonElement.classList.remove('text-green-500');
+      }, 2000);
+    }).catch(err => {
+      console.error('Failed to copy: ', err);
+      if (typeof ViewController !== 'undefined') ViewController.showToast("Copy failed.", "error");
     });
   }
 };
