@@ -322,36 +322,32 @@ const ChatUI = {
     words.forEach((w, index) => this.checkDuplicate(w.th, `${targetId}-${index}`));
   },
 
+  // 🌟 修正：GAS通信を廃止し、メモリ上の全単語データから瞬間検索する
   checkDuplicate: function(wordTh, uniqueIdx) {
     const btn = document.getElementById(`add-btn-${uniqueIdx}`);
     const btnText = document.getElementById(`btn-text-${uniqueIdx}`);
     const spinner = document.getElementById(`spinner-${uniqueIdx}`);
 
-    spinner.classList.remove('hidden');
-    btnText.innerText = "";
-    btn.classList.add('opacity-80', 'pointer-events-none');
+    if (!btn || !btnText || !spinner) return;
 
-    google.script.run
-      .withSuccessHandler((isDuplicate) => {
-        spinner.classList.add('hidden');
-        if (isDuplicate) {
-          // 🌟 登録済みボタンの色とスタイルを調整
-          btn.className = "px-3.5 py-2 rounded-xl text-[10px] font-bold flex items-center justify-center min-w-[65px] h-[32px] pointer-events-none opacity-50 border shadow-inner";
-          btn.style.background = "var(--bg-card)";
-          btn.style.color = "var(--text-sub)";
-          btn.style.borderColor = "var(--border)";
-          btnText.innerText = "登録済";
-        } else {
-          btn.classList.remove('opacity-80', 'pointer-events-none');
-          btnText.innerText = "追加";
-        }
-      })
-      .withFailureHandler(() => {
-        spinner.classList.add('hidden');
-        btn.classList.remove('opacity-80', 'pointer-events-none');
-        btnText.innerText = "追加";
-      })
-      .existsInVocabulary(wordTh);
+    // 1. スピナーは出さず、一瞬で判定する
+    spinner.classList.add('hidden');
+
+    // 2. メモリ上にある全単語データ (AppStore.state.allVocab) から同一タイ語があるか探す
+    // ※ some は1つでも見つかれば true を返す高速な配列メソッド
+    const isDuplicate = AppStore.state.allVocab.some(v => v.word_th === wordTh);
+
+    // 3. 判定結果を即座にUIへ反映
+    if (isDuplicate) {
+      btn.className = "px-3.5 py-2 rounded-xl text-[10px] font-bold flex items-center justify-center min-w-[65px] h-[32px] pointer-events-none opacity-50 border shadow-inner";
+      btn.style.background = "var(--bg-card)";
+      btn.style.color = "var(--text-sub)";
+      btn.style.borderColor = "var(--border)";
+      btnText.innerText = "登録済";
+    } else {
+      btn.classList.remove('opacity-80', 'pointer-events-none');
+      btnText.innerText = "追加";
+    }
   },
 
   handleAddWord: function(th, ja, phonetic, uniqueIdx) {
