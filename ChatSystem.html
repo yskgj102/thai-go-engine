@@ -193,11 +193,9 @@ const ChatSystem = {
     if (indicator) indicator.remove();
   },
 
-  // 🌟 追加：マークダウンのテーブルに加えて、リスト形式からも単語を抽出する最強版
   extractAndRenderVocab: function(markdownText) {
     const words = [];
     
-    // 1. テーブル形式からの抽出
     const tableRegex = /\|([^|]+)\|([^|]+)\|([^|]+)\|/g;
     let match;
     while ((match = tableRegex.exec(markdownText)) !== null) {
@@ -209,7 +207,6 @@ const ChatSystem = {
       }
     }
 
-    // 2. リスト形式「タイ語 (発音記号): 日本語」からの抽出
     const listRegex = /([\u0E00-\u0E7F\s]+)\s*\(([^)]+)\)\s*[:：]\s*([^、,\n]+)/g;
     while ((match = listRegex.exec(markdownText)) !== null) {
       const th = match[1].trim();
@@ -262,50 +259,54 @@ const ChatSystem = {
 };
 
 const ChatUI = {
-  // 🌟 追加：どこからでも使い回せるように targetId（出力先）と title（タイトル）を引数化
   renderVocabularyList: function(words, targetId = 'chat-action-panel', title = '📝 抽出された単語') {
     const container = document.getElementById(targetId);
     if (!container) return;
 
-    // チャットと解説でIDが被らないように工夫
     const listId = `word-list-${targetId}`;
     const toggleBtnId = `toggle-list-btn-${targetId}`;
 
+    // 🌟 タイトルの文字化け（サロゲートペア分割）を修正し、そのまま出力するように変更
     let html = `
       <div class="rounded-2xl p-4 shadow-xl border flex flex-col mb-2 animate-in slide-in-from-bottom-5 transition-all" style="background: var(--bg-card); border-color: var(--border);">
         <div class="flex justify-between items-center shrink-0 cursor-pointer select-none active:opacity-70 transition-opacity" 
              onclick="const list = document.getElementById('${listId}'); list.classList.toggle('hidden'); const btn = document.getElementById('${toggleBtnId}'); btn.innerText = list.classList.contains('hidden') ? '開く ▼' : '閉じる ▲';">
-          <h3 class="font-bold text-sm flex items-center gap-2" style="color: var(--text-main);">
-            <span>${title.charAt(0)}</span> ${title.substring(1)}
+          <h3 class="font-bold text-[13px] flex items-center gap-1.5" style="color: var(--text-main);">
+            ${title}
           </h3>
-          <div id="${toggleBtnId}" class="text-[10px] font-bold opacity-60 px-3 py-1.5 rounded-lg border transition-all flex items-center justify-center" style="background: var(--input-bg); color: var(--text-main); border-color: var(--border);">
+          <div id="${toggleBtnId}" class="text-[9px] font-bold opacity-60 px-2.5 py-1 rounded-md border transition-all flex items-center justify-center" style="background: var(--input-bg); color: var(--text-main); border-color: var(--border);">
             閉じる ▲
           </div>
         </div>
-        <div class="space-y-2 overflow-y-auto custom-scrollbar pr-1 mt-3 max-h-[35vh]" id="${listId}">
+        <div class="space-y-2.5 overflow-y-auto custom-scrollbar pr-1 mt-4 max-h-[35vh]" id="${listId}">
     `;
 
     words.forEach((w, index) => {
       const safeTh = w.th.replace(/'/g, "\\'");
-      const uniqueIdx = `${targetId}-${index}`; // ★これでID被りを完全に防ぐ
+      const uniqueIdx = `${targetId}-${index}`; 
+      
+      // 🌟 余白、フォントサイズ、flex-wrapを調整し、ネイティブアプリ風の洗練されたUIに変更
       html += `
         <div onclick="StudyEngine.speakSpecificText('${safeTh}')" 
-             class="flex justify-between items-center p-3.5 rounded-2xl border shadow-sm cursor-pointer active:scale-[0.98] transition-transform" 
+             class="flex justify-between items-center p-3 rounded-xl border shadow-sm cursor-pointer active:scale-[0.98] transition-transform" 
              style="background: var(--input-bg); border-color: var(--border);">
           
-          <div class="flex-1 pr-3">
-            <div class="flex items-center gap-2 mb-0.5">
-              <div class="text-base font-bold text-blue-500 thai-font">${w.th}</div>
+          <div class="flex-1 pr-3 flex flex-col justify-center">
+            <div class="flex items-baseline gap-2 mb-1">
+              <div class="text-[17px] font-bold text-blue-500 thai-font leading-none">${w.th}</div>
               <button onclick="event.stopPropagation(); navigator.clipboard.writeText('${safeTh}').then(() => typeof ViewController !== 'undefined' && ViewController.showToast('Copied!', 'success'))" 
-                      class="text-[12px] opacity-40 hover:opacity-100 active:scale-125 transition-all text-blue-500" style="padding: 4px;">⧉</button>
+                      class="text-[11px] opacity-40 hover:opacity-100 active:scale-125 transition-all text-blue-500 py-1">⧉</button>
             </div>
-            <div class="text-xs" style="color: var(--text-sub);">${w.ja} <span class="text-[10px] opacity-60 ml-1 font-mono">${w.phonetic}</span></div>
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <div class="text-[11px] font-bold" style="color: var(--text-sub);">${w.ja}</div>
+              <div class="text-[9px] opacity-50 font-mono tracking-wide" style="color: var(--text-main);">${w.phonetic}</div>
+            </div>
           </div>
           
           <button id="add-btn-${uniqueIdx}" 
                   onclick="event.stopPropagation(); ChatUI.handleAddWord('${safeTh}', '${w.ja}', '${w.phonetic}', '${uniqueIdx}')"
-                  class="bg-blue-600 active:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-md transition-all active:scale-95 flex items-center justify-center min-w-[75px]">
-            <svg class="w-4 h-4 mr-1 animate-spin hidden" id="spinner-${uniqueIdx}" fill="none" viewBox="0 0 24 24">
+                  class="bg-blue-600 active:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-[11px] font-bold shadow-sm transition-all active:scale-95 flex items-center justify-center min-w-[65px] h-[32px]">
+            <svg class="w-3.5 h-3.5 mr-1 animate-spin hidden" id="spinner-${uniqueIdx}" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
@@ -318,7 +319,6 @@ const ChatUI = {
     html += `</div></div>`;
     container.innerHTML = html;
 
-    // 登録済みの通信チェック
     words.forEach((w, index) => this.checkDuplicate(w.th, `${targetId}-${index}`));
   },
 
@@ -335,7 +335,8 @@ const ChatUI = {
       .withSuccessHandler((isDuplicate) => {
         spinner.classList.add('hidden');
         if (isDuplicate) {
-          btn.className = "px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center min-w-[75px] pointer-events-none opacity-50 border";
+          // 🌟 登録済みボタンの色とスタイルを調整
+          btn.className = "px-3.5 py-2 rounded-xl text-[10px] font-bold flex items-center justify-center min-w-[65px] h-[32px] pointer-events-none opacity-50 border shadow-inner";
           btn.style.background = "var(--bg-card)";
           btn.style.color = "var(--text-sub)";
           btn.style.borderColor = "var(--border)";
@@ -368,11 +369,11 @@ const ChatUI = {
         spinner.classList.add('hidden');
         
         if (isSuccess) {
-            btn.className = "bg-emerald-500/10 text-emerald-500 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center min-w-[75px] pointer-events-none transition-all duration-300 border border-emerald-500/20";
+            btn.className = "bg-emerald-500/10 text-emerald-500 px-3.5 py-2 rounded-xl text-[10px] font-bold flex items-center justify-center min-w-[65px] h-[32px] pointer-events-none transition-all duration-300 border border-emerald-500/20";
             btnText.innerText = "完了！";
             if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
         } else if (isDuplicate) {
-            btn.className = "px-4 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center min-w-[75px] pointer-events-none opacity-50 border";
+            btn.className = "px-3.5 py-2 rounded-xl text-[10px] font-bold flex items-center justify-center min-w-[65px] h-[32px] pointer-events-none opacity-50 border shadow-inner";
             btn.style.background = "var(--bg-card)";
             btn.style.color = "var(--text-sub)";
             btn.style.borderColor = "var(--border)";
