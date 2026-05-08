@@ -866,22 +866,33 @@ showTooltip: function(anchorEl, text) {
       } else if (left + tooltipWidth > window.scrollX + window.innerWidth - safePadding) {
         left = window.scrollX + window.innerWidth - tooltipWidth - safePadding; 
       }
+tooltip.style.left = `${left}px`;
+tooltip.style.top = `${top}px`;
+tooltip.style.opacity = '1';
+}); // ← ここまでは元のコードのまま
 
-      tooltip.style.left = `${left}px`;
-      tooltip.style.top = `${top}px`;
-      tooltip.style.opacity = '1';
-    });
-  },
-  /**
-   * ツールチップを隠す
-   */
-  hideTooltip: function() {
-    const tooltip = document.getElementById('global-context-tooltip');
-    if (tooltip) {
-      tooltip.style.opacity = '0';
-      setTimeout(() => tooltip.style.display = 'none', 200);
-    }
-  },
+// 🌟 追加：どのボタンから呼ばれても、4秒後には必ず自動で消す
+if (this.autoHideTimer) clearTimeout(this.autoHideTimer);
+this.autoHideTimer = setTimeout(() => {
+this.hideTooltip();
+}, 4000);
+},
+/**
+   * ツールチップを隠す
+   */
+ hideTooltip: function() {
+  const tooltip = document.getElementById('global-context-tooltip');
+  if (tooltip) {
+   tooltip.style.opacity = '0';
+   setTimeout(() => tooltip.style.display = 'none', 200);
+  }
+
+  // 🌟 追加：ツールチップを消す時、残っている青いハイライトも全て消す
+  document.querySelectorAll('.context-link[data-active="true"]').forEach(el => {
+   el.dataset.active = 'false';
+   el.style.background = '';
+  });
+ },
 /**
  * この単語を「解説」や「例文」に含んでいる他の単語を抽出する
  */
@@ -1961,7 +1972,20 @@ const ThaiValidator = {
 
 
 
+// --- 🌟 追加：画面の「よそ」をタッチした時にツールチップを即座に消す ---
+document.addEventListener('touchstart', function(event) {
+  // ツールチップ自体や、それを呼び出すボタンを触った時は無視する
+  if (!event.target.closest('#global-context-tooltip') && !event.target.closest('[onclick*="showTooltip"]')) {
+    StudyEngine.hideTooltip();
+  }
+}, { passive: true });
 
+// マウス操作（PC版）のためにも同じ処理を入れておく
+document.addEventListener('click', function(event) {
+  if (!event.target.closest('#global-context-tooltip') && !event.target.closest('[onclick*="showTooltip"]')) {
+    StudyEngine.hideTooltip();
+  }
+});
 
 
 </script>
