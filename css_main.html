@@ -1089,5 +1089,34 @@ position: fixed;
   bottom: 188px;
 }
 
+/* --- Tailwind CDN 読み込み前のチラつき（FOUC）完全防止 --- */
+  
+  /* 1. スプラッシュ画面を最初から絶対に全画面固定にする */
+  #splash-screen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background-color: #000000 !important;
+    z-index: 99999 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
 
+  /* 2. チャット画面を最初から画面外の底（100%下）に沈めておく */
+  #chat-sheet-container.translate-y-full {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    transform: translateY(100%) !important;
+  }
+
+  /* 3. チャットの背景幕（オーバーレイ）を最初から消しておく */
+  #chat-overlay.hidden {
+    display: none !important;
+  }
 </style>

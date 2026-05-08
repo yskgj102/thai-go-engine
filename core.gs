@@ -13,7 +13,9 @@ function doGet() {
   return HtmlService.createTemplateFromFile('index')
     .evaluate() // テンプレート内のスクリプト（<?!= ... ?>など）を実行
     .setTitle('THAI-GO Engine') // ブラウザのタブに表示されるタイトル
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1'); // スマホ向けの表示最適化
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1') // スマホ向けの表示最適化
+    // アプリ（WebView）内での表示を許可します
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
 /**
