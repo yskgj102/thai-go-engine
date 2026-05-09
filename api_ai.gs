@@ -262,6 +262,7 @@ const dataMap = {
     "example_phonetic": "---",
     "example_ja": "---",
     "explanation": "クイック追加（翻訳）により詳細未生成。再生成ボタンを押してください。",
+    "level": "", // 🌟 追加：初期追加時はレベル未判定なので空文字
     "last_update": now,
     "is_bookmark": false
   };
@@ -340,6 +341,7 @@ function reGenerateCardById(targetId) {
       "example_phonetic": ai.example_phonetic,
       "example_ja": ai.example_ja,
       "explanation": ai.explanation,
+      "level": ai.level || "",
       "last_update": new Date()
     };
 
@@ -517,6 +519,7 @@ const AutoFiller = {
           "example_phonetic": aiData.example_phonetic,
           "example_ja": aiData.example_ja,
           "explanation": aiData.explanation,
+          "level": aiData.level || "",
           "last_update": new Date() // ここで実行時の日付に更新されるため、次はスキップされる
         };
 
