@@ -180,10 +180,25 @@ this.updateMemoPreview(item); // 共通化して呼び出す
   /**
    * (追加) 特定の文字列だけを強制的にコピーする
    */
-  copyTextSpecific: function(textToCopy) {
+  copyTextSpecific: function(textToCopy, btn) {
     if (!textToCopy || textToCopy === '---') return;
+    
     navigator.clipboard.writeText(textToCopy).then(() => {
-      ViewController.showToast("Copied to clipboard!");
+      const originalHTML = btn.innerHTML;
+      
+      // アイコンを緑のチェックに変更
+      btn.innerHTML = `<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+      btn.classList.add('text-green-500');
+
+      // トースト通知 + バイブレーション
+      if (typeof ViewController !== 'undefined') ViewController.showToast("Copied!", "success");
+      if (window.navigator.vibrate) window.navigator.vibrate(5);
+
+      // 2秒後に元に戻す
+      setTimeout(() => {
+        btn.innerHTML = originalHTML;
+        btn.classList.remove('text-green-500');
+      }, 2000);
     });
   },
   /**
@@ -211,17 +226,18 @@ this.updateMemoPreview(item); // 共通化して呼び出す
   },
 
   /**
-   * 指定したHTML要素内のテキストをクリップボードにコピー
+   * 指定したIDのテキストをコピーし、ボタンの見た目を変更する
+   * @param {string} elementId - テキスト取得元の要素ID
+   * @param {HTMLElement} btn - クリックされたボタン要素 (this)
    */
-  copyText: function(elementId) {
+  copyText: function(elementId, btn) {
     const el = document.getElementById(elementId);
-    if (!el) return;
-    const text = el.innerText;
-    if (!text || text === '---') return;
+    if (!el || !btn) return;
 
-    navigator.clipboard.writeText(text).then(() => {
-      ViewController.showToast(`Copied: ${text}`, "success");
-    });
+    // 🌟 修正：inputやtextareaの場合は .value を、それ以外は .innerText を取得
+    const text = (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') ? el.value : el.innerText;
+    
+    this.copyTextSpecific(text, btn);
   },
 
   /**
@@ -1042,9 +1058,17 @@ const analysis = AppStore.state.currentAnalysis;
 
     // 4. 実行
     navigator.clipboard.writeText(text).then(() => {
-      const toastMsg = isMismatch ? "Copied（不一致検出！）" : "Copied";
-      ViewController.showToast(toastMsg, isMismatch ? "warning" : "success");
-      if (window.navigator.vibrate) window.navigator.vibrate(isMismatch ? [10, 50, 10] : 5);
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = `<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+      btn.classList.add('text-green-500');
+
+      ViewController.showToast("Copied!", "success");
+      if (window.navigator.vibrate) window.navigator.vibrate(5);
+
+      setTimeout(() => {
+        btn.innerHTML = originalHTML;
+        btn.classList.remove('text-green-500');
+      }, 2000);
     });
   },
 toggleAnalysis: function() {

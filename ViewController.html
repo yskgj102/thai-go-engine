@@ -524,8 +524,12 @@ const ViewController = {
           <div class="flex justify-between items-center mb-2">
             <p class="text-[10px] font-black uppercase tracking-widest text-blue-500">Context ${exThArray.length > 1 ? index + 1 : ''}</p>
             <div class="flex items-center gap-3">
-              <button onclick="event.stopPropagation(); StudyEngine.speakSpecificText('${targetText.replace(/'/g, "\\'")}', '${targetLang}')" class="text-[16px] opacity-80 hover:opacity-100 active:scale-125 transition-transform text-blue-500"></button>
-              <button onclick="event.stopPropagation(); StudyEngine.copyTextSpecific('${targetText.replace(/'/g, "\\'")}')" class="text-[14px] opacity-100 hover:opacity-100 active:scale-125 transition-all">⧉</button>
+              <button onclick="event.stopPropagation(); StudyEngine.speakSpecificText('${targetText.replace(/'/g, "\\'")}', '${targetLang}')" class="text-[16px] opacity-80 hover:opacity-100 active:scale-125 transition-transform text-blue-500">
+              </button>
+              
+              <button onclick="event.stopPropagation(); StudyEngine.copyTextSpecific('${targetText.replace(/'/g, "\\'")}', this)" class="text-[14px] opacity-100 hover:opacity-100 active:scale-125 transition-all">
+                ⧉
+              </button>
             </div>
           </div>
           <div class="relative inline-block pr-6 mb-2">

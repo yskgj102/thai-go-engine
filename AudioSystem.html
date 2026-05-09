@@ -7,13 +7,13 @@
 const AudioSystem = {
   currentCloudAudio: null,
 
-  /**
+/**
    * 🌟 連続再生エンジン専用：再生完了を待機できる非同期関数
+   * 修正：タイムアウトしても勝手に次に進まないようガード
    */
-// 🌟【修正】AudioSystem.js の playAsync
   playAsync: function(text, lang, rate) {
     return new Promise((resolve) => {
-      // 1. 空白や記号だけのテキストなら即座にスキップ（これがないとフリーズの元）
+      // 1. 無効なテキストは即時解決（フリーズ防止）
       if (!text || text.replace(/[\s\r\n]/g, '') === '' || text === '---') {
         resolve();
         return;
@@ -21,22 +21,27 @@ const AudioSystem = {
 
       let isResolved = false;
 
-      // 2. 🛡️ フェイルセーフ（安全装置）：15秒経っても終わらなければ強制突破
-      // ※例文がとても長い場合は、この15000（15秒）を20000等に伸ばしてくれ
+      // 2. 🛡️ ステータス監視タイマー（セーフティバルブ）
+      // resolve() を呼ばないことで、声が鳴るまでこの Promise は「未解決」を維持します
       const safetyTimer = setTimeout(() => {
         if (!isResolved) {
-          console.warn("[AudioSystem] 再生タイムアウト。強制的に次へ進みます:", text);
-          isResolved = true;
-          resolve(); 
+          console.warn("[AudioSystem] Cloud TTSの応答が遅れています。待機を継続します...", text);
+          // ⚠️ 次に進むための resolve() は削除。
+          // ユーザーに「詰まっていること」を知らせる通知だけ出す
+          if (typeof ViewController !== 'undefined') {
+            ViewController.showToast("Waiting for Cloud Voice...", "warning");
+          }
         }
       }, 15000); 
 
-      // 3. 実際の再生処理
+      // 3. 再生処理
+      // Cloudモードなら Bridge.fetchCloudAudio へ、通常なら playBrowserTTS へ。
+      // いずれも最終的に onEnd コールバック（resolve）が呼ばれるまで待機
       this.play(text, lang, rate, () => {
         if (!isResolved) {
-          clearTimeout(safetyTimer); // 正常に終わったらタイマー解除
+          clearTimeout(safetyTimer); // 正常終了したら警告タイマーを解除
           isResolved = true;
-          resolve();
+          resolve(); // ここで初めて「次の単語」への扉が開く
         }
       });
     });
