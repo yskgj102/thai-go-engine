@@ -309,6 +309,33 @@ const ViewController = {
    * AppStoreから渡された単語情報をHTML各要素に反映
    */
   updateText: function(item, isThai) {
+    // 🌟 修正：レベルバッジの表示制御と動的カラー変更
+    const levelEl = document.getElementById('card-level');
+    if (levelEl) {
+      if (item.level) {
+        levelEl.innerText = `Lvl ${item.level}`;
+        
+        // レベルごとのテーマカラーを定義（Tailwindクラス）
+        const colorClasses = {
+          1: 'text-blue-500 bg-blue-500/10 border-blue-500/30',       // 頻出：青
+          2: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/30', // 日常：緑
+          3: 'text-amber-500 bg-amber-500/10 border-amber-500/30',     // 一般：黄
+          4: 'text-orange-500 bg-orange-500/10 border-orange-500/30',  // 応用：オレンジ
+          5: 'text-rose-500 bg-rose-500/10 border-rose-500/30'         // 難解：赤
+        };
+        
+        // 一旦ベースのクラス（色なし）にリセット
+        levelEl.className = 'absolute top-6 left-6 text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md border shadow-sm transition-colors duration-300';
+        
+        // 該当するレベルの色（なければグレー）を付与
+        const targetColor = colorClasses[item.level] || 'text-slate-500 bg-slate-500/10 border-slate-500/30';
+        levelEl.className += ` ${targetColor}`;
+        
+        levelEl.classList.remove('hidden');
+      } else {
+        levelEl.classList.add('hidden');
+      }
+    }
     const formatMultiline = (text) => {
       if (!text) return '---';
       return String(text).replace(/\s+(?=[2-9]\.)/g, '\n');

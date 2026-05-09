@@ -8,6 +8,7 @@ const VocabListUI = {
     displayLimit: 80, // 初回表示件数（2万件を一度に出さず、描画負荷を軽減）
     currentQuery: "",  // 現在の検索文字列
     onlyBookmark: false, // ★ここを真偽値で持つ
+    selectedLevel: 0, // 🌟 追加：0なら「全レベル表示」、1〜5で絞り込み
     currentFilteredList: [], // 現在リストに表示されている単語の配列
   },
 
@@ -108,6 +109,11 @@ const pointerClass = (isLocked && !isAllowList) ? 'pointer-events-none opacity-5
       );
     }
 
+    // ★追加：レベルフィルタが指定されていれば絞り込む
+    if (this.state.selectedLevel > 0) {
+      displayData = displayData.filter(v => Number(v.level) === this.state.selectedLevel);
+    }
+
     // 2. その後、検索窓に文字があればスコアリング検索を実行
     if (q !== '') {
       // スペース区切りのAND検索に対応
@@ -122,6 +128,7 @@ const pointerClass = (isLocked && !isAllowList) ? 'pointer-events-none opacity-5
         const th = String(v.word_th || "").toLowerCase();
         const rawPh = String(v.phonetic || "").toLowerCase();
         const cat = String(v.category || "").toLowerCase();
+        const exp = String(v.explanation || "").toLowerCase(); // ★追加：解説文も検索対象に
         
 
 // 【★強化ポイント1】カテゴリー完全一致なら、超高スコアを与えて最上位へ
@@ -132,7 +139,7 @@ const pointerClass = (isLocked && !isAllowList) ? 'pointer-events-none opacity-5
         }
         // データ側の発音記号も正規化エンジンに通して比較
         const normPh = this.normalizePhonetic(rawPh);
-const ja   = String(v.meaning_ja || ""); 
+        const ja   = String(v.meaning_ja || ""); 
         const kana = this.normalizeJapanese(String(v.meaning_kana || ""));
 
         // 全キーワードがどれかのフィールドに部分一致するかチェック
@@ -144,6 +151,7 @@ const ja   = String(v.meaning_ja || "");
           const matchJa = ja.includes(kw);       // 漢字へのマッチ
           const matchKana = kana.includes(kJ);   // ひらがな読みへのマッチ
           const matchCat = cat.includes(kw);
+          const matchExp = exp.includes(kw);     // ★追加：解説文へのマッチ
           const matchPh = normPh.includes(nKw);  // 正規化発音記号へのマッチ
 
           // スコアリング：ユーザーの意図に近いものを上位へ
@@ -151,6 +159,7 @@ const ja   = String(v.meaning_ja || "");
           if (matchJa) score += 600;   // 漢字一致は意図が強いため高め
           if (matchKana) score += 400; 
           if (matchCat) score += 800; // カテゴリー一致の重みを少しアップ
+          if (matchExp) score += 300; // ★追加：解説文一致のスコア
           
           if (matchPh) {
             if (normPh === nKw) score += 2000;      // 完全一致は最優先
@@ -158,7 +167,7 @@ const ja   = String(v.meaning_ja || "");
             else score += 500;
             
           }
-          return (matchTh || matchJa || matchKana || matchPh || matchCat);
+          return (matchTh || matchJa || matchKana || matchPh || matchCat || matchExp); // ★変更：matchExp を追加
         });
 
         return { ...v, matchScore: isMatch ? score : 0 };
@@ -329,28 +338,40 @@ const container = document.getElementById('category-filter-bar');
     return indexA - indexB;
   });
 
-// ★ 2. ボタン配列に星を追加
-    const buttons = ["全件", "⭐", ...sortedCats];
+// ★ 2. ボタン配列に星とレベルを追加
+    const levelButtons = ["Lvl 1", "Lvl 2", "Lvl 3", "Lvl 4", "Lvl 5"];
+    const buttons = ["全件", "⭐", ...levelButtons, "|", ...sortedCats]; // ★変更：「|」で区切り線を入れる
     
   container.innerHTML = buttons.map(cat => {
+  if (cat === "|") {
+    return `<div class="w-[1px] h-6 bg-slate-300 dark:bg-white/20 mx-1 shrink-0 self-center"></div>`;
+  }
+
   let isActive = false;
+  let onClickFn = `VocabListUI.applyCategoryFilter('${cat}')`;
   
   if (cat === "⭐") {
     isActive = this.state.onlyBookmark;
   } else if (cat === "全件") {
-    // 検索窓が空、かつ、星もOFFの時だけ「全件」を光らせる
-    isActive = (this.state.currentQuery === "" && !this.state.onlyBookmark);
+    // 検索窓が空、かつ、星もOFF、かつレベルも0の時だけ「全件」を光らせる
+    isActive = (this.state.currentQuery === "" && !this.state.onlyBookmark && this.state.selectedLevel === 0);
+  } else if (cat.startsWith("Lvl ")) {
+    // ★追加：レベルボタンの判定
+    const lvlNum = parseInt(cat.replace("Lvl ", ""));
+    isActive = (this.state.selectedLevel === lvlNum);
+    onClickFn = `VocabListUI.applyLevelFilter(${lvlNum})`;
   } else {
     // カテゴリボタンの判定
     isActive = (this.state.currentQuery === cat.toLowerCase());
   }
 
+  const isLevelBtn = cat.startsWith("Lvl ");
   const activeClass = isActive 
-    ? 'bg-blue-600 text-white border-blue-400 shadow-[0_0_10px_rgba(37,99,235,0.5)] scale-105' 
+    ? (isLevelBtn ? 'bg-emerald-600 text-white border-emerald-400 shadow-[0_0_10px_rgba(5,150,105,0.5)] scale-105' : 'bg-blue-600 text-white border-blue-400 shadow-[0_0_10px_rgba(37,99,235,0.5)] scale-105') 
     : 'bg-white/5 text-white/40 border-white/10 hover:bg-white/10';
     return `
-      <button class="category-btn px-4 py-1.5 rounded-full border text-[10px] font-black transition-all active:scale-95 ${activeClass}" 
-              onclick="VocabListUI.applyCategoryFilter('${cat}')">
+      <button class="category-btn px-4 py-1.5 rounded-full border text-[10px] font-black transition-all active:scale-95 shrink-0 ${activeClass}" 
+              onclick="${onClickFn}">
         ${cat}
       </button>
     `;
@@ -369,6 +390,7 @@ applyCategoryFilter: function(cat) {
     // 全リセット
     this.state.currentQuery = "";
     this.state.onlyBookmark = false;
+    this.state.selectedLevel = 0; // ★追加：レベルもリセット
     if (searchInput) searchInput.value = "";
   } else {
     // カテゴリ絞り込み（星フィルタは維持したままカテゴリだけ変える）
@@ -381,6 +403,24 @@ applyCategoryFilter: function(cat) {
   this.renderCategoryBar();
   
   // リストの中身を更新
+  this.state.displayLimit = 80;
+  this.render();
+  
+  if (window.navigator.vibrate) window.navigator.vibrate(5);
+},
+
+/**
+ * ★追加：レベルボタンを押した時の挙動
+ */
+applyLevelFilter: function(level) {
+  // 同じレベルをもう一度押したら解除（全件表示に戻す）
+  if (this.state.selectedLevel === level) {
+    this.state.selectedLevel = 0;
+  } else {
+    this.state.selectedLevel = level;
+  }
+  
+  this.renderCategoryBar();
   this.state.displayLimit = 80;
   this.render();
   

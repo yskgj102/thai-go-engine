@@ -129,9 +129,10 @@
     </svg>
   </button>
 </div>
-                             <div id="category-filter-bar" 
-     style="display: flex; overflow-x: auto; padding: 8px; gap: 8px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; -webkit-overflow-scrolling: touch;">
-  </div>
+    <div id="category-filter-bar" 
+     class="flex overflow-x-auto overscroll-x-contain gap-2 px-4 py-3 shrink-0 hide-scrollbar"
+     style="background-color: var(--bg-card); border-bottom: 1px solid var(--border); -webkit-overflow-scrolling: touch;">
+</div>
             <button onclick="StudyEngine.openGotThai(document.getElementById('list-search').value)"
                     class="mt-2 px-3 py-1 bg-blue-500/10 border border-blue-500/30 rounded-xl text-blue-500 text-[10px] font-bold active:scale-95 transition-all">
               GOTTHAI ↗
@@ -151,6 +152,9 @@
 
           <div id="word-card" onclick="if(AppStore.state.revealed) StudyEngine.speak(false)"
                class="card-style rounded-[2.5rem] p-8 shadow-2xl relative min-h-[360px] flex flex-col items-center justify-center cursor-pointer">
+            
+            <div id="card-level" class="absolute top-6 left-6 text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md border shadow-sm hidden transition-colors duration-300"></div>
+
             <div class="absolute top-5 right-6 flex items-center gap-4">
             
               <button onclick="event.stopPropagation(); StudyEngine.openGotThai()" class="text-[8px] font-bold opacity-100 hover:opacity-100 uppercase tracking-widest">Gotthai ↗</button>
@@ -392,6 +396,11 @@
 
     document.addEventListener('touchstart', (e) => {
       if (window.innerWidth >= 1024) return;
+
+      // 🌟 追加：カテゴリーバーなどの「横スクロールエリア」を触った時は、スワイプ横取りをキャンセル！
+      if (e.target.closest('.overflow-x-auto') || e.target.closest('#category-filter-bar')) {
+        return; 
+      }
       wasOpen = panelContainer.classList.contains('is-open');
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
