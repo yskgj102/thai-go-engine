@@ -68,10 +68,14 @@
       </div>
     </div>
     <div id="header-word-area" class="absolute inset-0 flex flex-col items-center justify-center opacity-0 pointer-events-none translate-y-4 transition-all duration-300 cursor-pointer">
-        <div id="header-display-th" class="thai-font text-[14px] font-bold leading-none text-blue-500/90 mb-1"></div>
-        <div class="flex items-center gap-2">
-            <div id="header-display-ja" class="text-[9px] opacity-40 font-bold"></div>
-            <button onclick="event.stopPropagation(); StudyEngine.copyText('header-display-th', this)" class="text-[12px] opacity-100 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div id="header-display-th" class="thai-font text-[14px] font-bold leading-none text-blue-500/90 mb-1 truncate max-w-full"></div>
+    
+    <div class="flex items-center justify-center gap-1.5 w-full px-2">
+        <div id="header-display-ja" class="text-[9px] opacity-40 font-bold truncate max-w-[85px] sm:max-w-[110px] text-right"></div>
+        
+        <button onclick="event.stopPropagation(); StudyEngine.copyText('header-display-th', this)" 
+                class="opacity-100 shrink-0 flex items-center justify-center w-4 h-4 text-blue-500/60 hover:text-blue-500 transition-all active:scale-125">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
 
@@ -525,6 +529,83 @@ window.addEventListener('scroll', () => {
   }
 }, { passive: true });
 
+// ==========================================
+// ボトムシート用：ブラウザ干渉無効化スワイプ
+// ==========================================
+const initSheetSwipe = (sheetId, handleSelector, closeFn) => {
+  const sheet = document.getElementById(sheetId);
+  if (!sheet) return;
+  
+  // 🌟 ハンドルの指定（.sheet-header等）があればそれを、なければシート全体
+  const handle = sheet.querySelector(handleSelector) || sheet;
+  
+  let startY = 0, currentY = 0, isDragging = false;
+
+  // 🌟 ブラウザのスクロール（引っ張り更新等）をJS側で完全に封鎖する
+  const preventSystemScroll = (e) => {
+    if (isDragging && e.cancelable) e.preventDefault();
+  };
+
+  handle.addEventListener('touchstart', (e) => {
+    // ボタンや入力欄を直接触った時はスワイプさせない
+    if (e.target.closest('button') || e.target.closest('textarea') || e.target.closest('input')) {
+      return; 
+    }
+
+    // 入力中の場合はフォーカスを外してキーボードを退避
+    if (document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'INPUT') {
+      document.activeElement.blur();
+    }
+
+    startY = e.touches[0].clientY;
+    isDragging = true;
+    sheet.style.transition = 'none'; 
+  }, { passive: true });
+
+  // 🌟 passive: false にすることで、e.preventDefault() を有効化し、ブラウザの邪魔を阻止
+  handle.addEventListener('touchmove', (e) => {
+    if (!isDragging) return;
+    
+    currentY = e.touches[0].clientY;
+    const diff = currentY - startY;
+
+    if (diff > 0) { 
+      // 🌟 ここでブラウザのスクロールを殺す
+      if (e.cancelable) e.preventDefault(); 
+      // 物理的に引き下げる
+      sheet.style.setProperty('transform', `translateY(${diff}px)`, 'important');
+    }
+  }, { passive: false });
+
+  handle.addEventListener('touchend', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    
+    const diff = currentY - startY;
+    sheet.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
+
+    if (diff > 80) { 
+      sheet.style.transform = '';
+      closeFn();
+    } else {
+      sheet.style.transform = '';
+    }
+    startY = 0; currentY = 0;
+  });
+};
+
+// 🌟 メモ：上部のハンドル(棒)だけでなく、ヘッダー全体(余白)も「掴み場所」として登録
+// これにより、ボタン以外の場所ならどこを触ってもスワイプが反応します
+initSheetSwipe('memo-sheet', '.sheet-handle, .sheet-header', () => {
+  ViewController.toggleMemoSheet(false);
+});
+
+// 🌟 チャット：上部のヘッダー全体
+initSheetSwipe('chat-sheet-container', '.flex-shrink-0', () => {
+  document.getElementById('chat-sheet-container').classList.add('translate-y-full');
+  document.getElementById('chat-overlay').classList.add('hidden');
+  document.body.style.overflow = '';
+});
 
     };
   </script>
