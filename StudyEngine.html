@@ -1278,11 +1278,64 @@ syllables.forEach((syl) => {
             : `${borderDefault} shadow-sm dark:shadow-none`;
 
         // タイ語文字の生成
-        const coloredText = Array.from(syl.full).map(c => 
-            syl.mainC.includes(c) 
-                ? `<span class="${cColor}">${c}</span>` 
-                : `<span class="${subCharColor}">${c}</span>`
-        ).join('');
+        // ==========================================
+        // 🌟 新・子音「だけ」完全色分けロジック（PC & Mobile対応）
+        // ==========================================
+        // 頭子音(mainC)をSet化して検索を高速化
+        const mainCSet = new Set(Array.from(syl.mainC || ""));
+        const chars = Array.from(syl.full);
+        const segments = [];
+        let i = 0;
+
+        while (i < chars.length) {
+            let char = chars[i];
+            
+            // A. その文字が「syl.mainC」(頭子音)のリストに含まれるか判定
+            // 「ๆฯ」などの記号は parser側で mainCから除外されているため、自動的にグレーになります。
+            // また、多義子音（ย, ว, อ）も parserが母音として扱った場合は mainCに含まれないため、グレーになります。
+            let isMainConsonant = mainCSet.has(char);
+            let combinedMarks = "";
+
+            i++;
+
+            // B. スマホの重なり防止対策（結合記号の「先読み吸い込み」）
+            // その文字が「緑色の子音」の場合、その上に乗る記号（上下の母音・声調記号）も
+            // 物理的に同じHTMLスパン(緑)の中に「入れ子」として入れないと、スマホで重なりバグが起きます。
+            while (i < chars.length) {
+                let lookahead = chars[i];
+                
+                // 結合記号（非 spacing文字）かどうかの判定（Unicode定義に基づく）
+                const isCombining = /[\u0E31\u0E34-\u0E3A\u0E47-\u0E4E]/.test(lookahead);
+                
+                // C. 【重要】それが「結合記号」であり、かつ「mainC(子音)」リストに含まれていない場合
+                // つまり「声調記号」や「上下の母音」であれば、前の文字に吸い込ませる（グレーにする準備）
+                if (isCombining && !mainCSet.has(lookahead)) {
+                    combinedMarks += lookahead;
+                    i++;
+                } else {
+                    break; // 結合記号でない、またはmainCに登録されている子音(例:รร)なら吸い込まずに終了
+                }
+            }
+
+            segments.push({ base: char, isMain: isMainConsonant, marks: combinedMarks });
+        }
+
+        // --- 🎨 HTML組み立て層 ---
+        const coloredText = segments.map(seg => {
+            if (seg.isMain) {
+                // 主役の子音：ベース文字は色(緑)をつけ、
+                // そこに付随する結合記号(marks)がある場合は、内側の <span> でグレーに塗り直す
+                if (seg.marks) {
+                    return `<span class="${cColor}">${seg.base}<span class="${subCharColor}">${seg.marks}</span></span>`;
+                } else {
+                    return `<span class="${cColor}">${seg.base}</span>`;
+                }
+            } else {
+                // 子音以外（横並び母音、末子音など）：全部グレー
+                // combinedMarksもまとめてグレーになる
+                return `<span class="${subCharColor}">${seg.base}${seg.marks}</span>`;
+            }
+        }).join('');
 
         wrapper.insertAdjacentHTML('beforeend', `
             <div class="analysis-chip p-4 rounded-3xl w-[130px] text-center flex-shrink-0 relative overflow-hidden transition-all border ${chipBorderClass}
@@ -1294,7 +1347,7 @@ syllables.forEach((syl) => {
                     <div class="${tInfo.color} text-[10px] font-black tracking-tighter uppercase">${tInfo.label}</div>
                 </div>
 
-                <div class="text-4xl font-bold mb-4 thai-font">${coloredText}</div>
+                <div class="text-4xl font-bold mb-4 pt-1 thai-font leading-relaxed">${coloredText}</div>
 
                 <div class="text-[10px] text-left space-y-2 font-mono">
                     <div class="flex justify-between items-center">

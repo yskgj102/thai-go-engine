@@ -72,9 +72,10 @@ VocabListUI.renderCategoryBar()
    */
 // Bridge内の fetchCloudAudio 部分
 fetchCloudAudio: function(text, lang, rate, onComplete) {
-  const cacheKey = lang + "_" + text;
+  const cacheKey = text; 
 
   if (AppStore.state.audioCache && AppStore.state.audioCache[cacheKey]) {
+    console.log(`[Bridge] Cache Hit: ${text}`);
     AudioSystem.playCloudAudio(AppStore.state.audioCache[cacheKey], rate, onComplete);
     return;
   }
@@ -645,16 +646,39 @@ const AutoPlayEngine = {
   stop: function() {
     this.active = false;
     
-    // 🌟 操作制限を解除
+    // 🌟 1. 操作制限を即時解除
     document.removeEventListener('click', this._blocker, true);
 
+    // 🌟 2. 音声を即時遮断
     window.speechSynthesis.cancel();
     if (AudioSystem.currentCloudAudio) {
       AudioSystem.currentCloudAudio.pause();
+      AudioSystem.currentCloudAudio.src = ""; // メモリ解放
       AudioSystem.currentCloudAudio = null;
     }
+
+    // 🌟 3. ハイライト演出を一斉掃除（ゴミを残さない）
+    const highlightedElements = document.querySelectorAll('#main-content *');
+    highlightedElements.forEach(el => {
+      el.style.color = '';
+      el.style.transform = '';
+    });
+
+    // 🌟 4. 万が一壊れた時のための保険：speak関数の生存確認と復元
+    // ※もし playSequence 内で上書き中だった場合への対策
+    if (this._originalSpeak) {
+      StudyEngine.speak = this._originalSpeak;
+      this._originalSpeak = null;
+    }
+
     this.updateUI(false);
-    if (this.wakeLock) { this.wakeLock.release().catch(() => {}); this.wakeLock = null; }
+    if (this.wakeLock) { 
+      this.wakeLock.release().catch(() => {}); 
+      this.wakeLock = null; 
+    }
+
+    // 停止したことをユーザーに明示
+    ViewController.showToast("Autoplay Stopped.", "success");
   },
 
 playSequence: async function() {
@@ -717,15 +741,20 @@ playSequence: async function() {
       const track = playlist[i];
       
       if (i === 0) {
-        // 🌟 【復元】revealAllによる自動発話を一時的に無効化し、競合を防ぐ
-        const originalSpeak = StudyEngine.speak;
+        // 🌟 元の関数を退避させておく
+        this._originalSpeak = StudyEngine.speak;
         StudyEngine.speak = function() {}; 
 
         StudyEngine.revealAll();
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
         // 0.5秒後に元に戻す
-        setTimeout(() => { StudyEngine.speak = originalSpeak; }, 500);
+        setTimeout(() => { 
+          if (this._originalSpeak) {
+            StudyEngine.speak = this._originalSpeak; 
+            this._originalSpeak = null;
+          }
+        }, 500);
       }
 
       // 【自動スクロール & ハイライト】

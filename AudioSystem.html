@@ -6,60 +6,61 @@
 
 const AudioSystem = {
   currentCloudAudio: null,
-
+audioCache: {},
 /**
    * 🌟 連続再生エンジン専用：再生完了を待機できる非同期関数
    * 修正：タイムアウトしても勝手に次に進まないようガード
    */
+  // 🌟 AudioSystem.js の playAsync を強化
   playAsync: function(text, lang, rate) {
-    return new Promise((resolve) => {
-      // 1. 無効なテキストは即時解決（フリーズ防止）
-      if (!text || text.replace(/[\s\r\n]/g, '') === '' || text === '---') {
-        resolve();
-        return;
-      }
+    return new Promise(async (resolve) => { // async化
+      if (!text || text === '---') { resolve(); return; }
+
+      // 🌟 修正1：リクエスト前に 300ms ほどの「溜め」を作る
+      // これによりGASへの過度な連打を物理的に抑制し、サーバー側の機嫌を損ねないようにする
+      await new Promise(r => setTimeout(r, 300));
 
       let isResolved = false;
 
-      // 2. 🛡️ ステータス監視タイマー（セーフティバルブ）
-      // resolve() を呼ばないことで、声が鳴るまでこの Promise は「未解決」を維持します
+      // 🌟 修正2：通信が帰ってこない場合のタイムアウトは「警告」のみに留める
+      // resolve() を呼ばなければ、ループはそこで止まり、勝手に次の単語へ行かない
       const safetyTimer = setTimeout(() => {
         if (!isResolved) {
-          console.warn("[AudioSystem] Cloud TTSの応答が遅れています。待機を継続します...", text);
-          // ⚠️ 次に進むための resolve() は削除。
-          // ユーザーに「詰まっていること」を知らせる通知だけ出す
-          if (typeof ViewController !== 'undefined') {
-            ViewController.showToast("Waiting for Cloud Voice...", "warning");
-          }
+          ViewController.showToast("Waiting for Cloud API...", "warning");
+          // 意地でも resolve() は呼ばない（スキップさせない）
         }
-      }, 15000); 
+      }, 10000); 
 
-      // 3. 再生処理
-      // Cloudモードなら Bridge.fetchCloudAudio へ、通常なら playBrowserTTS へ。
-      // いずれも最終的に onEnd コールバック（resolve）が呼ばれるまで待機
       this.play(text, lang, rate, () => {
         if (!isResolved) {
-          clearTimeout(safetyTimer); // 正常終了したら警告タイマーを解除
+          clearTimeout(safetyTimer);
           isResolved = true;
-          resolve(); // ここで初めて「次の単語」への扉が開く
+          resolve(); 
         }
       });
     });
   },
 
-  /**
-   * 音声再生のルーター
-   */
   play: function(text, lang, rate, onEnd = null) {
-    if (!text || text === '---') {
-      if (onEnd) onEnd();
-      return;
-    }
-// 🌟 【ここが重要】Cloudモード ON かつ「タイ語(th-TH)」の時だけAPIを叩く
+    if (!text || text === '---') { if (onEnd) onEnd(); return; }
+
     if (AppStore.state.isCloudTTS && lang === 'th-TH') {
-      Bridge.fetchCloudAudio(text, lang, rate, onEnd);
+      // 🌟 修正：キーを text で引く
+      if (this.audioCache[text]) {
+        this.playCloudAudio(this.audioCache[text], rate, onEnd);
+        return;
+      }
+
+      // 🌟 2. キャッシュがない場合のみGASへ取りに行く
+      // Bridge側で取得成功時にキャッシュに保存するようにコールバックを組む
+      Bridge.fetchCloudAudio(text, lang, rate, (base64) => {
+        if (base64) {
+          this.audioCache[text] = base64; // 履歴に保存
+        }
+        // 再生自体は playCloudAudio 内で行われる（Bridge内部の設計に合わせる）
+        if (onEnd) onEnd(); 
+      });
     } else {
-      // 日本語（またはCloudモードOFF）はすべてブラウザ標準TTSで即座に鳴らす
       this.playBrowserTTS(text, lang, rate, onEnd);
     }
   },
@@ -67,33 +68,50 @@ const AudioSystem = {
   /**
    * Cloud TTS 再生ロジック
    */
+  // 🌟 AudioSystem オブジェクト内の playCloudAudio を修正
   playCloudAudio: function(base64Audio, rate, onEnd) {
     try {
+      // 1. 既存の再生を完全に停止・クリア
       if (this.currentCloudAudio) {
         this.currentCloudAudio.pause();
-        this.currentCloudAudio.onended = null; 
+        this.currentCloudAudio.onended = null;
         this.currentCloudAudio.onerror = null;
+        // srcを空にしてメモリを解放（重要）
+        this.currentCloudAudio.src = "";
+        this.currentCloudAudio.load(); 
       }
-      window.speechSynthesis.cancel(); 
 
-      const audio = new Audio("data:audio/mp3;base64," + base64Audio);
+      // 2. プレーヤーの生成（またはリサイクル）
+      const audio = new Audio();
       this.currentCloudAudio = audio;
-      audio.playbackRate = rate; 
       
-      audio.onended = () => { 
-        this.currentCloudAudio = null;
-        if (onEnd) onEnd(); 
-      };
-      audio.onerror = () => { 
-        this.currentCloudAudio = null;
-        if (onEnd) onEnd(); 
-      };
-      
-      audio.play().catch(() => {
+      // 🌟 イベントリスナーを先にセット（エラー捕捉を確実に）
+      audio.onended = () => {
         this.currentCloudAudio = null;
         if (onEnd) onEnd();
-      });
+      };
+
+      audio.onerror = (e) => {
+        console.warn("[AudioSystem] Playback interrupted (Normal behavior on rapid clicks)");
+        this.currentCloudAudio = null;
+        // 🌟 修正：連打によるエラーは「失敗」ではなく「中断」として扱い、次に進ませる
+        if (onEnd) onEnd(); 
+      };
+
+      // 3. データの流し込み
+      audio.src = "data:audio/mp3;base64," + base64Audio;
+      audio.playbackRate = rate;
+
+      // 4. 再生（Promiseの拒否をサイレントに処理）
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(err => {
+          // AbortError（連打による中断）は無視して次へ進む
+          if (onEnd) onEnd();
+        });
+      }
     } catch (e) {
+      console.error("[AudioSystem] Fatal Error:", e);
       if (onEnd) onEnd();
     }
   },
