@@ -214,28 +214,37 @@ this.state.currentFilteredList = displayData;
 
     // --- HTML生成（各単語カードの構築） ---
     let html = "";
-    // ★修正：星フィルタがON、または検索キーワードが入っている時にボタンを表示
-    if ((this.state.onlyBookmark || q !== '') && displayData.length > 0) {
+
+    // ★修正：星・検索・レベルのいずれかがアクティブな時にボタンを表示
+    const hasQ = q !== '';
+    const hasStar = this.state.onlyBookmark;
+    const hasLvl = this.state.selectedLevel > 0;
+
+    if ((hasStar || hasQ || hasLvl) && displayData.length > 0) {
       
       const btnStateClass = isLocked 
         ? "opacity-30 pointer-events-none cursor-not-allowed" 
         : "opacity-100 active:scale-95 cursor-pointer";    
 
-      // ★追加：状態に応じてラベルと「テーマカラー」を動的に変える
       let btnLabel = "";
-      let themeColorClass = ""; // Tailwindのクラスを組み立てるための変数
+      let themeColorClass = "";
 
-      if (this.state.onlyBookmark && q === '') {
+      // 条件に応じたラベルと色の切り替え
+      if (hasLvl && !hasStar && !hasQ) {
+        // レベル単体選択：エメラルドグリーン
+        btnLabel = `START LEVEL ${this.state.selectedLevel} STUDY (${displayData.length})`;
+        themeColorClass = "bg-emerald-500/10 border-emerald-500/30 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]";
+      } else if (hasStar && !hasLvl && !hasQ) {
+        // 星単体選択：イエロー
         btnLabel = `START STAR STUDY (${displayData.length})`;
-        // 星のみ：黄色テーマ
         themeColorClass = "bg-[#FFD700]/10 border-[#FFD700]/30 text-[#FFD700] shadow-[0_0_15px_rgba(255,215,0,0.1)]";
-      } else if (this.state.onlyBookmark && q !== '') {
-        btnLabel = `STAR & FILTERED (${displayData.length})`; 
-        // 星＋検索：黄色と青のグラデーション（または少し派手な色）
-        themeColorClass = "bg-gradient-to-r from-[#FFD700]/10 to-blue-500/10 border-[#FFD700]/50 text-[#FFD700] shadow-[0_0_15px_rgba(255,215,0,0.2)]";
       } else {
-        btnLabel = `START FILTERED STUDY (${displayData.length})`;
-        // 検索のみ：青色テーマ（デフォルトのテーマカラーに合わせる）
+        // 複合条件：ブルー
+        let parts = [];
+        if (hasLvl) parts.push(`LVL ${this.state.selectedLevel}`);
+        if (hasStar) parts.push("STAR");
+        if (hasQ) parts.push("FILTER");
+        btnLabel = `START ${parts.join(" & ")} STUDY (${displayData.length})`;
         themeColorClass = "bg-blue-500/10 border-blue-500/30 text-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.1)]";
       }
 
