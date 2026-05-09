@@ -1001,19 +1001,28 @@ pasteTo: function(elementId) {
    * AppStoreの解析データを構造化してクリップボードへ
    */
   copyAnalysisToClipboard: function(btn) {
-    // 🌟 修正：引数を btn にし、ガードを追加
     if (!btn) return;
     const analysis = AppStore.state.currentAnalysis;
     const item = AppStore.getCurrentItem();
 
     if (!analysis || !item) return;
 
-    // --- テキスト構築ロジック（ここは変更なし） ---
-    const rawAi = (item.phonetic || '').replace(/[\[\]]/g, '').trim();
-    const rawEngine = (analysis.meta?.derivedPhonetic || '').replace(/[\[\]]/g, '').trim();
-    const isMismatch = rawAi !== rawEngine;
-    const displayAi = `[${rawAi}]`;
-    const displayEngine = `[${rawEngine}]`;
+    // 🌟 修正：超強力な正規化（カッコ、スペース、ハイフンを全て消し去る）
+    // これにより、"[ a-rai ]" と "a-rai" と "arai" が全て一致判定になります
+    const normalize = (s) => String(s || '')
+      .replace(/[\[\]\s\-]/g, '') // カッコ [ ]、空白、ハイフンを削除
+      .toLowerCase();             // 大文字小文字も無視
+
+    const rawAi = normalize(item.phonetic);
+    const rawEngine = normalize(analysis.meta?.derivedPhonetic);
+    
+    // 内容が空でない場合のみ比較
+    const isMismatch = (rawAi && rawEngine) ? (rawAi !== rawEngine) : false;
+
+    // --- 表示用（クリップボード用）のテキスト構築 ---
+    // AI側が元々カッコを持っていればそれを活かし、なければ付ける
+    const displayAi = item.phonetic && item.phonetic.includes('[') ? item.phonetic : `[${item.phonetic}]`;
+    const displayEngine = `[${analysis.meta?.derivedPhonetic || ''}]`;
 
     let text = `【THAI-GO 発音比較】\n`;
     text += `単語: ${item.word_th}\n`;
