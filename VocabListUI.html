@@ -150,7 +150,7 @@ const pointerClass = (isLocked && !isAllowList) ? 'pointer-events-none opacity-5
       const qLower = q.toLowerCase();
       displayData = displayData.map(v => {
         let score = 0;
-        v.expSnippet = null; // 🌟 追加：スニペットを初期化
+        let tempSnippet = null; // 🌟 修正1：元データを汚さないようにローカル変数を使う
 // ★ ここを修正：String() で囲って、数値でも安全に文字列として扱う
         const th = String(v.word_th || "").toLowerCase();
         const rawPh = String(v.phonetic || "").toLowerCase();
@@ -180,10 +180,9 @@ const pointerClass = (isLocked && !isAllowList) ? 'pointer-events-none opacity-5
           const matchCat = cat.includes(kw);
           const matchExp = exp.includes(kw);     // ★追加：解説文へのマッチ
           const matchPh = normPh.includes(nKw);  // 正規化発音記号へのマッチ
-          // 🌟 追加：解説文にヒットした場合、その部分のスニペットを作成して保存
-          if (matchExp && !v.expSnippet) {
-            // 元の大文字小文字を維持したテキストから抽出
-            v.expSnippet = VocabListUI.getHighlightSnippet(String(v.explanation || ""), kw);
+          // 🌟 修正2：ローカル変数にスニペットを格納
+          if (matchExp && !tempSnippet) {
+            tempSnippet = VocabListUI.getHighlightSnippet(String(v.explanation || ""), kw);
           }
 
 
@@ -203,7 +202,8 @@ const pointerClass = (isLocked && !isAllowList) ? 'pointer-events-none opacity-5
           return (matchTh || matchJa || matchKana || matchPh || matchCat || matchExp); // ★変更：matchExp を追加
         });
 
-        return { ...v, matchScore: isMatch ? score : 0 };
+        // 🌟 修正3：新しいオブジェクトを作って、そこにだけスニペットを持たせる（元データは無傷）
+        return { ...v, matchScore: isMatch ? score : 0, expSnippet: tempSnippet };
       }).filter(v => v.matchScore > 0).sort((a, b) => b.matchScore - a.matchScore);
     }
 this.state.currentFilteredList = displayData;
@@ -320,7 +320,7 @@ this.state.currentFilteredList = displayData;
             </div>
           </div>
 
-          ${item.expSnippet ? `
+          ${(q !== '' && item.expSnippet) ? `
             <div class="mt-3 pt-2 border-t border-white/10 pl-2 pr-2">
               <p class="text-[9px] text-slate-400 dark:text-slate-500 leading-relaxed italic line-clamp-2">
                 <span class="font-bold opacity-60 not-italic mr-1">解説:</span>${item.expSnippet}
