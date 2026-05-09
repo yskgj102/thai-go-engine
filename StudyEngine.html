@@ -76,6 +76,9 @@ this.updateMemoPreview(item); // 共通化して呼び出す
    * メモのプレビュー表示を更新する
    * 複数行ある場合は1行目のみを表示し、末尾に「...」を付与する
    */
+  /**
+   * メモのプレビュー表示を更新する
+   */
   updateMemoPreview: function(item) {
     const memoArea = document.getElementById('memo-preview-area');
     const memoText = document.getElementById('memo-preview-text');
@@ -84,24 +87,42 @@ this.updateMemoPreview(item); // 共通化して呼び出す
 
     if (item && item.memo && item.memo.trim() !== "") {
       const fullText = item.memo.trim();
-      
-      // 改行コードでテキストを配列に分割
       const lines = fullText.split('\n');
-      
-      // 1行目を取得
       let previewString = lines[0];
-      
-      // 元のテキストが2行以上あった場合は、末尾に「...」をつける
       if (lines.length > 1) {
         previewString += ' ...';
       }
-
       memoText.innerText = previewString;
-      memoArea.classList.remove('hidden');
+
+      // 🌟 修正：フェードイン
+      if (memoArea.classList.contains('hidden')) {
+        memoArea.style.opacity = '0'; // 表示する前に一旦透明にしておく
+        memoArea.classList.remove('hidden'); // 物理的に表示
+        
+        // ブラウザに描画させた直後に不透明度を1にする（これでCSSアニメーションが発動）
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            memoArea.style.opacity = '1';
+          });
+        });
+      } else {
+        // すでに表示中の場合はそのまま維持
+        memoArea.style.opacity = '1';
+      }
+
     } else {
-      // メモが空の場合はエリアごと隠す
-      memoArea.classList.add('hidden');
-      memoText.innerText = "";
+      // 🌟 修正：フェードアウト
+      memoArea.style.opacity = '0'; // まず透明にする
+      
+      // アニメーションが終わる頃（0.25秒後）に完全に非表示にする
+      setTimeout(() => {
+        // ⚠️ 連打対策：高速でスワイプした時に、次のカードのメモを間違えて消さないようにする
+        const currentItem = AppStore.state.queue[AppStore.state.currentIndex];
+        if (!currentItem || !currentItem.memo || currentItem.memo.trim() === "") {
+          memoArea.classList.add('hidden');
+          memoText.innerText = "";
+        }
+      }, 250);
     }
   },
 

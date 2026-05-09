@@ -620,6 +620,9 @@ const ViewController = {
       overlay.style.display = 'block';
       setTimeout(() => sheet.classList.add('show'), 10);
       textarea.focus();
+
+      // 🌟 追加：メモを開いた時に裏のカードのスクロールを物理ロックする
+      document.body.style.overflow = 'hidden';
       
     } else {
       // --- 【CLOSE】 メモを閉じる時 ＆ オートセーブ処理 ---
@@ -643,6 +646,9 @@ const ViewController = {
         overlay.style.display = 'none';
       }, 300);
       document.activeElement.blur();
+
+      // 🌟 追加：メモを閉じた時に裏のカードのスクロールロックを解除する
+      document.body.style.overflow = '';
     }
   },
 
