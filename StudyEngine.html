@@ -1972,17 +1972,21 @@ const ThaiValidator = {
 
 
 
-// --- 🌟 追加：画面の「よそ」をタッチした時にツールチップを即座に消す ---
+// --- 🌟 修正版：画面の「よそ」をタッチした時にツールチップを即座に消す ---
 document.addEventListener('touchstart', function(event) {
-  // ツールチップ自体や、それを呼び出すボタンを触った時は無視する
-  if (!event.target.closest('#global-context-tooltip') && !event.target.closest('[onclick*="showTooltip"]')) {
+  // ツールチップ自体、分析パネルの文字、および「単語リンク(.context-link)」を触った時はリセットしない
+  if (!event.target.closest('#global-context-tooltip') && 
+      !event.target.closest('[onclick*="showTooltip"]') &&
+      !event.target.closest('.context-link')) { // 🌟 この除外条件を追加！
     StudyEngine.hideTooltip();
   }
 }, { passive: true });
 
 // マウス操作（PC版）のためにも同じ処理を入れておく
 document.addEventListener('click', function(event) {
-  if (!event.target.closest('#global-context-tooltip') && !event.target.closest('[onclick*="showTooltip"]')) {
+  if (!event.target.closest('#global-context-tooltip') && 
+      !event.target.closest('[onclick*="showTooltip"]') &&
+      !event.target.closest('.context-link')) { // 🌟 この除外条件を追加！
     StudyEngine.hideTooltip();
   }
 });
