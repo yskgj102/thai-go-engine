@@ -80,23 +80,31 @@ const VocabListUI = {
 /**
    * 🌟 追加：ヘッダー窓をタップした「瞬間（文字を打つ前）」にバトンパスする
    */
-  onQuickInputFocus: function() {
-    const panel = document.getElementById('vocab-panel');
-    const listSearch = document.getElementById('list-search');
+onQuickInputFocus: function() {
+  const panel = document.getElementById('vocab-panel');
+  const listSearch = document.getElementById('list-search');
 
-    // 1. リストが閉じていれば開く
-    if (panel && panel.classList.contains('hidden')) {
-      if (typeof ViewController !== 'undefined') {
-        ViewController.toggleVocabPanel(); 
-      }
+  // 1. パネルを開く
+  if (panel && panel.classList.contains('hidden')) {
+    if (typeof ViewController !== 'undefined') {
+      ViewController.toggleVocabPanel(); 
     }
+  }
 
-    // 2. 文字が打たれる「前」に、フォーカスをリスト側に完全譲渡する
-    // これにより、IME（予測変換）が途切れる原因だった「入力途中のフォーカス移動」が発生しない
-    if (listSearch) {
+  // 2. フォーカスのバトンパスを「2段構え」にする
+  if (listSearch) {
+    // 1回目：即座にフォーカス。iOSに「まだ入力中だよ！」と伝える
+    listSearch.focus();
+
+    // 2回目：アニメーションの完了（0.1秒後）を待って、確実に定着させる
+    // ここでカーソル位置も末尾に固定して、"全選択" による上書き消去を防ぐ
+    setTimeout(() => {
       listSearch.focus();
-    }
-  },
+      const len = listSearch.value.length;
+      listSearch.setSelectionRange(len, len);
+    }, 100);
+  }
+},
 
 /**
    * 検索クエリの更新と再描画（★究極の双方向同期＆ペースト保護）
