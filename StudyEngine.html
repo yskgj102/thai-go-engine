@@ -984,8 +984,8 @@ pasteTo: function(elementId) {
     .then(text => {
       if (text) {
         el.value = text;
-        // リスト検索の場合は、入力イベントを強制発火させてフィルタリングを動かす
-        if (elementId === 'list-search') {
+        // 🌟 修正：'list-search' だけでなく 'quick-input' (Add側) の場合も update を発火させる
+        if (elementId === 'list-search' || elementId === 'quick-input') {
           VocabListUI.update(text);
         }
         // ViewController.showToast("Pasted!", "success");
