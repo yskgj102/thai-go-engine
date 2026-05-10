@@ -270,50 +270,38 @@ const ViewController = {
    * 常にフォーカスを当てることで invokeQuickSearch を不要にする。
    */
   toggleVocabPanel: function(e) {
-    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-    
+    if (e) e.stopPropagation();
     const panel = document.getElementById('vocab-panel');
     const searchInput = document.getElementById('list-search');
 
-    // 🌟 判定にDOMを使わず、まず「次どうしたいか」をStateから決める
-    const shouldOpen = !AppStore.state.isVocabPanelOpen;
-    
-    // 🌟 関数に入った瞬間にStateを確定させる（ゾンビ状態を防止）
-    AppStore.state.isVocabPanelOpen = shouldOpen;
-
-    if (shouldOpen) {
+    if (panel.classList.contains('hidden')) {
       // --- OPEN ---
-      panel.classList.remove('hidden');
-      document.body.style.overflow = 'hidden';
-
-      // 🌟 フォーカスはアニメーションを待たずに「今」予約する
-      if (searchInput) {
-        searchInput.focus(); // iOS対策：即座に一発目
-      }
-
+      panel.classList.remove('hidden'); 
       requestAnimationFrame(() => {
-        panel.classList.add('is-open');
-        VocabListUI.update();
-        
-        // 🌟 ダメ押しのフォーカス（アニメーション開始後）
-        if (searchInput) {
-          setTimeout(() => {
-            searchInput.focus();
-            const len = searchInput.value.length;
-            searchInput.setSelectionRange(len, len);
-          }, 50); // 100msより少し短くして競合を防ぐ
-        }
+          panel.classList.add('is-open');
+          AppStore.state.isVocabPanelOpen = true;
+          VocabListUI.update();
+          
+          // 開く時は常にフォーカス（アニメーション完了を待たずに即準備）
+          if (searchInput) {
+            setTimeout(() => {
+              searchInput.focus();
+              searchInput.click(); 
+              // 既存の文字があれば全選択、なければ即入力可能な状態に
+              searchInput.setSelectionRange(0, searchInput.value.length);
+            }, 100); 
+          }
       });
+      document.body.style.overflow = 'hidden';
     } else {
       // --- CLOSE ---
       panel.classList.remove('is-open');
-      document.body.style.overflow = '';
-
+      AppStore.state.isVocabPanelOpen = false;
       setTimeout(() => {
-        // 🌟 ここでStateを再確認せず、強制的にhiddenにする
         panel.classList.add('hidden');
+        document.body.style.overflow = '';
         if (searchInput) searchInput.blur();
-      }, 150); // アニメーションの完了を待ってから物理的に消す
+      }, 100);
     }
   },
 

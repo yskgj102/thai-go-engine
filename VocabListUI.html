@@ -93,11 +93,6 @@ onQuickInputFocus: function() {
 
   // 2. フォーカスのバトンパスを「2段構え」にする
   if (listSearch) {
-
-    // 🌟 バトンパス：ダミーからフォーカスを剥がしてから本命に当てる
-    if (dummyInput && dummyInput !== listSearch) {
-      dummyInput.blur(); 
-    }
     // 1回目：即座にフォーカス。iOSに「まだ入力中だよ！」と伝える
     listSearch.focus();
 
