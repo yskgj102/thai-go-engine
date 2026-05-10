@@ -152,7 +152,11 @@ const ViewController = {
     // 3. 【入力系】メモ帳と検索窓を除外するロジック
     document.querySelectorAll('input, textarea').forEach(el => {
       // 「メモ帳」または「検索窓」ならロックしない（そのまま通す）
-      if (el.id === 'memo-textarea' || el.id === 'list-search'|| el.id === 'floating-search-input') {
+      if (el.id === 'floating-search-input') {
+        // 🌟 ダミーInputはロック中も透明度0を強制維持し、見た目を変えない
+        el.style.setProperty('opacity', '0', 'important');
+        el.style.setProperty('pointer-events', 'auto', 'important'); // ロック中も押せるようにする場合
+      else if (el.id === 'memo-textarea' || el.id === 'list-search') {
         el.readOnly = false;
         el.style.setProperty('opacity', '1', 'important');
         el.style.setProperty('pointer-events', 'auto', 'important');
