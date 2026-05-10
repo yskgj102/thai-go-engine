@@ -77,18 +77,61 @@ const VocabListUI = {
     const regex = new RegExp(`(${keyword})`, 'gi');
     return snippet.replace(regex, '<b class="text-blue-400 bg-blue-500/10 px-0.5 rounded">$1</b>');
   },
-
-  /**
-   * 検索クエリの更新と再描画
-   * @param {string} query - 検索入力文字列
+/**
+   * 🌟 追加：ヘッダー窓をタップした「瞬間（文字を打つ前）」にバトンパスする
    */
-  update: function(query,isAllowList = false) {
-    const searchInput = document.getElementById('list-search');
-    // 検索窓の値を優先し、なければ引数を使用。全角スペースを処理して小文字化
-    let q = (searchInput && searchInput.value !== undefined) ? searchInput.value : (query || '');
+  onQuickInputFocus: function() {
+    const panel = document.getElementById('vocab-panel');
+    const listSearch = document.getElementById('list-search');
+
+    // 1. リストが閉じていれば開く
+    if (panel && panel.classList.contains('hidden')) {
+      if (typeof ViewController !== 'undefined') {
+        ViewController.toggleVocabPanel(); 
+      }
+    }
+
+    // 2. 文字が打たれる「前」に、フォーカスをリスト側に完全譲渡する
+    // これにより、IME（予測変換）が途切れる原因だった「入力途中のフォーカス移動」が発生しない
+    if (listSearch) {
+      listSearch.focus();
+    }
+  },
+
+/**
+   * 検索クエリの更新と再描画（★究極の双方向同期＆ペースト保護）
+   */
+  update: function(query, isAllowList = false) {
+    const listSearch = document.getElementById('list-search');
+    const quickInput = document.getElementById('quick-input');
+    
+    let q = "";
+
+    // 1. ペーストや入力で明示的に文字(文字列)が渡された場合はそれを最優先
+    if (typeof query === 'string') {
+        q = query;
+    } 
+    // 2. イベントオブジェクトが渡された、または引数なしの場合は、
+    // 現在アクティブ（カーソルが当たっている方）の入力欄の値を強制的に読み取る
+    else {
+        if (document.activeElement === quickInput) {
+            q = quickInput ? quickInput.value : "";
+        } else if (listSearch) {
+            q = listSearch.value;
+        }
+    }
+
+    // ★ 究極の双方向同期（純粋に値が違うやつを全部 q に書き換える）
+    if (listSearch && listSearch.value !== q) {
+        listSearch.value = q;
+    }
+    if (quickInput && quickInput.value !== q) {
+        quickInput.value = q;
+    }
+
+    // 以降は既存の検索ロジック
     this.state.currentQuery = q.toLowerCase().trim();
-this.renderCategoryBar();
-    // 検索のたびに表示リミットをリセットして爆速化
+    this.renderCategoryBar();
     this.state.displayLimit = 80;
     this.render(isAllowList);
   },
@@ -209,37 +252,53 @@ const pointerClass = (isLocked && !isAllowList) ? 'pointer-events-none opacity-5
 this.state.currentFilteredList = displayData;
     // ヒット件数の表示更新
     if (totalCountEl) totalCountEl.innerText = `${displayData.length} hits`;
+const limitedData = displayData.slice(0, this.state.displayLimit);
 
-    const limitedData = displayData.slice(0, this.state.displayLimit);
+    // ==========================================
+    // 🌟 追加：安全なハイライト付与エンジン（HTMLタグ破壊防止）
+    // ==========================================
+    const searchKeywords = q !== '' ? q.split(/[\s　]+/).filter(k => k.length > 0) : [];
+    
+    const highlightText = (text) => {
+      if (!text || searchKeywords.length === 0) return text;
+      let res = text;
+      
+      // 長いキーワードから順に処理し、短い単語での部分一致誤爆を防ぐ
+      const sortedKws = [...searchKeywords].sort((a, b) => b.length - a.length);
+      
+      sortedKws.forEach(kw => {
+        // 検索文字の正規表現エスケープ（記号対策）
+        const escapedKw = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        
+        // (?![^<]*>) ＝ 閉じタグ「>」が来る前に開始タグ「<」がない（つまりHTMLタグの内側ではない）場合のみマッチする最強の正規表現
+        const regex = new RegExp(`(${escapedKw})(?![^<]*>)`, 'gi');
+        
+        // ハイライト用の装飾（ライト/ダーク両対応）
+        res = res.replace(regex, '<b class="text-blue-600 dark:text-blue-400 bg-blue-500/20 px-[2px] mx-[1px] rounded shadow-sm">$1</b>');
+      });
+      return res;
+    };
 
     // --- HTML生成（各単語カードの構築） ---
     let html = "";
 
-    // ★修正：星・検索・レベルのいずれかがアクティブな時にボタンを表示
+    // ★星・検索・レベルのいずれかがアクティブな時にボタンを表示 (既存コード維持)
     const hasQ = q !== '';
     const hasStar = this.state.onlyBookmark;
     const hasLvl = this.state.selectedLevel > 0;
 
     if ((hasStar || hasQ || hasLvl) && displayData.length > 0) {
-      
-      const btnStateClass = isLocked 
-        ? "opacity-30 pointer-events-none cursor-not-allowed" 
-        : "opacity-100 active:scale-95 cursor-pointer";    
-
+      const btnStateClass = isLocked ? "opacity-30 pointer-events-none cursor-not-allowed" : "opacity-100 active:scale-95 cursor-pointer";    
       let btnLabel = "";
       let themeColorClass = "";
 
-      // 条件に応じたラベルと色の切り替え
       if (hasLvl && !hasStar && !hasQ) {
-        // レベル単体選択：エメラルドグリーン
         btnLabel = `START LEVEL ${this.state.selectedLevel} STUDY (${displayData.length})`;
         themeColorClass = "bg-emerald-500/10 border-emerald-500/30 text-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]";
       } else if (hasStar && !hasLvl && !hasQ) {
-        // 星単体選択：イエロー
         btnLabel = `START STAR STUDY (${displayData.length})`;
         themeColorClass = "bg-[#FFD700]/10 border-[#FFD700]/30 text-[#FFD700] shadow-[0_0_15px_rgba(255,215,0,0.1)]";
       } else {
-        // 複合条件：ブルー
         let parts = [];
         if (hasLvl) parts.push(`LVL ${this.state.selectedLevel}`);
         if (hasStar) parts.push("STAR");
@@ -259,25 +318,21 @@ this.state.currentFilteredList = displayData;
         </div>
       `;
     }
-// --- HTML生成（各単語カードの構築） ---
+
+    // --- HTML生成（カード本体） ---
     html += limitedData.map(item => {
-      // 忘却度に応じたカラーバーをStudyEngineから取得
       const statusColor = StudyEngine.getColor(item); 
-      
-      // ブックマーク状態の判定
       const isBM = (item.is_bookmark === true || String(item.is_bookmark).toLowerCase() === "true");
 
-      // --- ★ 意味（meaning_ja）のリスト用整形 ---
-      const displayMeaning = String(item.meaning_ja || '')
-        .replace(/\d+\.\s*/g, '')      
-        .replace(/[\n\r]+/g, ' / ');   
+      // 1. 純粋なテキストデータを用意
+      const rawMeaning = String(item.meaning_ja || '').replace(/\d+\.\s*/g, '').replace(/[\n\r]+/g, ' / ');   
+      const rawCategory = String(item.category || '').replace(/\d+\.\s*/g, '').replace(/[\n\r]+/g, ' / ');
 
-      // --- ★ 品詞（category）のリスト用整形 ---
-      // 「1. 代名詞 2. 名詞」 → 「代名詞 / 名詞」に変換する
-      const displayCategory = String(item.category || '')
-        .replace(/\d+\.\s*/g, '')      
-        .replace(/[\n\r]+/g, ' / ');
-        // 🌟 追加：リスト用の極小レベルバッジを生成
+      // 🌟 2. ハイライト関数を通す
+      const displayWordTh = highlightText(item.word_th);
+      const displayMeaning = highlightText(rawMeaning);
+      const displayCategory = highlightText(rawCategory);
+
       let listLevelBadge = '';
       if (item.level) {
         const listColors = {
@@ -288,10 +343,8 @@ this.state.currentFilteredList = displayData;
           5: 'text-rose-500 bg-rose-500/10 border-rose-500/30'
         };
         const badgeColor = listColors[item.level] || 'text-slate-400 bg-slate-500/10 border-slate-500/30';
-        // 「L1」のようにコンパクトに表示
         listLevelBadge = `<span class="text-[8px] font-black px-1.5 py-[1px] rounded-sm border ${badgeColor} shrink-0">L${item.level}</span>`;
       }
-      // -------------------------------------------------------
 
       return `
         <div onclick="StudyEngine.jumpToWordFromId('${item.id}');ViewController.toggleVocabPanel()" 
@@ -303,10 +356,8 @@ this.state.currentFilteredList = displayData;
             <div class="min-w-0 flex-1 pl-2 pr-2">
               <div class="flex items-center gap-2 mb-0.5">
                 ${isBM ? '<span class="text-[10px] text-[#FFD700] drop-shadow-[0_0_5px_rgba(255,215,0,0.4)] shrink-0">★</span>' : ''}
-                
                 ${listLevelBadge}
-                
-                <span class="thai-font text-[13px] font-bold text-blue-500/90 truncate">${item.word_th}</span>
+                <span class="thai-font text-[13px] font-bold text-blue-500/90 truncate">${displayWordTh}</span>
                 <span class="text-[8px] font-mono opacity-20 shrink-0">${item.last_date === 'New' ? 'New' : item.last_date.split(' ')[0]}</span>
               </div>
               
@@ -315,7 +366,7 @@ this.state.currentFilteredList = displayData;
             </div>
             
             <div class="text-right ml-2 shrink-0 w-[65px] flex flex-col items-end">
-              <div class="text-[8px] font-black uppercase tracking-tighter opacity-100 mb-1 w-full truncate text-right" title="${displayCategory}">${displayCategory}</div>
+              <div class="text-[8px] font-black uppercase tracking-tighter opacity-100 mb-1 w-full truncate text-right" title="${rawCategory}">${displayCategory}</div>
               <div class="text-[7px] font-mono opacity-100 italic">${item.interval}d</div>
             </div>
           </div>
@@ -332,6 +383,7 @@ this.state.currentFilteredList = displayData;
       `;
     }).join('');
 
+    // ...以降、既存コード (list-end-marker など) ...
     // 無限スクロール：最下部まで来たら次の80件をロード
     if (displayData.length > this.state.displayLimit) {
       html += `<div id="list-end-marker" class="p-8 text-center opacity-20 text-[9px] tracking-widest">LOADING MORE...</div>`;

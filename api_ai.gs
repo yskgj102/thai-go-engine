@@ -112,7 +112,7 @@ const prompt = `
       "example_phonetic": "例文の発音記号",
       "example_ja": "例文の日本語訳",
       "explanation": "■【語源と構成】\\n（記述）\\n\\n■【核となるニュアンス】\\n（記述）\\n\\n■【実戦的使い分け】\\n（記述）\\n\\n■【類義語・反対語】\\n（記述）\\n\\n■【重要チャンク・成句】\\n（記述）\\n\\n■【例文の全単語解析】\\n（記述）■【読み方や見た目が似た語】\\n（記述）",
-      "level": "1-5の整数（基準に従うこと）"
+      "level": "1-5の整数"
     }
   `;
 
@@ -469,7 +469,7 @@ const AutoFiller = {
     if (idx.id === -1 || idx.word === -1 || idx.example_th === -1 || idx.last_update === -1) return;
 
     // 条件判定用の基準日（2026/04/18）
-    const thresholdDate = new Date('2026/05/09 12:05:00');
+    const thresholdDate = new Date('2026/05/09 10:05:00');
 
     for (let i = data.length - 1; i >= 1 ; i--) {
       const row = data[i];
