@@ -156,7 +156,7 @@ const ViewController = {
         // 🌟 ダミーInputはロック中も透明度0を強制維持し、見た目を変えない
         el.style.setProperty('opacity', '0', 'important');
         el.style.setProperty('pointer-events', 'auto', 'important'); // ロック中も押せるようにする場合
-      else if (el.id === 'memo-textarea' || el.id === 'list-search') {
+      }else if (el.id === 'memo-textarea' || el.id === 'list-search') {
         el.readOnly = false;
         el.style.setProperty('opacity', '1', 'important');
         el.style.setProperty('pointer-events', 'auto', 'important');
