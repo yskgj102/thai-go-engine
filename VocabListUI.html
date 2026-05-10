@@ -83,33 +83,33 @@ const VocabListUI = {
 /**
    * ヘッダーのクイック入力やFABのダミー入力にフォーカスした時
    */
-  onQuickInputFocus: function(e) {
-    const listSearch = document.getElementById('list-search');
-    const dummyInput = e ? e.target : null; // 🌟 引数 e からダミー要素を特定
+onQuickInputFocus: function(e) {
+  const listSearch = document.getElementById('list-search');
+  const dummyInput = e ? e.target : null;
 
-    // 1. パネルが閉じていれば開く（ステートで判定）
-    if (!AppStore.state.isVocabPanelOpen) {
-      ViewController.toggleVocabPanel(true);
+  // 1. パネルが閉じていれば開く（State優先）
+  if (!AppStore.state.isVocabPanelOpen) {
+    ViewController.toggleVocabPanel(true); // 明示的に「開く」
+  }
+
+  // 2. フォーカスのバトンパス（カーソル消失対策）
+  if (listSearch) {
+    // 🌟 ダミー(floating-search-inputなど)からフォーカスを剥がして、本命に移す準備
+    if (dummyInput && dummyInput !== listSearch) {
+      dummyInput.blur();
     }
 
-    // 2. フォーカスのバトンパス
-    if (listSearch) {
-      // 🌟 ダミーからフォーカスを剥がして競合を防ぐ
-      if (dummyInput && dummyInput !== listSearch) {
-        dummyInput.blur();
-      }
+    // 一段目：即座にフォーカスを当ててIME（キーボード）を維持
+    listSearch.focus();
 
-      // 本命に当てる
+    // 二段目：パネルのアニメーション完了後に、確実にカーソルを末尾に定着させる
+    setTimeout(() => {
       listSearch.focus();
-
-      // ダメ押しの再フォーカス（パネル移動中の剥奪対策）
-      setTimeout(() => {
-        listSearch.focus();
-        const len = listSearch.value.length;
-        listSearch.setSelectionRange(len, len);
-      }, 120); // toggle側より少し遅らせて確実に上書き
-    }
-  },
+      const len = listSearch.value.length;
+      listSearch.setSelectionRange(len, len);
+    }, 120); 
+  }
+},
 
 /**
    * 検索クエリの更新と再描画（★究極の双方向同期＆ペースト保護）

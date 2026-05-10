@@ -151,18 +151,26 @@ const ViewController = {
 
     // 3. 【入力系】メモ帳と検索窓を除外するロジック
     document.querySelectorAll('input, textarea').forEach(el => {
-      // 「メモ帳」または「検索窓」ならロックしない（そのまま通す）
-      if (el.id === 'memo-textarea' || el.id === 'list-search'|| el.id === 'floating-search-input') {
-        el.readOnly = false;
-        el.style.setProperty('opacity', '1', 'important');
-        el.style.setProperty('pointer-events', 'auto', 'important');
+    // 🌟 修正：検索・追加・メモに関する入力欄はロックから除外する
+    const isExempt = ['memo-textarea', 'list-search', 'quick-input', 'floating-search-input'].includes(el.id);
+
+    if (isExempt) {
+      el.readOnly = false;
+      el.style.setProperty('pointer-events', 'auto', 'important');
+      
+      // 🌟 ここがポイント：ダミー入力欄なら透明度0を維持、それ以外は1にする
+      if (el.id === 'floating-search-input') {
+        el.style.setProperty('opacity', '0', 'important');
       } else {
-        // それ以外（通常の入力欄）はロック
-        el.readOnly = true;
-        el.style.setProperty('opacity', '0.4', 'important');
-        el.style.setProperty('pointer-events', 'none', 'important');
+        el.style.setProperty('opacity', '1', 'important');
       }
-    });
+    } else {
+      // それ以外の入力欄（通常の編集フォームなど）はロック
+      el.readOnly = true;
+      el.style.setProperty('opacity', '0.4', 'important');
+      el.style.setProperty('pointer-events', 'none', 'important');
+    }
+  });
 
     // 4. 【ボタン系】ここは今の「きいている」ループを維持
     document.querySelectorAll('button').forEach(b => {
