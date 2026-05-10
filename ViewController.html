@@ -151,26 +151,18 @@ const ViewController = {
 
     // 3. 【入力系】メモ帳と検索窓を除外するロジック
     document.querySelectorAll('input, textarea').forEach(el => {
-    // 🌟 修正：検索・追加・メモに関する入力欄はロックから除外する
-    const isExempt = ['memo-textarea', 'list-search', 'quick-input', 'floating-search-input'].includes(el.id);
-
-    if (isExempt) {
-      el.readOnly = false;
-      el.style.setProperty('pointer-events', 'auto', 'important');
-      
-      // 🌟 ここがポイント：ダミー入力欄なら透明度0を維持、それ以外は1にする
-      if (el.id === 'floating-search-input') {
-        el.style.setProperty('opacity', '0', 'important');
-      } else {
+      // 「メモ帳」または「検索窓」ならロックしない（そのまま通す）
+      if (el.id === 'memo-textarea' || el.id === 'list-search'|| el.id === 'floating-search-input') {
+        el.readOnly = false;
         el.style.setProperty('opacity', '1', 'important');
+        el.style.setProperty('pointer-events', 'auto', 'important');
+      } else {
+        // それ以外（通常の入力欄）はロック
+        el.readOnly = true;
+        el.style.setProperty('opacity', '0.4', 'important');
+        el.style.setProperty('pointer-events', 'none', 'important');
       }
-    } else {
-      // それ以外の入力欄（通常の編集フォームなど）はロック
-      el.readOnly = true;
-      el.style.setProperty('opacity', '0.4', 'important');
-      el.style.setProperty('pointer-events', 'none', 'important');
-    }
-  });
+    });
 
     // 4. 【ボタン系】ここは今の「きいている」ループを維持
     document.querySelectorAll('button').forEach(b => {
@@ -277,49 +269,51 @@ const ViewController = {
    * ボキャブラリーパネルの開閉（検索フォーカス強制版）
    * 常にフォーカスを当てることで invokeQuickSearch を不要にする。
    */
-  /**
-   * ボキャブラリーパネルの開閉（ステート・フォーカス完全連動版）
-   */
-  toggleVocabPanel: function(force) {
-    if (force && typeof force.stopPropagation === 'function') force.stopPropagation();
+  toggleVocabPanel: function(e) {
+    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
     
     const panel = document.getElementById('vocab-panel');
     const searchInput = document.getElementById('list-search');
-    if (!panel) return;
 
-    // 引数が bool ならそれに従い、そうでなければ反転
-    const shouldOpen = (typeof force === 'boolean') ? force : !AppStore.state.isVocabPanelOpen;
+    // 🌟 判定にDOMを使わず、まず「次どうしたいか」をStateから決める
+    const shouldOpen = !AppStore.state.isVocabPanelOpen;
     
-    // 🌟 何よりも先にステートを確定（「曇り」の判定不整合を防ぐ）
+    // 🌟 関数に入った瞬間にStateを確定させる（ゾンビ状態を防止）
     AppStore.state.isVocabPanelOpen = shouldOpen;
 
     if (shouldOpen) {
+      // --- OPEN ---
       panel.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
 
-      // 一段目のフォーカス（iOSへの入力継続宣言）
-      if (searchInput) searchInput.focus();
+      // 🌟 フォーカスはアニメーションを待たずに「今」予約する
+      if (searchInput) {
+        searchInput.focus(); // iOS対策：即座に一発目
+      }
 
       requestAnimationFrame(() => {
         panel.classList.add('is-open');
         VocabListUI.update();
         
-        // 二段目のフォーカス（アニメーション開始後）
+        // 🌟 ダメ押しのフォーカス（アニメーション開始後）
         if (searchInput) {
           setTimeout(() => {
             searchInput.focus();
             const len = searchInput.value.length;
             searchInput.setSelectionRange(len, len);
-          }, 50);
+          }, 50); // 100msより少し短くして競合を防ぐ
         }
       });
     } else {
+      // --- CLOSE ---
       panel.classList.remove('is-open');
       document.body.style.overflow = '';
+
       setTimeout(() => {
+        // 🌟 ここでStateを再確認せず、強制的にhiddenにする
         panel.classList.add('hidden');
         if (searchInput) searchInput.blur();
-      }, 150);
+      }, 150); // アニメーションの完了を待ってから物理的に消す
     }
   },
 

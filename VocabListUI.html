@@ -80,34 +80,34 @@ const VocabListUI = {
 /**
    * 🌟 追加：ヘッダー窓をタップした「瞬間（文字を打つ前）」にバトンパスする
    */
-/**
-   * ヘッダーのクイック入力やFABのダミー入力にフォーカスした時
-   */
-onQuickInputFocus: function(e) {
+onQuickInputFocus: function() {
+  const panel = document.getElementById('vocab-panel');
   const listSearch = document.getElementById('list-search');
-  const dummyInput = e ? e.target : null;
 
-  // 1. パネルが閉じていれば開く（State優先）
-  if (!AppStore.state.isVocabPanelOpen) {
-    ViewController.toggleVocabPanel(true); // 明示的に「開く」
+  // 1. パネルを開く
+  if (panel && panel.classList.contains('hidden')) {
+    if (typeof ViewController !== 'undefined') {
+      ViewController.toggleVocabPanel(); 
+    }
   }
 
-  // 2. フォーカスのバトンパス（カーソル消失対策）
+  // 2. フォーカスのバトンパスを「2段構え」にする
   if (listSearch) {
-    // 🌟 ダミー(floating-search-inputなど)からフォーカスを剥がして、本命に移す準備
-    if (dummyInput && dummyInput !== listSearch) {
-      dummyInput.blur();
-    }
 
-    // 一段目：即座にフォーカスを当ててIME（キーボード）を維持
+    // 🌟 バトンパス：ダミーからフォーカスを剥がしてから本命に当てる
+    if (dummyInput && dummyInput !== listSearch) {
+      dummyInput.blur(); 
+    }
+    // 1回目：即座にフォーカス。iOSに「まだ入力中だよ！」と伝える
     listSearch.focus();
 
-    // 二段目：パネルのアニメーション完了後に、確実にカーソルを末尾に定着させる
+    // 2回目：アニメーションの完了（0.1秒後）を待って、確実に定着させる
+    // ここでカーソル位置も末尾に固定して、"全選択" による上書き消去を防ぐ
     setTimeout(() => {
       listSearch.focus();
       const len = listSearch.value.length;
       listSearch.setSelectionRange(len, len);
-    }, 120); 
+    }, 100);
   }
 },
 

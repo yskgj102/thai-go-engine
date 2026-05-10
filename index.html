@@ -56,7 +56,7 @@
     <div id="header-input-area" class="relative w-full max-w-[130px] sm:max-w-[150px] transition-all duration-300">
       <input id="quick-input" type="text" 
        placeholder="Search/Add..."
-       onfocus="VocabListUI.onQuickInputFocus(event)"
+       onfocus="VocabListUI.onQuickInputFocus()"
        oninput="VocabListUI.update(this.value)"
        class="w-full bg-white/5 border border-white/5 rounded-xl 
               px-2 py-1.5 text-[12px] text-ellipsis
@@ -266,7 +266,7 @@
   </svg>
   
   <input id="floating-search-input" type="text" 
-         onfocus="VocabListUI.onQuickInputFocus(event)" 
+         onfocus="VocabListUI.onQuickInputFocus()" 
          class="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-[16px] outline-none">
 </div>
 
@@ -486,27 +486,45 @@
       isDragging = false;
       if (!isHorizontalSwipe) { resetStyles(); return; }
 
+      const searchInput = document.getElementById('list-search');
       const deltaX = e.changedTouches[0].clientX - startX;
       const shouldBeOpen = wasOpen ? deltaX <= panelWidth / 3 : deltaX < -panelWidth / 3;
 
-      // 1. 手動でいじったインラインスタイルにアニメーションを付けて戻す準備
+      // 着地用アニメーションをセット
       panelContent.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)';
       panelContainer.style.transition = 'background 0.3s';
-      
-      // 2. 指を離した瞬間にJSで書いたスタイルを消し、CSSクラス（is-open）に制御を戻す
       panelContent.style.transform = '';
       panelContainer.style.background = '';
 
-      // 3. 🌟 独自ロジックを全廃し、ViewController の司令塔に一本化
-      // これにより、ステート更新・フォーカス奪取・バトンパスが全て適用される
-      if (typeof ViewController !== 'undefined') {
-        ViewController.toggleVocabPanel(shouldBeOpen);
+      if (shouldBeOpen) {
+        // --- OPEN (toggleVocabPanel 互換) ---
+        panelContainer.classList.remove('hidden'); 
+        requestAnimationFrame(() => {
+          panelContainer.classList.add('is-open');
+          AppStore.state.isVocabPanelOpen = true;
+          VocabListUI.update();
+          if (searchInput) {
+            setTimeout(() => {
+              searchInput.focus();
+              searchInput.setSelectionRange(0, searchInput.value.length);
+            }, 100); 
+          }
+        });
+        document.body.style.overflow = 'hidden';
+      } else {
+        // --- CLOSE (toggleVocabPanel 互換) ---
+        panelContainer.classList.remove('is-open');
+        AppStore.state.isVocabPanelOpen = false;
+        setTimeout(() => {
+          if (!AppStore.state.isVocabPanelOpen) {
+            panelContainer.classList.add('hidden');
+            document.body.style.overflow = '';
+            if (searchInput) searchInput.blur();
+            resetStyles(); // ここでJSのスタイルを全消去
+          }
+        }, 100);
       }
-
-      // 4. 数ミリ秒後にインラインスタイル（transition等）を完全にクリーンアップ
-      setTimeout(resetStyles, 300);
-      
-    }, { passive: true });
+    });
 
     // スクロール監視：300px以上進んだら「上へ」ボタンを表示
 window.addEventListener('scroll', () => {
