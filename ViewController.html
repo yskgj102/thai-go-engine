@@ -269,39 +269,49 @@ const ViewController = {
    * ボキャブラリーパネルの開閉（検索フォーカス強制版）
    * 常にフォーカスを当てることで invokeQuickSearch を不要にする。
    */
-  toggleVocabPanel: function(e) {
-    if (e) e.stopPropagation();
+  /**
+   * ボキャブラリーパネルの開閉（ステート・フォーカス完全連動版）
+   */
+  toggleVocabPanel: function(force) {
+    if (force && typeof force.stopPropagation === 'function') force.stopPropagation();
+    
     const panel = document.getElementById('vocab-panel');
     const searchInput = document.getElementById('list-search');
+    if (!panel) return;
 
-    if (panel.classList.contains('hidden')) {
-      // --- OPEN ---
-      panel.classList.remove('hidden'); 
-      requestAnimationFrame(() => {
-          panel.classList.add('is-open');
-          AppStore.state.isVocabPanelOpen = true;
-          VocabListUI.update();
-          
-          // 開く時は常にフォーカス（アニメーション完了を待たずに即準備）
-          if (searchInput) {
-            setTimeout(() => {
-              searchInput.focus();
-              searchInput.click(); 
-              // 既存の文字があれば全選択、なければ即入力可能な状態に
-              searchInput.setSelectionRange(0, searchInput.value.length);
-            }, 100); 
-          }
-      });
+    // 引数が bool ならそれに従い、そうでなければ反転
+    const shouldOpen = (typeof force === 'boolean') ? force : !AppStore.state.isVocabPanelOpen;
+    
+    // 🌟 何よりも先にステートを確定（「曇り」の判定不整合を防ぐ）
+    AppStore.state.isVocabPanelOpen = shouldOpen;
+
+    if (shouldOpen) {
+      panel.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
+
+      // 一段目のフォーカス（iOSへの入力継続宣言）
+      if (searchInput) searchInput.focus();
+
+      requestAnimationFrame(() => {
+        panel.classList.add('is-open');
+        VocabListUI.update();
+        
+        // 二段目のフォーカス（アニメーション開始後）
+        if (searchInput) {
+          setTimeout(() => {
+            searchInput.focus();
+            const len = searchInput.value.length;
+            searchInput.setSelectionRange(len, len);
+          }, 50);
+        }
+      });
     } else {
-      // --- CLOSE ---
       panel.classList.remove('is-open');
-      AppStore.state.isVocabPanelOpen = false;
+      document.body.style.overflow = '';
       setTimeout(() => {
         panel.classList.add('hidden');
-        document.body.style.overflow = '';
         if (searchInput) searchInput.blur();
-      }, 100);
+      }, 150);
     }
   },
 
