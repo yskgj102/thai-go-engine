@@ -146,7 +146,7 @@ fetchCloudAudio: function(text, lang, rate, onComplete) {
     if (!val || AppStore.state.isProcessing) return;
 
     // UIをロックし、追加中であることを通知
-    ViewController.applyGlobalLock("Adding word ...");
+    ViewController.applyGlobalLock("Adding word ...",true);
 
     google.script.run
       .withSuccessHandler(res => {

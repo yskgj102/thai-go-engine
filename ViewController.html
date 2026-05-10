@@ -643,7 +643,10 @@ const ViewController = {
     const sheet = document.getElementById('memo-sheet');
     const overlay = document.getElementById('memo-overlay');
     const textarea = document.getElementById('memo-textarea');
-    
+if (textarea) {
+  // 🌟 preventScroll: true を指定して、ブラウザによる勝手なスクロールを防ぐ
+  textarea.focus({ preventScroll: true });
+}
     // 現在の単語データを取得
     const currentItem = AppStore.getCurrentItem();
     if (!currentItem) return;
