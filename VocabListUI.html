@@ -194,11 +194,15 @@ const pointerClass = (isLocked && !isAllowList) ? 'pointer-events-none opacity-5
       displayData = displayData.map(v => {
         let score = 0;
         let tempSnippet = null; // 🌟 修正1：元データを汚さないようにローカル変数を使う
+        let tempExSnippet = null;
 // ★ ここを修正：String() で囲って、数値でも安全に文字列として扱う
         const th = String(v.word_th || "").toLowerCase();
         const rawPh = String(v.phonetic || "").toLowerCase();
         const cat = String(v.category || "").toLowerCase();
         const exp = String(v.explanation || "").toLowerCase(); // ★追加：解説文も検索対象に
+
+        const exTh = String(v.example_th || "").toLowerCase();
+        const exJa = String(v.example_ja || "").toLowerCase();
         
 
 // 【★強化ポイント1】カテゴリー完全一致なら、超高スコアを与えて最上位へ
@@ -223,9 +227,19 @@ const pointerClass = (isLocked && !isAllowList) ? 'pointer-events-none opacity-5
           const matchCat = cat.includes(kw);
           const matchExp = exp.includes(kw);     // ★追加：解説文へのマッチ
           const matchPh = normPh.includes(nKw);  // 正規化発音記号へのマッチ
+
+          const matchExTh = exTh.includes(kw);
+          const matchExJa = exJa.includes(kw);
+          const matchEx = matchExTh || matchExJa;
+
           // 🌟 修正2：ローカル変数にスニペットを格納
           if (matchExp && !tempSnippet) {
             tempSnippet = VocabListUI.getHighlightSnippet(String(v.explanation || ""), kw);
+          }
+          // 🌟 追加：例文でヒットした場合、その部分を切り出してハイライトする
+          if (matchEx && !tempExSnippet) {
+            const targetText = matchExTh ? String(v.example_th || "") : String(v.example_ja || "");
+            tempExSnippet = VocabListUI.getHighlightSnippet(targetText, kw);
           }
 
 
@@ -235,6 +249,7 @@ const pointerClass = (isLocked && !isAllowList) ? 'pointer-events-none opacity-5
           if (matchKana) score += 400; 
           if (matchCat) score += 800; // カテゴリー一致の重みを少しアップ
           if (matchExp) score += 300; // ★追加：解説文一致のスコア
+          if (matchEx) score += 200;
           
           if (matchPh) {
             if (normPh === nKw) score += 2000;      // 完全一致は最優先
@@ -242,11 +257,11 @@ const pointerClass = (isLocked && !isAllowList) ? 'pointer-events-none opacity-5
             else score += 500;
             
           }
-          return (matchTh || matchJa || matchKana || matchPh || matchCat || matchExp); // ★変更：matchExp を追加
+          return (matchTh || matchJa || matchKana || matchPh || matchCat || matchExp || matchEx);
         });
 
         // 🌟 修正3：新しいオブジェクトを作って、そこにだけスニペットを持たせる（元データは無傷）
-        return { ...v, matchScore: isMatch ? score : 0, expSnippet: tempSnippet };
+        return { ...v, matchScore: isMatch ? score : 0, expSnippet: tempSnippet, exSnippet: tempExSnippet };
       }).filter(v => v.matchScore > 0).sort((a, b) => b.matchScore - a.matchScore);
     }
 this.state.currentFilteredList = displayData;
@@ -371,6 +386,14 @@ const limitedData = displayData.slice(0, this.state.displayLimit);
             </div>
           </div>
 
+          ${(q !== '' && item.exSnippet) ? `
+            <div class="mt-2 pt-2 border-t border-white/10 pl-2 pr-2">
+              <p class="text-[10px] text-emerald-400/80 leading-relaxed italic line-clamp-2">
+                <span class="font-bold opacity-60 not-italic mr-1 text-emerald-500">例文:</span>${item.exSnippet}
+              </p>
+            </div>
+          ` : ''}
+
           ${(q !== '' && item.expSnippet) ? `
             <div class="mt-3 pt-2 border-t border-white/10 pl-2 pr-2">
               <p class="text-[9px] text-slate-400 dark:text-slate-500 leading-relaxed italic line-clamp-2">
@@ -378,6 +401,7 @@ const limitedData = displayData.slice(0, this.state.displayLimit);
               </p>
             </div>
           ` : ''}
+
 
         </div>
       `;
