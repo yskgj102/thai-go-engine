@@ -544,6 +544,12 @@ executeSaveMemo: function(id, text) {
           // 自分のテキスト ＋ デリミタ ＋ AIの最新回答 で上書き
           const newText = userText + AI_DELIMITER + res;
           textarea.value = newText;
+
+          // 👇 ここから3行を追加！ 👇
+          // テキストエリアを更新したついでに、表のMarkdownプレビューも強制的に最新化する
+          const richView = document.getElementById('memo-rich-view');
+          if (richView) richView.innerHTML = typeof marked !== 'undefined' ? marked.parse(newText) : newText;
+          // 👆 ここまで 👆
           
           // 自動でDBに保存（手動でDoneを押す手間を省く）
           Bridge.executeSaveMemo(item.id, newText);
