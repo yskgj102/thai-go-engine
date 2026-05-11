@@ -1963,29 +1963,7 @@
         }
       });
 
-      // 🌟 シートを閉じた時も「子→親」の順で安全に初期化
-      const sheetElement = document.getElementById("grammar-sheet");
-      if (sheetElement) {
-        const observer = new MutationObserver((mutations) => {
-          mutations.forEach((mutation) => {
-            if (mutation.attributeName === "class") {
-              const isClosed = sheetElement.classList.contains("translate-y-full");
-              if (isClosed) {
-                resetFilter();
-                const wrapper = document.getElementById("grammar-ref-wrapper");
-                wrapper.querySelectorAll(".grammar-item").forEach(item => item.open = false);
-                
-                requestAnimationFrame(() => {
-                  wrapper.querySelectorAll(".chapter-details").forEach(chapter => chapter.open = false);
-                  const scrollContainer = document.getElementById("grammar-content-area");
-                  if (scrollContainer) scrollContainer.scrollTop = 0;
-                });
-              }
-            }
-          });
-        });
-        observer.observe(sheetElement, { attributes: true, attributeFilter: ["class"] });
-      }
+     
 
     })();
   </script>
