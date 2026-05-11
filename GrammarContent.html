@@ -1833,10 +1833,23 @@
         search.value = "";
         updateSearch();
       }
+      function resetFilter() {
+        search.value = "";
+        updateSearch();
+      }
 
-      // ==========================================
-      // 🌟 修正：スクロールをボトムシート内だけに閉じ込める
-      // ==========================================
+      // 🌟 1. 追加：スクロールのブレに影響されない絶対座標（Y座標）を計算する関数
+      function getTargetScrollTop(target, container) {
+        let top = 0;
+        let elem = target;
+        while (elem && elem !== container && elem !== document.body && elem !== document.documentElement) {
+          top += elem.offsetTop;
+          elem = elem.offsetParent;
+        }
+        return top - 20; // 20pxの余白
+      }
+
+      // 🌟 2. 修正：openItem内のジャンプ処理
       function openItem(item) {
         if (!item) return;
 
@@ -1849,19 +1862,16 @@
         const chapter = item.closest(".chapter");
         if (chapter) chapter.hidden = false;
 
-        setTimeout(() => {
-          // ブラウザ標準の scrollIntoView ではなく、コンテナ内の相対位置を計算してスクロール
-          const scrollContainer = document.getElementById("grammar-content-area");
-          if (scrollContainer) {
-            const containerRect = scrollContainer.getBoundingClientRect();
-            const itemRect = item.getBoundingClientRect();
-            const scrollTop = scrollContainer.scrollTop + (itemRect.top - containerRect.top) - 20; // 20pxの余白
-            scrollContainer.scrollTo({ top: scrollTop, behavior: "smooth" });
-          }
-        }, 150);
-
-        // URLハッシュの変更はアプリの予期せぬ動作を招くため削除（コメントアウト）
-        // try { history.replaceState(null, "", `#${item.id}`); } catch (e) {}
+        // requestAnimationFrameを2段重ねにして、ブラウザが「一気に展開」を終えるのを確実に待つ
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const scrollContainer = document.getElementById("grammar-content-area");
+            if (scrollContainer) {
+              const targetTop = getTargetScrollTop(item, scrollContainer);
+              scrollContainer.scrollTo({ top: targetTop, behavior: "smooth" });
+            }
+          });
+        });
       }
 
       function jumpToRelated(term, sourceChapterId) {
@@ -1935,16 +1945,15 @@
           const details = target.querySelector(".chapter-details");
           if (details) details.open = true;
           
-          // 章へのジャンプもコンテナ内のスクロールに変換
-          setTimeout(() => {
-            const scrollContainer = document.getElementById("grammar-content-area");
-            if (scrollContainer) {
-              const containerRect = scrollContainer.getBoundingClientRect();
-              const targetRect = target.getBoundingClientRect();
-              const scrollTop = scrollContainer.scrollTop + (targetRect.top - containerRect.top) - 20;
-              scrollContainer.scrollTo({ top: scrollTop, behavior: "smooth" });
-            }
-          }, 150);
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              const scrollContainer = document.getElementById("grammar-content-area");
+              if (scrollContainer) {
+                const targetTop = getTargetScrollTop(target, scrollContainer);
+                scrollContainer.scrollTo({ top: targetTop, behavior: "smooth" });
+              }
+            });
+          });
         }
 
         if (target.classList.contains("grammar-item")) {
