@@ -1796,6 +1796,7 @@
         });
       }
 
+      // 🌟 修正：検索時の自動展開も「親→子」の順で確実に行いバグを防ぐ
       function updateSearch() {
         const q = normalize(search.value);
         let visibleCount = 0;
@@ -1810,12 +1811,6 @@
           if (hit) {
             visibleCount += 1;
           }
-
-          if (q && hit) {
-            item.open = true;
-            const chapter = item.closest(".chapter-details");
-            if (chapter) chapter.open = true;
-          }
         });
 
         wrapper.querySelectorAll(".chapter").forEach(chapter => {
@@ -1825,10 +1820,21 @@
 
         count.textContent = q ? `${visibleCount}件` : `${total}項目`;
 
-        // 🌟 検索結果ゼロの時だけメッセージを表示する
         const emptyState = document.getElementById("grammar-empty-state");
         if (emptyState) {
           emptyState.style.display = (q && visibleCount === 0) ? "block" : "none";
+        }
+
+        // 検索文字がある時だけ自動展開（親を開いてから、1フレーム後に子を開く）
+        if (q) {
+          wrapper.querySelectorAll(".chapter-details").forEach(chapter => {
+            if (!chapter.closest(".chapter").hidden) chapter.open = true;
+          });
+          requestAnimationFrame(() => {
+            wrapper.querySelectorAll(".grammar-item").forEach(item => {
+              if (!item.hidden) item.open = true;
+            });
+          });
         }
       }
 
@@ -1837,20 +1843,19 @@
         updateSearch();
       }
 
-      // 🌟 修正：スマホの計算狂いを防ぐため、DOM展開を確実に待ってから瞬間移動（auto）する
+      // スクロール処理（瞬間ワープで描画を安定させる）
       function safeScrollTo(target) {
         if (!target) return;
-        
         setTimeout(() => {
           const container = document.getElementById("grammar-content-area");
           if (!container) return;
           
           const cRect = container.getBoundingClientRect();
           const tRect = target.getBoundingClientRect();
-          const absoluteTop = container.scrollTop + (tRect.top - cRect.top) - 20; // 20pxの余白
+          const absoluteTop = container.scrollTop + (tRect.top - cRect.top) - 20;
           
           container.scrollTo({ top: absoluteTop, behavior: "auto" });
-        }, 150); // 中身が確実に展開されるのを待つ
+        }, 50); 
       }
 
       function openItem(item) {
@@ -1895,22 +1900,31 @@
 
       search.addEventListener("input", updateSearch);
 
+      // 🌟 修正：「すべて開く」は親→子の順
       openAll.addEventListener("click", () => {
         const wrapper = document.getElementById("grammar-ref-wrapper");
-        wrapper.querySelectorAll("details").forEach(details => {
-          details.open = true;
+        wrapper.querySelectorAll(".chapter-details").forEach(chapter => chapter.open = true);
+        requestAnimationFrame(() => {
+          wrapper.querySelectorAll(".grammar-item").forEach(item => item.open = true);
         });
       });
 
-      // 🌟 根本解決：章も、細かいアイテムも、【すべて】強制的に閉じる
+      // 🌟 根本解決：「すべて閉じる」は【絶対に】子→親の順で閉じてゾンビ化を防ぐ
       closeAll.addEventListener("click", () => {
         resetFilter(); 
         const wrapper = document.getElementById("grammar-ref-wrapper");
         
-        // HTMLの全 <details> タグから open 属性を完全に消し去る（裏で残るのを阻止）
-        wrapper.querySelectorAll("details").forEach(details => {
-          details.removeAttribute("open");
-          details.open = false; 
+        // 1. まず細かい項目（子）をすべて閉じる
+        wrapper.querySelectorAll(".grammar-item").forEach(item => {
+          item.open = false; 
+        });
+
+        // 2. ブラウザが子を閉じたことを認識するまで1フレーム待つ
+        requestAnimationFrame(() => {
+          // 3. その後に大枠の章（親）を閉じる
+          wrapper.querySelectorAll(".chapter-details").forEach(chapter => {
+            chapter.open = false; 
+          });
         });
       });
 
@@ -1949,7 +1963,7 @@
         }
       });
 
-      // 🌟 シートをスワイプで閉じた時も、細かいアイテムを含めて完全リセット
+      // 🌟 シートを閉じた時も「子→親」の順で安全に初期化
       const sheetElement = document.getElementById("grammar-sheet");
       if (sheetElement) {
         const observer = new MutationObserver((mutations) => {
@@ -1958,15 +1972,14 @@
               const isClosed = sheetElement.classList.contains("translate-y-full");
               if (isClosed) {
                 resetFilter();
-                // 裏側に残っている細かいアイテムも一掃する
-                document.querySelectorAll("#grammar-ref-wrapper details").forEach(details => {
-                  details.removeAttribute("open");
-                  details.open = false;
+                const wrapper = document.getElementById("grammar-ref-wrapper");
+                wrapper.querySelectorAll(".grammar-item").forEach(item => item.open = false);
+                
+                requestAnimationFrame(() => {
+                  wrapper.querySelectorAll(".chapter-details").forEach(chapter => chapter.open = false);
+                  const scrollContainer = document.getElementById("grammar-content-area");
+                  if (scrollContainer) scrollContainer.scrollTop = 0;
                 });
-                const scrollContainer = document.getElementById("grammar-content-area");
-                if (scrollContainer) {
-                  scrollContainer.scrollTop = 0;
-                }
               }
             }
           });
