@@ -527,7 +527,7 @@ executeSaveMemo: function(id, text) {
     // --- ★ 追加：表示テキスト・区切り文字の共通化（一元管理） ---
     const AI_BTN_TEXT = "🪄 Ask AI";
     const AI_LOADING_TEXT = "Thinking...";
-    const AI_DELIMITER = `\n\n--- ${AI_BTN_TEXT} ---\n`;
+    const AI_DELIMITER = `\n\n--- ${AI_BTN_TEXT} ---\n\n`;
     // -------------------------------------------------------------
 
     // デリミタ（区切り文字）で分割し、過去のAIの回答（下半分）を切り捨てる
