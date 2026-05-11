@@ -82,7 +82,7 @@
     }
 
     /* =========================================================
-       2. レイアウトと部品（全て #grammar-ref-wrapper の中に限定）
+       2. レイアウトと部品
        ========================================================= */
     #grammar-ref-wrapper {
       box-sizing: border-box;
@@ -103,28 +103,6 @@
 
     #grammar-top {
       scroll-margin-top: 88px;
-    }
-
-    #grammar-ref-wrapper .app-header {
-      padding: 18px 16px;
-      background: linear-gradient(135deg, var(--header-from), var(--header-to));
-      color: #ffffff;
-      border-radius: 16px;
-      box-shadow: var(--shadow);
-      margin-bottom: 16px;
-    }
-
-    #grammar-ref-wrapper .app-header h1 {
-      margin: 0 0 6px;
-      font-size: 1.35rem;
-      line-height: 1.35;
-      font-weight: 800;
-    }
-
-    #grammar-ref-wrapper .app-header p {
-      margin: 0;
-      font-size: 0.85rem;
-      opacity: 0.95;
     }
 
     #grammar-ref-wrapper .tools {
@@ -228,7 +206,7 @@
     }
 
     #grammar-ref-wrapper .chapter {
-      scroll-margin-top: 118px;
+      scroll-margin-top: 20px;
       margin: 14px 0;
     }
 
@@ -300,7 +278,7 @@
     }
 
     #grammar-ref-wrapper .grammar-item {
-      scroll-margin-top: 118px;
+      scroll-margin-top: 20px;
       margin: 10px 0;
       border: 1px solid var(--line);
       border-radius: 18px;
@@ -407,12 +385,26 @@
       box-shadow: var(--shadow);
       font-weight: 800;
     }
-  </style>
 
-  <!-- <header class="app-header" id="grammar-top">
-    <h1>タイ語文法</h1>
-    <p>日本語話者向け。必要な文法項目を検索して参照するための一覧。</p>
-  </header> -->
+    /* 🌟 追加：検索結果ゼロの時のメッセージデザイン */
+    #grammar-empty-state {
+      display: none;
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--sub);
+    }
+    #grammar-empty-state .icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+      opacity: 0.4;
+    }
+    #grammar-empty-state .msg {
+      font-weight: 800;
+      font-size: 1.1rem;
+      letter-spacing: 0.05em;
+      opacity: 0.8;
+    }
+  </style>
 
   <section class="tools" aria-label="検索と操作">
     <div class="search-row">
@@ -423,12 +415,17 @@
       <button type="button" id="grammar-openAll" class="g-btn">すべて開く</button>
       <button type="button" id="grammar-closeAll" class="g-btn">すべて閉じる</button>
       <button type="button" id="grammar-clearSearch" class="g-btn">検索を消す</button>
-      </div>
+    </div>
   </section>
 
   <nav id="grammar-chapterNav" class="chapter-nav hide-scrollbar" aria-label="章一覧"></nav>
 
   <main id="grammar-content"></main>
+
+  <div id="grammar-empty-state">
+    <div class="icon">🔍</div>
+    <div class="msg">見つかりませんでした</div>
+  </div>
 
   <button type="button" class="to-top" aria-label="上へ戻る" 
           onclick="document.getElementById('grammar-content-area').scrollTo({top: 0, behavior: 'smooth'});">↑</button>
@@ -1827,29 +1824,35 @@
         });
 
         count.textContent = q ? `${visibleCount}件` : `${total}項目`;
-      }
 
-      function resetFilter() {
-        search.value = "";
-        updateSearch();
-      }
-      function resetFilter() {
-        search.value = "";
-        updateSearch();
-      }
-
-      // 🌟 1. 追加：スクロールのブレに影響されない絶対座標（Y座標）を計算する関数
-      function getTargetScrollTop(target, container) {
-        let top = 0;
-        let elem = target;
-        while (elem && elem !== container && elem !== document.body && elem !== document.documentElement) {
-          top += elem.offsetTop;
-          elem = elem.offsetParent;
+        // 🌟 検索結果ゼロの時だけメッセージを表示する
+        const emptyState = document.getElementById("grammar-empty-state");
+        if (emptyState) {
+          emptyState.style.display = (q && visibleCount === 0) ? "block" : "none";
         }
-        return top - 20; // 20pxの余白
       }
 
-      // 🌟 2. 修正：openItem内のジャンプ処理
+      function resetFilter() {
+        search.value = "";
+        updateSearch();
+      }
+
+      // 🌟 修正：スマホの計算狂いを防ぐため、DOM展開を確実に待ってから瞬間移動（auto）する
+      function safeScrollTo(target) {
+        if (!target) return;
+        
+        setTimeout(() => {
+          const container = document.getElementById("grammar-content-area");
+          if (!container) return;
+          
+          const cRect = container.getBoundingClientRect();
+          const tRect = target.getBoundingClientRect();
+          const absoluteTop = container.scrollTop + (tRect.top - cRect.top) - 20; // 20pxの余白
+          
+          container.scrollTo({ top: absoluteTop, behavior: "auto" });
+        }, 150); // 中身が確実に展開されるのを待つ
+      }
+
       function openItem(item) {
         if (!item) return;
 
@@ -1862,16 +1865,7 @@
         const chapter = item.closest(".chapter");
         if (chapter) chapter.hidden = false;
 
-        // requestAnimationFrameを2段重ねにして、ブラウザが「一気に展開」を終えるのを確実に待つ
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            const scrollContainer = document.getElementById("grammar-content-area");
-            if (scrollContainer) {
-              const targetTop = getTargetScrollTop(item, scrollContainer);
-              scrollContainer.scrollTo({ top: targetTop, behavior: "smooth" });
-            }
-          });
-        });
+        safeScrollTo(item);
       }
 
       function jumpToRelated(term, sourceChapterId) {
@@ -1891,10 +1885,9 @@
         search.value = term;
         updateSearch();
         
-        // 検索窓へのスクロールもコンテナ内でおこなう
         const scrollContainer = document.getElementById("grammar-content-area");
         if (scrollContainer) {
-          scrollContainer.scrollTo({ top: 0, behavior: "smooth" });
+          scrollContainer.scrollTo({ top: 0, behavior: "auto" });
         }
       }
 
@@ -1909,10 +1902,15 @@
         });
       });
 
+      // 🌟 根本解決：章も、細かいアイテムも、【すべて】強制的に閉じる
       closeAll.addEventListener("click", () => {
+        resetFilter(); 
         const wrapper = document.getElementById("grammar-ref-wrapper");
-        wrapper.querySelectorAll(".grammar-item, .chapter-details").forEach(details => {
-          details.open = false;
+        
+        // HTMLの全 <details> タグから open 属性を完全に消し去る（裏で残るのを阻止）
+        wrapper.querySelectorAll("details").forEach(details => {
+          details.removeAttribute("open");
+          details.open = false; 
         });
       });
 
@@ -1921,14 +1919,11 @@
         search.focus();
       });
 
-      // ==========================================
-      // 🌟 修正：ブラウザの勝手なジャンプ（ガタつき）を阻止
-      // ==========================================
       const wrapper = document.getElementById("grammar-ref-wrapper");
       wrapper.addEventListener("click", event => {
         const related = event.target.closest("[data-related]");
         if (related) {
-          event.preventDefault(); // デフォルト動作をブロック
+          event.preventDefault();
           jumpToRelated(related.dataset.related, related.dataset.sourceChapter);
           return;
         }
@@ -1936,7 +1931,7 @@
         const link = event.target.closest("a[data-open-target]");
         if (!link) return;
 
-        event.preventDefault(); // ★ここで勝手なページ内ジャンプを完全ブロック！
+        event.preventDefault();
 
         const target = document.querySelector(link.getAttribute("href"));
         if (!target) return;
@@ -1945,15 +1940,7 @@
           const details = target.querySelector(".chapter-details");
           if (details) details.open = true;
           
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              const scrollContainer = document.getElementById("grammar-content-area");
-              if (scrollContainer) {
-                const targetTop = getTargetScrollTop(target, scrollContainer);
-                scrollContainer.scrollTo({ top: targetTop, behavior: "smooth" });
-              }
-            });
-          });
+          safeScrollTo(target);
         }
 
         if (target.classList.contains("grammar-item")) {
@@ -1961,6 +1948,31 @@
           openItem(target);
         }
       });
+
+      // 🌟 シートをスワイプで閉じた時も、細かいアイテムを含めて完全リセット
+      const sheetElement = document.getElementById("grammar-sheet");
+      if (sheetElement) {
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (mutation.attributeName === "class") {
+              const isClosed = sheetElement.classList.contains("translate-y-full");
+              if (isClosed) {
+                resetFilter();
+                // 裏側に残っている細かいアイテムも一掃する
+                document.querySelectorAll("#grammar-ref-wrapper details").forEach(details => {
+                  details.removeAttribute("open");
+                  details.open = false;
+                });
+                const scrollContainer = document.getElementById("grammar-content-area");
+                if (scrollContainer) {
+                  scrollContainer.scrollTop = 0;
+                }
+              }
+            }
+          });
+        });
+        observer.observe(sheetElement, { attributes: true, attributeFilter: ["class"] });
+      }
 
     })();
   </script>
