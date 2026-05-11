@@ -1,0 +1,1958 @@
+<div id="grammar-ref-wrapper">
+  <style>
+    /* =========================================================
+       1. カラーテーマ（アプリ本体の .light-mode に自動連動！）
+       ========================================================= */
+    /* デフォルト（ダークモード） */
+    #grammar-ref-wrapper {
+      --bg: #0b0f14;
+      --card: #111821;
+      --surface: #151c27;
+      --input-bg: #151c27;
+      --text: #f4f7fb;
+      --sub: #aab4c3;
+      --line: #2d3645;
+
+      --blue: #64aaff;
+      --blue-soft: #112b45;
+      --green-soft: #10251a;
+      --yellow-soft: #2b2413;
+      --red-soft: #2a171a;
+      --gray-soft: #1b2230;
+
+      --tools-bg: rgba(11, 15, 20, 0.94);
+
+      --header-from: #064d99;
+      --header-to: #155e75;
+
+      --heading: #cbd5e1;
+      --thai-text: #f9fafb;
+      --translation: #cbd5e1;
+      --placeholder: #7d8797;
+
+      --blue-chip-text: #b7d5ff;
+      --item-chip-text: #b7d5ff;
+      --item-chip-border: #244a73;
+
+      --focus-ring: rgba(100, 170, 255, 0.24);
+
+      --top-bg: #f4f7fb;
+      --top-text: #111827;
+
+      --shadow: 0 8px 26px rgba(0, 0, 0, 0.36);
+    }
+
+    /* ライトモード（アプリ本体が light-mode の時だけ発動） */
+    body.light-mode #grammar-ref-wrapper {
+      --bg: transparent;
+      --card: #ffffff;
+      --surface: #ffffff;
+      --input-bg: #ffffff;
+      --text: #111827;
+      --sub: #667085;
+      --line: #d9dee8;
+
+      --blue: #0a84ff;
+      --blue-soft: #e8f2ff;
+      --green-soft: #edf8f1;
+      --yellow-soft: #fff7df;
+      --red-soft: #fff0f0;
+      --gray-soft: #f2f4f7;
+
+      --tools-bg: rgba(245, 246, 248, 0.94);
+
+      --header-from: #0a84ff;
+      --header-to: #5ac8fa;
+
+      --heading: #344054;
+      --thai-text: #111827;
+      --translation: #344054;
+      --placeholder: #98a2b3;
+
+      --blue-chip-text: #0057b8;
+      --item-chip-text: #073b7a;
+      --item-chip-border: #c8ddff;
+
+      --focus-ring: rgba(10, 132, 255, 0.14);
+
+      --top-bg: #111827;
+      --top-text: #ffffff;
+
+      --shadow: 0 8px 24px rgba(16, 24, 40, 0.08);
+    }
+
+    /* =========================================================
+       2. レイアウトと部品（全て #grammar-ref-wrapper の中に限定）
+       ========================================================= */
+    #grammar-ref-wrapper {
+      box-sizing: border-box;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+      font-size: 16px;
+      line-height: 1.75;
+      text-align: left;
+    }
+
+    #grammar-ref-wrapper * {
+      box-sizing: border-box;
+    }
+
+    #grammar-ref-wrapper [hidden] {
+      display: none !important;
+    }
+
+    #grammar-top {
+      scroll-margin-top: 88px;
+    }
+
+    #grammar-ref-wrapper .app-header {
+      padding: 18px 16px;
+      background: linear-gradient(135deg, var(--header-from), var(--header-to));
+      color: #ffffff;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+
+    #grammar-ref-wrapper .app-header h1 {
+      margin: 0 0 6px;
+      font-size: 1.35rem;
+      line-height: 1.35;
+      font-weight: 800;
+    }
+
+    #grammar-ref-wrapper .app-header p {
+      margin: 0;
+      font-size: 0.85rem;
+      opacity: 0.95;
+    }
+
+    #grammar-ref-wrapper .tools {
+      position: relative;
+      z-index: 50;
+      margin: 0 -4px 14px;
+      padding: 12px 4px 10px;
+      background: var(--tools-bg);
+      border-bottom: 1px solid var(--line);
+    }
+
+    #grammar-ref-wrapper .search-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    #grammar-ref-wrapper .search {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--input-bg);
+      color: var(--text);
+      caret-color: var(--blue);
+      font-size: 16px;
+      outline: none;
+    }
+
+    #grammar-ref-wrapper .search::placeholder {
+      color: var(--placeholder);
+      opacity: 1;
+    }
+
+    #grammar-ref-wrapper .search:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px var(--focus-ring);
+    }
+
+    #grammar-ref-wrapper .count {
+      flex: 0 0 auto;
+      min-width: 70px;
+      text-align: center;
+      padding: 9px 10px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: var(--blue-chip-text);
+      font-weight: 700;
+      font-size: 0.86rem;
+    }
+
+    #grammar-ref-wrapper .toolbar {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      margin-top: 10px;
+      padding-bottom: 2px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #grammar-ref-wrapper button.g-btn,
+    #grammar-ref-wrapper .nav-chip,
+    #grammar-ref-wrapper .item-chip,
+    #grammar-ref-wrapper .rel {
+      appearance: none;
+      -webkit-appearance: none;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--input-bg);
+      color: var(--text);
+      font: inherit;
+      font-size: 0.88rem;
+      line-height: 1.3;
+      white-space: nowrap;
+      text-decoration: none;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+
+    #grammar-ref-wrapper .rel {
+      padding: 6px 10px;
+      background: var(--surface);
+      font-size: 0.82rem;
+    }
+
+    #grammar-ref-wrapper button.g-btn:active,
+    #grammar-ref-wrapper .nav-chip:active,
+    #grammar-ref-wrapper .item-chip:active,
+    #grammar-ref-wrapper .rel:active {
+      transform: scale(0.98);
+    }
+
+    #grammar-ref-wrapper .chapter-nav {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      margin: 12px 0 18px;
+      padding-bottom: 4px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #grammar-ref-wrapper .chapter {
+      scroll-margin-top: 118px;
+      margin: 14px 0;
+    }
+
+    #grammar-ref-wrapper .chapter-details {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    #grammar-ref-wrapper summary {
+      cursor: pointer;
+      list-style: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #grammar-ref-wrapper summary::-webkit-details-marker {
+      display: none;
+    }
+
+    #grammar-ref-wrapper .chapter-summary {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px 12px;
+      align-items: center;
+    }
+
+    #grammar-ref-wrapper .chapter-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+
+    #grammar-ref-wrapper .chapter-count {
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: var(--blue-chip-text);
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    #grammar-ref-wrapper .chapter-lead {
+      grid-column: 1 / -1;
+      margin: 0;
+      color: var(--sub);
+      font-size: 0.85rem;
+    }
+
+    #grammar-ref-wrapper .chapter-body {
+      padding: 0 12px 14px;
+    }
+
+    #grammar-ref-wrapper .item-nav {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      padding: 0 2px 10px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    #grammar-ref-wrapper .item-chip {
+      background: var(--blue-soft);
+      border-color: var(--item-chip-border);
+      color: var(--item-chip-text);
+      font-size: 0.82rem;
+    }
+
+    #grammar-ref-wrapper .grammar-item {
+      scroll-margin-top: 118px;
+      margin: 10px 0;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    #grammar-ref-wrapper .grammar-item summary {
+      padding: 14px;
+    }
+
+    #grammar-ref-wrapper .item-title {
+      display: block;
+      font-size: 1.05rem;
+      font-weight: 800;
+      line-height: 1.4;
+    }
+
+    #grammar-ref-wrapper .item-summary {
+      display: block;
+      margin-top: 4px;
+      color: var(--sub);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    #grammar-ref-wrapper .item-body {
+      padding: 0 12px 14px;
+    }
+
+    #grammar-ref-wrapper .block {
+      margin: 10px 0;
+      padding: 12px;
+      border-radius: 14px;
+      background: var(--green-soft);
+    }
+
+    #grammar-ref-wrapper .example {
+      margin: 10px 0;
+      padding: 12px;
+      border-radius: 14px;
+      background: var(--yellow-soft);
+    }
+
+    #grammar-ref-wrapper .note {
+      background: var(--red-soft);
+    }
+
+    #grammar-ref-wrapper .related {
+      background: var(--gray-soft);
+    }
+
+    #grammar-ref-wrapper .block h3,
+    #grammar-ref-wrapper .example h3 {
+      margin: 0 0 6px;
+      font-size: 0.88rem;
+      color: var(--heading);
+      font-weight: 800;
+    }
+
+    #grammar-ref-wrapper .block p,
+    #grammar-ref-wrapper .example p {
+      margin: 0;
+    }
+
+    #grammar-ref-wrapper .thai {
+      display: block;
+      margin: 4px 0 2px;
+      font-size: 1.35rem;
+      line-height: 1.9;
+      color: var(--thai-text);
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+      font-family: 'Sarabun', sans-serif;
+      font-weight: 700;
+    }
+
+    #grammar-ref-wrapper .translation {
+      color: var(--translation);
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    #grammar-ref-wrapper .related-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 8px;
+    }
+
+    #grammar-ref-wrapper .to-top {
+      position: fixed;
+      right: 14px;
+      bottom: calc(14px + env(safe-area-inset-bottom));
+      z-index: 60;
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: var(--top-bg);
+      color: var(--top-text);
+      text-decoration: none;
+      box-shadow: var(--shadow);
+      font-weight: 800;
+    }
+  </style>
+
+  <header class="app-header" id="grammar-top">
+    <h1>タイ語文法</h1>
+    <p>日本語話者向け。必要な文法項目を検索して参照するための一覧。</p>
+  </header>
+
+  <section class="tools" aria-label="検索と操作">
+    <div class="search-row">
+      <input id="grammar-search" class="search" type="search" placeholder="文法名・日本語・タイ語で検索">
+      <div id="grammar-count" class="count">0項目</div>
+    </div>
+    <div class="toolbar hide-scrollbar">
+      <button type="button" id="grammar-openAll" class="g-btn">すべて開く</button>
+      <button type="button" id="grammar-closeAll" class="g-btn">すべて閉じる</button>
+      <button type="button" id="grammar-clearSearch" class="g-btn">検索を消す</button>
+      </div>
+  </section>
+
+  <nav id="grammar-chapterNav" class="chapter-nav hide-scrollbar" aria-label="章一覧"></nav>
+
+  <main id="grammar-content"></main>
+
+  <button type="button" class="to-top" aria-label="上へ戻る" 
+          onclick="document.getElementById('grammar-content-area').scrollTo({top: 0, behavior: 'smooth'});">↑</button>
+
+  <script>
+    (function() {
+      // データの流し込み
+      const DATA = [
+        {
+          id: "c01",
+          title: "文の骨格・語順",
+          desc: "タイ語の文がどの順番で組み立てられるかを確認する章。語形変化に頼らない基本構造を扱う。",
+          items: [
+            {
+              title: "基本語順",
+              gist: "タイ語の基本語順は「主語＋動詞＋目的語」。日本語のように助詞で関係を示さず、語順が重要。",
+              thai: "ฉันซื้อกาแฟ",
+              ja: "私はコーヒーを買う。",
+              note: "日本語の「私はコーヒーを買う」の語順に引きずられない。目的語は通常、動詞の後ろに置く。",
+              related: ["動詞述語", "目的語の省略", "副詞の位置"],
+              tags: ["語順", "主語", "動詞", "目的語", "文型"]
+            },
+            {
+              title: "トピック文",
+              gist: "話題にしたい語は文頭に出せる。「〜については」に近い働き。",
+              thai: "เรื่องนี้ฉันไม่รู้",
+              ja: "この件は私は知らない。",
+              note: "文頭に出した語が必ず主語になるわけではない。日本語の「は」に似るが、助詞は使わない。",
+              related: ["基本語順", "ก็", "ล่ะ"],
+              tags: ["話題", "については", "文頭", "焦点"]
+            },
+            {
+              title: "主語の省略",
+              gist: "文脈で分かる主語はよく省略される。会話では特に自然。",
+              thai: "ไปกินข้าวกันไหม",
+              ja: "ご飯を食べに行かない？",
+              note: "毎回 ฉัน や คุณ を入れると不自然に聞こえることがある。誰の話か不明なときだけ補う。",
+              related: ["一人称", "二人称", "疑問への答え方"],
+              tags: ["省略", "会話", "私", "あなた"]
+            },
+            {
+              title: "目的語の省略",
+              gist: "何を指すか分かる目的語は省略できる。日本語の「もう買った」「読んだ」と同じ感覚。",
+              thai: "ซื้อแล้ว",
+              ja: "もう買った。",
+              note: "省略できるのは文脈で明確な場合。初めて出す対象は省略しない。",
+              related: ["แล้ว", "基本語順", "動詞述語"],
+              tags: ["省略", "目的語", "文脈", "もう"]
+            },
+            {
+              title: "時制の無変化",
+              gist: "タイ語の動詞は過去・現在・未来で形が変わらない。時間は副詞や文脈で表す。",
+              thai: "เมื่อวานฉันไปตลาด",
+              ja: "昨日、私は市場へ行った。",
+              note: "英語のような動詞変化はない。過去だからといって動詞に何かを付ける必要はない。",
+              related: ["จะ", "แล้ว", "เพิ่ง"],
+              tags: ["時制", "過去", "現在", "未来", "活用なし"]
+            },
+            {
+              title: "副詞の位置",
+              gist: "副詞は動詞や形容詞の後ろ、または文頭・文末に置くことが多い。種類によって位置が変わる。",
+              thai: "เขาพูดไทยได้ดี",
+              ja: "彼はタイ語を上手に話せる。",
+              note: "日本語のように副詞を常に動詞の前に置くとは限らない。程度語 มาก は形容詞の後ろに置く。",
+              related: ["มาก", "動詞＋ได้", "基本語順"],
+              tags: ["副詞", "位置", "程度", "上手に"]
+            }
+          ]
+        },
+        {
+          id: "c02",
+          title: "名詞句・類別詞",
+          desc: "名詞の数、修飾、所有、指示、類別詞を扱う章。日本語話者が迷いやすい「名詞の後ろに置く」構造を整理する。",
+          items: [
+            {
+              title: "単数・複数",
+              gist: "タイ語の名詞は単数・複数で形が変わらない。数を明確にするときは数量表現を加える。",
+              thai: "แมวอยู่ในบ้าน",
+              ja: "猫が家の中にいる。",
+              note: "名詞だけでは「一つ」か「複数」かは文脈次第。複数を強調するときは หลาย や数量を使う。",
+              related: ["数＋類別詞", "ทุก", "แต่ละ"],
+              tags: ["単数", "複数", "名詞", "数", "数量"]
+            },
+            {
+              title: "複合名詞",
+              gist: "名詞を並べて新しい名詞を作る。中心となる名詞が前、説明する語が後ろに来ることが多い。",
+              thai: "ร้านกาแฟนี้เงียบดี",
+              ja: "このカフェは静かでいい。",
+              note: "日本語の「コーヒー店」は「コーヒー＋店」だが、タイ語では ร้านกาแฟ のように「店＋コーヒー」になる。",
+              related: ["名詞の後ろから修飾", "所有の ของ"],
+              tags: ["名詞", "複合語", "店", "語順"]
+            },
+            {
+              title: "名詞の後ろから修飾",
+              gist: "形容詞や説明語は名詞の後ろに置く。語順は「名詞＋説明」。",
+              thai: "ฉันชอบเสื้อสีฟ้า",
+              ja: "私は青い服が好きだ。",
+              note: "日本語の「青い服」を直訳して「青い＋服」の順にしない。タイ語では เสื้อสีฟ้า。",
+              related: ["形容詞述語", "指示詞 นี้・นั้น・โน้น", "ที่"],
+              tags: ["修飾", "後ろから", "形容詞", "名詞", "色"]
+            },
+            {
+              title: "所有の ของ",
+              gist: "所有者は ของ の後ろに置く。「名詞＋ของ＋所有者」で「〜の…」を表す。",
+              thai: "นี่คือกระเป๋าของฉัน",
+              ja: "これは私のかばんです。",
+              note: "日本語の「私のかばん」と語順が逆になる。親しい関係では ของ が省略されることもある。",
+              related: ["คือ", "一人称", "名詞の後ろから修飾"],
+              tags: ["所有", "の", "私の", "所属"]
+            },
+            {
+              title: "指示詞 นี้・นั้น・โน้น",
+              gist: "นี้ は「この」、นั้น は「その・あの」、โน้น は「遠くのあの」を表す。名詞句の後ろに置く。",
+              thai: "ฉันเอาอันนี้",
+              ja: "私はこれにする。",
+              note: "名詞を修飾するときは「名詞＋類別詞＋นี้」の形が自然なことが多い。",
+              related: ["類別詞＋指示詞", "類別詞の基本"],
+              tags: ["これ", "それ", "あれ", "この", "指示"]
+            },
+            {
+              title: "類別詞の基本",
+              gist: "数えるときや特定するとき、名詞に合う類別詞を使う。日本語の「一冊」「一人」の「冊・人」に近い。",
+              thai: "ฉันซื้อเสื้อสองตัว",
+              ja: "私は服を二着買った。",
+              note: "名詞の種類ごとに類別詞が変わる。人は คน、本は เล่ม、服や動物は ตัว がよく使われる。",
+              related: ["数＋類別詞", "類別詞＋指示詞"],
+              tags: ["類別詞", "助数詞", "数える", "冊", "人"]
+            },
+            {
+              title: "数＋類別詞",
+              gist: "数量は「名詞＋数＋類別詞」で表す。名詞だけに数を直接付けない。",
+              thai: "ฉันมีหนังสือสามเล่ม",
+              ja: "私は本を三冊持っている。",
+              note: "日本語では「三冊の本」と数が前に来るが、タイ語では หนังสือสามเล่ม の順。",
+              related: ["類別詞の基本", "単数・複数"],
+              tags: ["数量", "数", "類別詞", "助数詞", "何個"]
+            },
+            {
+              title: "類別詞＋指示詞",
+              gist: "特定のものを指すときは「名詞＋類別詞＋指示詞」を使う。",
+              thai: "รถคันนี้ใหม่มาก",
+              ja: "この車はとても新しい。",
+              note: "รถนี้ も通じるが、รถคันนี้ の方が整った言い方。類別詞を入れると「その一つ」を明確にできる。",
+              related: ["指示詞 นี้・นั้น・โน้น", "類別詞の基本"],
+              tags: ["この", "その", "あの", "特定", "類別詞"]
+            },
+            {
+              title: "ทุก",
+              gist: "ทุก は「すべての・毎〜」を表す。名詞や類別詞の前に置く。",
+              thai: "ฉันดื่มกาแฟทุกเช้า",
+              ja: "私は毎朝コーヒーを飲む。",
+              note: "ทุก は全体をまとめて指す。個々を一つずつ意識する แต่ละ とは違う。",
+              related: ["แต่ละ", "単数・複数"],
+              tags: ["すべて", "毎", "全部", "毎日", "毎朝"]
+            },
+            {
+              title: "แต่ละ",
+              gist: "แต่ละ は「それぞれの・各〜」を表す。個別性を強調する。",
+              thai: "แต่ละคนคิดไม่เหมือนกัน",
+              ja: "それぞれ考え方が違う。",
+              note: "ทุก は「全員」、แต่ละ は「一人ひとり」。日本語の「各」に近い。",
+              related: ["ทุก", "กัน"],
+              tags: ["それぞれ", "各", "個別", "一人ひとり"]
+            },
+            {
+              title: "สัก",
+              gist: "สัก は数量をやわらげて「だいたい・少し・一つくらい」を表す。依頼でもよく使う。",
+              thai: "ขอเวลาสักห้านาที",
+              ja: "五分ほど時間をください。",
+              note: "正確な数ではなく、控えめな数量を示す。依頼では押しつけ感を弱める。",
+              related: ["ขอ", "หน่อย", "ประมาณ"],
+              tags: ["くらい", "ほど", "少し", "依頼", "控えめ"]
+            }
+          ]
+        },
+        {
+          id: "c03",
+          title: "代名詞・呼称",
+          desc: "人称代名詞と、名前・肩書き・親族語を代名詞として使う表現を扱う章。対人関係で変わる言い方を確認する。",
+          items: [
+            {
+              title: "一人称",
+              gist: "一人称は話し手の性別、丁寧さ、関係性で変わる。ผม、ฉัน、เรา などを使う。",
+              thai: "ฉันไปก่อนนะ",
+              ja: "先に行くね。",
+              note: "ผม は男性が丁寧に使う。ฉัน は親しい場面で使いやすい。เรา は「私」または「私たち」になる。",
+              related: ["ครับ・ค่ะ", "主語の省略"],
+              tags: ["私", "僕", "自分", "話し手", "代名詞"]
+            },
+            {
+              title: "二人称",
+              gist: "二人称は คุณ が中立的で使いやすい。親しい相手には เธอ や名前・呼称を使うことも多い。",
+              thai: "คุณว่างไหม",
+              ja: "あなたは空いていますか。",
+              note: "日本語の「あなた」と同じ感覚で頻繁に使うと距離を感じることがある。実際の会話では呼称代名詞が多い。",
+              related: ["呼称代名詞", "ไหม"],
+              tags: ["あなた", "相手", "呼び方", "代名詞"]
+            },
+            {
+              title: "三人称 เขา",
+              gist: "เขา は「彼・彼女・その人」を表す。性別で形は変わらない。",
+              thai: "เขายังไม่มา",
+              ja: "彼／彼女はまだ来ていない。",
+              note: "英語のように男女で代名詞を変えない。文脈で誰か判断する。",
+              related: ["ยังไม่", "主語の省略"],
+              tags: ["彼", "彼女", "その人", "第三者"]
+            },
+            {
+              title: "呼称代名詞",
+              gist: "名前、肩書き、年齢関係の呼び方を代名詞として使える。タイ語会話では非常に一般的。",
+              thai: "พี่เอาอะไรไหม",
+              ja: "何か要りますか。",
+              note: "พี่ は年上、น้อง は年下に使う。相手を คุณ で呼ぶより自然な場面が多い。",
+              related: ["二人称", "一人称", "ไหม"],
+              tags: ["呼び方", "年上", "年下", "名前", "肩書き"]
+            },
+            {
+              title: "自分の เอง",
+              gist: "เอง は「自分で・本人が・〜だけ」を表す。代名詞や名詞の後ろに置く。",
+              thai: "ฉันทำเอง",
+              ja: "私は自分でやる。",
+              note: "日本語の「自分」を名詞として前に置くのではなく、タイ語では後ろに置く。",
+              related: ["一人称", "แค่・เท่านั้น"],
+              tags: ["自分で", "本人", "だけ", "自力"]
+            },
+            {
+              title: "相互・共同の กัน",
+              gist: "กัน は「一緒に・互いに」を表す。動詞の後ろに置く。",
+              thai: "เราช่วยกันทำอาหาร",
+              ja: "私たちは一緒に料理を作る。",
+              note: "กัน は複数の参加者が関わることを示す。一人だけの行為には使わない。",
+              related: ["ด้วย", "แต่ละ", "自分の เอง"],
+              tags: ["一緒に", "互いに", "共同", "みんなで"]
+            }
+          ]
+        },
+        {
+          id: "c04",
+          title: "述語・動詞構文",
+          desc: "動詞、形容詞、存在、所有、受身、使役など、文の中心になる述語を扱う章。日本語の「です・ある・いる」に直訳しにくい構文を整理する。",
+          items: [
+            {
+              title: "動詞述語",
+              gist: "動詞だけで述語になる。「する・行く・食べる」などに日本語の「です」は付けない。",
+              thai: "เขาทำงานที่บ้าน",
+              ja: "彼は家で仕事をする。",
+              note: "タイ語には日本語の「ます」に当たる活用はない。丁寧さは ครับ・ค่ะ などで加える。",
+              related: ["基本語順", "ครับ・ค่ะ"],
+              tags: ["動詞", "述語", "ます", "する", "行く"]
+            },
+            {
+              title: "形容詞述語",
+              gist: "形容詞はそのまま述語になる。「おいしいです」は「おいしい」に当たる語だけで言える。",
+              thai: "อาหารร้านนี้อร่อย",
+              ja: "この店の料理はおいしい。",
+              note: "เป็น を入れて อาหารเป็นอร่อย とは言わない。形容詞の前に「です」に当たる語は不要。",
+              related: ["มาก", "ไม่", "名詞の後ろから修飾"],
+              tags: ["形容詞", "述語", "おいしい", "です"]
+            },
+            {
+              title: "เป็น",
+              gist: "เป็น は職業、身分、種類、性質として「〜である」を表す。名詞を述語にするときによく使う。",
+              thai: "น้องสาวฉันเป็นครู",
+              ja: "私の妹は先生です。",
+              note: "場所を表す「いる・ある」には使わない。位置は อยู่ を使う。",
+              related: ["คือ", "อยู่", "動詞＋เป็น"],
+              tags: ["である", "職業", "身分", "種類", "名詞述語"]
+            },
+            {
+              title: "คือ",
+              gist: "คือ は「つまり〜だ・それは〜だ」と説明や定義を示す。やや説明的な響きがある。",
+              thai: "ปัญหาคือเวลาไม่พอ",
+              ja: "問題は時間が足りないことだ。",
+              note: "เป็น と置き換えられる場合もあるが、คือ は説明・定義の焦点を強く出す。",
+              related: ["เป็น", "ว่า", "トピック文"],
+              tags: ["つまり", "定義", "説明", "それは"]
+            },
+            {
+              title: "อยู่",
+              gist: "อยู่ は人や物の所在を表す。「いる・ある」に近い。",
+              thai: "แม่อยู่ในครัว",
+              ja: "母は台所にいる。",
+              note: "日本語の「母は台所です」を直訳して เป็น を使わない。場所には อยู่ を使う。",
+              related: ["ใน", "ที่", "動詞＋อยู่"],
+              tags: ["いる", "ある", "所在", "場所", "存在"]
+            },
+            {
+              title: "มี",
+              gist: "มี は「持っている」と「存在する」の両方を表す。所有者や場所を主語にできる。",
+              thai: "แถวนี้มีร้านยาไหม",
+              ja: "この辺に薬局はありますか。",
+              note: "人が主語なら「持っている」、場所が主語なら「ある」と訳すことが多い。",
+              related: ["ไม่มี", "ไหม", "ที่"],
+              tags: ["持っている", "ある", "存在", "所有"]
+            },
+            {
+              title: "ให้：与える",
+              gist: "ให้ は「与える・あげる」を表す動詞。受け手は後ろに置く。",
+              thai: "ฉันให้ของขวัญเพื่อน",
+              ja: "私は友達にプレゼントをあげる。",
+              note: "日本語の「友達に」の「に」に引きずられず、受け手は動詞句の後ろに置く。",
+              related: ["動詞＋ให้", "ให้＋人＋動詞"],
+              tags: ["あげる", "与える", "渡す", "受け手"]
+            },
+            {
+              title: "動詞＋ให้",
+              gist: "「動詞＋ให้」は「〜してあげる・相手のために〜する」を表す。",
+              thai: "ฉันซื้อขนมให้ลูก",
+              ja: "私は子どもにお菓子を買ってあげる。",
+              note: "ให้ の後ろは利益を受ける人。単なる場所や目的地には使わない。",
+              related: ["ให้：与える", "เพื่อ"],
+              tags: ["してあげる", "ために", "利益", "相手のため"]
+            },
+            {
+              title: "ให้＋人＋動詞",
+              gist: "「ให้＋人＋動詞」は「人に〜させる・〜することを許す」を表す。",
+              thai: "แม่ให้ฉันล้างจาน",
+              ja: "母は私に皿を洗わせた。",
+              note: "文脈によって「命令してさせる」か「許可する」かが変わる。強制の原因は ทำให้ とは違う。",
+              related: ["ทำให้", "ขอ", "ช่วย"],
+              tags: ["させる", "許可", "人にさせる", "使役"]
+            },
+            {
+              title: "ทำให้",
+              gist: "ทำให้ は「〜が原因で…になる」を表す。原因と結果をつなぐ。",
+              thai: "ฝนทำให้รถติด",
+              ja: "雨のせいで渋滞した。",
+              note: "人に何かをさせる意味の ให้＋人＋動詞 とは違う。ทำให้ は状態変化の原因を表す。",
+              related: ["ให้＋人＋動詞", "เพราะ", "ก็เลย・จึง"],
+              tags: ["原因", "結果", "せいで", "状態変化"]
+            },
+            {
+              title: "受身の ถูก・โดน",
+              gist: "ถูก・โดน は被害や迷惑を受けた受身でよく使う。「〜される」に近い。",
+              thai: "กระเป๋าของฉันโดนขโมย",
+              ja: "私のかばんが盗まれた。",
+              note: "中立的な受身や良い出来事には使いにくい。悪い影響を受けた感じが出やすい。",
+              related: ["中立受身の ได้รับ", "ไม่", "แล้ว"],
+              tags: ["受身", "される", "被害", "迷惑", "盗まれる"]
+            },
+            {
+              title: "中立受身の ได้รับ",
+              gist: "ได้รับ は「受ける・受け取る」を表し、通知、招待、許可、影響などに使う。書き言葉・丁寧な場面で多い。",
+              thai: "ฉันได้รับเชิญไปงานแต่ง",
+              ja: "私は結婚式に招待された。",
+              note: "被害感は ถูก・โดน より弱い。公式な文では ได้รับ が自然。",
+              related: ["受身の ถูก・โดน", "ได้＋動詞"],
+              tags: ["受ける", "受け取る", "招待される", "通知", "公式"]
+            },
+            {
+              title: "連続動詞",
+              gist: "タイ語では動詞を接続詞なしで並べられる。移動、目的、手段などを一つの流れで表す。",
+              thai: "เขาไปซื้อของที่ตลาด",
+              ja: "彼は市場へ買い物に行く。",
+              note: "日本語では「行って買う」と言うが、タイ語では ไปซื้อ のように直接続ける。",
+              related: ["ไป・มา", "เพื่อ", "基本語順"],
+              tags: ["動詞を並べる", "行って買う", "目的", "移動"]
+            }
+          ]
+        },
+        {
+          id: "c05",
+          title: "時間・アスペクト",
+          desc: "未来、進行、完了、経験、直前など、動作の時間的な見え方を扱う章。動詞を活用せず、語を加えて表す点を整理する。",
+          items: [
+            {
+              title: "จะ",
+              gist: "จะ は未来、予定、意志を表す。動詞の前に置く。",
+              thai: "พรุ่งนี้ฉันจะไปเชียงใหม่",
+              ja: "明日、私はチェンマイへ行く。",
+              note: "未来でも จะ が必須とは限らない。時間語だけで未来が分かる場合もある。",
+              related: ["กำลังจะ", "時制の無変化"],
+              tags: ["未来", "予定", "意志", "これから", "つもり"]
+            },
+            {
+              title: "กำลัง",
+              gist: "กำลัง は「今まさに〜している」を表す。動詞の前に置く。",
+              thai: "เขากำลังกินข้าว",
+              ja: "彼はご飯を食べているところだ。",
+              note: "習慣には使わない。今進行中の動作を表す。",
+              related: ["動詞＋อยู่", "กำลังจะ"],
+              tags: ["進行", "している", "今", "最中"]
+            },
+            {
+              title: "動詞＋อยู่",
+              gist: "「動詞＋อยู่」は動作や状態が続いていることを表す。",
+              thai: "ฉันรออยู่หน้าบ้าน",
+              ja: "私は家の前で待っている。",
+              note: "กำลัง よりも「まだその状態にある」感じが出る。両方を使って กำลังรออยู่ とも言える。",
+              related: ["กำลัง", "อยู่", "ยัง"],
+              tags: ["継続", "している", "まだ", "状態"]
+            },
+            {
+              title: "แล้ว",
+              gist: "แล้ว は完了や状態変化を表す。「もう〜した」「〜になった」に近い。",
+              thai: "ฉันกินข้าวแล้ว",
+              ja: "私はもうご飯を食べた。",
+              note: "過去を表すだけではない。新しい状態になったことを示す場合が多い。",
+              related: ["แล้วหรือยัง", "ยังไม่", "เพิ่ง"],
+              tags: ["完了", "もう", "した", "状態変化", "なった"]
+            },
+            {
+              title: "ยัง",
+              gist: "ยัง は「まだ」を表す。状態や動作が続いていることを示す。",
+              thai: "เขายังอยู่ที่บริษัท",
+              ja: "彼はまだ会社にいる。",
+              note: "否定と組むと ยังไม่「まだ〜ない」になる。単独では否定ではない。",
+              related: ["ยังไม่", "動詞＋อยู่"],
+              tags: ["まだ", "継続", "今も", "続いている"]
+            },
+            {
+              title: "ยังไม่",
+              gist: "ยังไม่ は「まだ〜していない」を表す。未完了の否定。",
+              thai: "ฉันยังไม่รู้",
+              ja: "私はまだ知らない。",
+              note: "単なる否定 ไม่ より「これから変わる可能性」がある響きになる。",
+              related: ["ยัง", "ไม่", "แล้วหรือยัง"],
+              tags: ["まだない", "未完了", "まだしていない", "否定"]
+            },
+            {
+              title: "เคย",
+              gist: "เคย は「〜したことがある」を表す。経験を言うときに動詞の前に置く。",
+              thai: "ฉันเคยไปภูเก็ต",
+              ja: "私はプーケットへ行ったことがある。",
+              note: "過去の一回の出来事ではなく、経験の有無を表す。",
+              related: ["ไม่เคย", "แล้วหรือยัง"],
+              tags: ["経験", "したことがある", "過去経験"]
+            },
+            {
+              title: "ไม่เคย",
+              gist: "ไม่เคย は「〜したことがない」を表す。経験の否定。",
+              thai: "เขาไม่เคยกินทุเรียน",
+              ja: "彼はドリアンを食べたことがない。",
+              note: "ไม่ได้กิน は「食べなかった」、ไม่เคยกิน は「食べた経験がない」。",
+              related: ["เคย", "ไม่ได้＋動詞"],
+              tags: ["経験なし", "したことがない", "一度もない"]
+            },
+            {
+              title: "เพิ่ง",
+              gist: "เพิ่ง は「たった今〜した・〜したばかり」を表す。動詞の前に置く。",
+              thai: "ฉันเพิ่งกลับถึงบ้าน",
+              ja: "私は家に着いたばかりだ。",
+              note: "単なる過去ではなく、現在に近い出来事を表す。",
+              related: ["แล้ว", "ถึง"],
+              tags: ["したばかり", "たった今", "直前", "今さっき"]
+            },
+            {
+              title: "กำลังจะ",
+              gist: "กำลังจะ は「今にも〜しそう・これからすぐ〜する」を表す。",
+              thai: "ฝนกำลังจะตก",
+              ja: "雨が降りそうだ。",
+              note: "単なる未来の จะ より、直前性が強い。",
+              related: ["จะ", "กำลัง"],
+              tags: ["今にも", "しそう", "すぐ", "直前", "これから"]
+            },
+            {
+              title: "แล้วหรือยัง",
+              gist: "แล้วหรือยัง は「もう〜したか」を尋ねる。完了確認の疑問。",
+              thai: "คุณกินข้าวแล้วหรือยัง",
+              ja: "もうご飯を食べましたか。",
+              note: "答えは กินแล้ว「食べた」、ยังไม่กิน「まだ食べていない」のように言う。",
+              related: ["แล้ว", "ยังไม่", "疑問への答え方"],
+              tags: ["もうしたか", "完了確認", "まだですか", "質問"]
+            }
+          ]
+        },
+        {
+          id: "c06",
+          title: "否定",
+          desc: "動詞、名詞述語、所有、可能、禁止の否定を扱う章。否定語の位置で意味が変わる表現を分けて確認する。",
+          items: [
+            {
+              title: "ไม่",
+              gist: "ไม่ は動詞や形容詞の前に置く基本の否定語。「〜しない・〜ではない」を表す。",
+              thai: "วันนี้ฉันไม่ไป",
+              ja: "今日は私は行かない。",
+              note: "名詞述語の否定には ไม่ใช่ を使うことが多い。",
+              related: ["ไม่ใช่", "ไม่มี", "ไม่ค่อย"],
+              tags: ["否定", "しない", "ではない", "基本否定"]
+            },
+            {
+              title: "ไม่ใช่",
+              gist: "ไม่ใช่ は「〜ではない」と身分・種類・同一性を否定する。",
+              thai: "นี่ไม่ใช่กระเป๋าฉัน",
+              ja: "これは私のかばんではない。",
+              note: "形容詞の否定には使わない。อร่อย なら ไม่อร่อย。",
+              related: ["เป็น", "คือ", "ไม่"],
+              tags: ["ではない", "違う", "同一性", "名詞否定"]
+            },
+            {
+              title: "ไม่มี",
+              gist: "ไม่มี は「持っていない・存在しない」を表す。มี の否定。",
+              thai: "ฉันไม่มีเงินสด",
+              ja: "私は現金を持っていない。",
+              note: "「ない」は何でも ไม่มี ではない。動作の否定は ไม่ を使う。",
+              related: ["มี", "ไม่"],
+              tags: ["ない", "持っていない", "存在しない", "所有否定"]
+            },
+            {
+              title: "ไม่ได้＋動詞",
+              gist: "「ไม่ได้＋動詞」は「実際には〜しなかった」を表すことが多い。",
+              thai: "เมื่อวานฉันไม่ได้ไปทำงาน",
+              ja: "昨日、私は仕事に行かなかった。",
+              note: "動詞の前の ไม่ได้ は過去の未実行を表しやすい。可能否定は位置が変わる。",
+              related: ["動詞＋ไม่ได้", "ไม่เคย"],
+              tags: ["しなかった", "未実行", "過去否定", "実際には"]
+            },
+            {
+              title: "動詞＋ไม่ได้",
+              gist: "「動詞＋ไม่ได้」は「〜できない」を表す。可能・許可の否定。",
+              thai: "วันนี้ฉันไปไม่ได้",
+              ja: "今日は私は行けない。",
+              note: "ไม่ได้ไป は「行かなかった」、ไปไม่ได้ は「行けない」。位置で意味が変わる。",
+              related: ["ไม่ได้＋動詞", "動詞＋ได้"],
+              tags: ["できない", "行けない", "可能否定", "許可否定"]
+            },
+            {
+              title: "อย่า",
+              gist: "อย่า は「〜するな・〜しないで」を表す禁止。動詞の前に置く。",
+              thai: "อย่าลืมกุญแจ",
+              ja: "鍵を忘れないで。",
+              note: "相手に直接注意する表現。丁寧にしたいときは文末語や言い方を柔らかくする。",
+              related: ["ห้าม", "นะ"],
+              tags: ["禁止", "しないで", "するな", "注意"]
+            },
+            {
+              title: "ห้าม",
+              gist: "ห้าม は規則として「禁止する」を表す。掲示やルールでよく使う。",
+              thai: "ห้ามสูบบุหรี่ในห้องนี้",
+              ja: "この部屋では喫煙禁止です。",
+              note: "อย่า より公式・規則的。個人的な注意なら อย่า が自然なことが多い。",
+              related: ["อย่า", "ใน"],
+              tags: ["禁止", "禁止する", "ルール", "掲示", "規則"]
+            },
+            {
+              title: "ไม่ค่อย",
+              gist: "ไม่ค่อย は「あまり〜ない」を表す。頻度や程度が低い否定。",
+              thai: "ฉันไม่ค่อยดื่มกาแฟ",
+              ja: "私はあまりコーヒーを飲まない。",
+              note: "完全否定ではない。少しはする可能性がある。",
+              related: ["ไม่", "นิดหน่อย"],
+              tags: ["あまりない", "あまりしない", "頻度", "程度"]
+            },
+            {
+              title: "ไม่…เลย",
+              gist: "ไม่…เลย は「全然〜ない」を表す強い否定。",
+              thai: "เขาไม่โกรธเลย",
+              ja: "彼は全然怒っていない。",
+              note: "เลย は否定を強める。肯定文の เลย とは機能が違う。",
+              related: ["ไม่", "มาก"],
+              tags: ["全然ない", "まったくない", "強い否定"]
+            }
+          ]
+        },
+        {
+          id: "c07",
+          title: "疑問",
+          desc: "はい・いいえ疑問、確認疑問、選択疑問、疑問詞疑問を扱う章。疑問詞を文頭へ移動しない特徴を整理する。",
+          items: [
+            {
+              title: "ไหม",
+              gist: "ไหม は文末に置いて「〜ですか」と尋ねる。はい・いいえで答える疑問。",
+              thai: "คุณหิวไหม",
+              ja: "お腹が空いていますか。",
+              note: "ไหม は文末に置く。日本語の「か」のように使うが、丁寧さそのものを表す語ではない。",
+              related: ["หรือเปล่า", "疑問への答え方"],
+              tags: ["ですか", "はい いいえ", "疑問", "質問", "文末"]
+            },
+            {
+              title: "หรือเปล่า",
+              gist: "หรือเปล่า は「〜かどうか」を尋ねる。ไหม より確認・選択の感じが出ることがある。",
+              thai: "วันนี้คุณว่างหรือเปล่า",
+              ja: "今日は空いていますか。",
+              note: "日常会話でよく使う。丁寧さは ครับ・ค่ะ などで調整する。",
+              related: ["ไหม", "ใช่ไหม"],
+              tags: ["かどうか", "ですか", "確認", "質問"]
+            },
+            {
+              title: "ใช่ไหม",
+              gist: "ใช่ไหม は「〜ですよね」と確認する表現。相手の同意を求める。",
+              thai: "ร้านนี้อร่อยใช่ไหม",
+              ja: "この店はおいしいですよね。",
+              note: "中立的に質問する ไหม とは違い、話し手に予想がある。",
+              related: ["ไหม", "หรือเปล่า"],
+              tags: ["ですよね", "確認", "同意", "でしょ"]
+            },
+            {
+              title: "หรือ",
+              gist: "หรือ は「または・それとも」を表し、選択肢をつなぐ。",
+              thai: "เอากาแฟหรือชา",
+              ja: "コーヒーにしますか、それともお茶にしますか。",
+              note: "単なるはい・いいえ疑問の หรือ と、選択の หรือ は文脈で区別する。",
+              related: ["หรือเปล่า", "และ"],
+              tags: ["または", "それとも", "選択", "どちら"]
+            },
+            {
+              title: "疑問詞の位置",
+              gist: "疑問詞は答えが入る位置に置く。英語のように文頭へ移動しない。",
+              thai: "คุณซื้ออะไร",
+              ja: "何を買いましたか。",
+              note: "「何を」を文頭に出さず、目的語の位置に อะไร を置く。",
+              related: ["อะไร", "ใคร", "ที่ไหน"],
+              tags: ["疑問詞", "位置", "どこに置く", "何", "誰"]
+            },
+            {
+              title: "อะไร",
+              gist: "อะไร は「何」を表す。名詞や目的語の位置に置く。",
+              thai: "นี่คืออะไร",
+              ja: "これは何ですか。",
+              note: "疑問詞なので、通常は文末に ไหม を付けない。",
+              related: ["疑問詞の位置", "คือ"],
+              tags: ["何", "なに", "もの", "疑問詞"]
+            },
+            {
+              title: "ใคร",
+              gist: "ใคร は「誰」を表す。主語、目的語、所有者の位置に置ける。",
+              thai: "ใครโทรมา",
+              ja: "誰が電話してきましたか。",
+              note: "主語を尋ねるときは文頭に来るが、これは主語の位置にあるだけ。",
+              related: ["疑問詞の位置", "ไป・มา"],
+              tags: ["誰", "だれ", "人", "疑問詞"]
+            },
+            {
+              title: "ที่ไหน",
+              gist: "ที่ไหน は「どこ」を表す。場所を尋ねる。",
+              thai: "ห้องน้ำอยู่ที่ไหน",
+              ja: "トイレはどこにありますか。",
+              note: "場所を尋ねるときは อยู่ と一緒に使うことが多い。",
+              related: ["อยู่", "ที่"],
+              tags: ["どこ", "場所", "どこに", "疑問詞"]
+            },
+            {
+              title: "เมื่อไร",
+              gist: "เมื่อไร は「いつ」を表す。時点を尋ねる。",
+              thai: "คุณจะกลับเมื่อไร",
+              ja: "いつ帰りますか。",
+              note: "未来の予定には จะ と一緒に使うことが多い。",
+              related: ["จะ", "時制の無変化"],
+              tags: ["いつ", "時", "時点", "予定", "疑問詞"]
+            },
+            {
+              title: "ทำไม",
+              gist: "ทำไม は「なぜ」を表す。理由を尋ねる。",
+              thai: "ทำไมวันนี้รถติด",
+              ja: "なぜ今日は渋滞しているのですか。",
+              note: "理由を答えるときは เพราะ を使うことが多い。",
+              related: ["เพราะ", "ก็เลย・จึง"],
+              tags: ["なぜ", "どうして", "理由", "疑問詞"]
+            },
+            {
+              title: "ยังไง",
+              gist: "ยังไง は「どう・どのように」を表す。方法や状態を尋ねる口語表現。",
+              thai: "ไปสถานียังไง",
+              ja: "駅へはどう行きますか。",
+              note: "อย่างไร より口語的。会話では ยังไง がよく使われる。",
+              related: ["ไป・มา", "ที่ไหน"],
+              tags: ["どう", "どのように", "方法", "状態", "口語"]
+            },
+            {
+              title: "เท่าไร・กี่",
+              gist: "เท่าไร は価格・量・程度、กี่ は数を尋ねる。กี่ は類別詞と一緒に使う。",
+              thai: "อันนี้ราคาเท่าไร",
+              ja: "これはいくらですか。",
+              note: "人数なら กี่คน、個数なら กี่อัน のように類別詞を使う。",
+              related: ["数＋類別詞", "類別詞の基本"],
+              tags: ["いくら", "いくつ", "何人", "何個", "数", "価格"]
+            },
+            {
+              title: "ไหน",
+              gist: "ไหน は「どの・どこ」を表す。選択肢の中から尋ねるときに使う。",
+              thai: "คุณชอบร้านไหน",
+              ja: "どの店が好きですか。",
+              note: "ที่ไหน は場所そのもの、ไหน は選択肢の中の「どれ」に近い。",
+              related: ["ที่ไหน", "疑問詞の位置"],
+              tags: ["どの", "どれ", "どこ", "選択", "疑問詞"]
+            },
+            {
+              title: "疑問への答え方",
+              gist: "タイ語では「はい・いいえ」だけでなく、動詞や形容詞を繰り返して答えることが多い。",
+              thai: "ไป",
+              ja: "行きます。",
+              note: "ใช่ は「その通り」に近く、すべての「はい」に使えるわけではない。ไปไหม には ไป / ไม่ไป で答える。",
+              related: ["ไหม", "ไม่", "ใช่ไหม"],
+              tags: ["答え方", "はい", "いいえ", "返事", "応答"]
+            }
+          ]
+        },
+        {
+          id: "c08",
+          title: "助動詞・モダリティ",
+          desc: "希望、必要、義務、推量、可能、依頼、試行を扱う章。日本語の「できる」「したい」「すべき」に対応する表現を分けて確認する。",
+          items: [
+            {
+              title: "อยาก",
+              gist: "อยาก は「〜したい」を表す。動詞の前に置く。",
+              thai: "ฉันอยากกินก๋วยเตี๋ยว",
+              ja: "私はクイッティアオを食べたい。",
+              note: "名詞を直接続けるより、動詞を入れる形が自然。丁寧な希望には ต้องการ も使う。",
+              related: ["ต้องการ", "ขอ"],
+              tags: ["したい", "欲しい", "希望", "願望"]
+            },
+            {
+              title: "ต้องการ",
+              gist: "ต้องการ は「必要とする・希望する」を表す。อยาก より硬く丁寧。",
+              thai: "บริษัทต้องการพนักงานใหม่",
+              ja: "会社は新しい社員を必要としている。",
+              note: "日常の「〜したい」は อยาก の方が自然。ต้องการ は案内・業務・公式場面で多い。",
+              related: ["อยาก", "ต้อง"],
+              tags: ["必要", "希望", "求める", "公式", "丁寧"]
+            },
+            {
+              title: "ต้อง",
+              gist: "ต้อง は「〜しなければならない」を表す。義務や必要を示す。",
+              thai: "วันนี้ฉันต้องกลับเร็ว",
+              ja: "今日は早く帰らなければならない。",
+              note: "「必要がある」という意味で、命令とは限らない。否定は ไม่ต้อง「〜しなくてよい」。",
+              related: ["ควร", "ห้าม"],
+              tags: ["しなければならない", "必要", "義務", "しなくてよい"]
+            },
+            {
+              title: "ควร",
+              gist: "ควร は「〜すべきだ」を表す。助言や一般的な妥当性を示す。",
+              thai: "คุณควรพักผ่อน",
+              ja: "休んだ方がいいです。",
+              note: "ต้อง より弱い。義務ではなく、望ましい行動を示す。",
+              related: ["ต้อง", "น่าจะ"],
+              tags: ["すべき", "した方がいい", "助言", "望ましい"]
+            },
+            {
+              title: "น่าจะ",
+              gist: "น่าจะ は「たぶん〜だろう・〜のはずだ」を表す。推量に使う。",
+              thai: "พรุ่งนี้น่าจะฝนตก",
+              ja: "明日はたぶん雨が降るだろう。",
+              note: "日本語の「〜すべき」とは限らない。推測の意味が強い。",
+              related: ["ควร", "จะ"],
+              tags: ["たぶん", "だろう", "はず", "推量", "予想"]
+            },
+            {
+              title: "動詞＋ได้",
+              gist: "「動詞＋ได้」は「〜できる・〜してよい」を表す。可能や許可を示す。",
+              thai: "ฉันกินเผ็ดได้",
+              ja: "私は辛いものを食べられる。",
+              note: "ได้ の位置が重要。動詞の後ろなら可能・許可を表しやすい。",
+              related: ["動詞＋ไม่ได้", "ได้＋動詞"],
+              tags: ["できる", "可能", "許可", "してよい", "食べられる"]
+            },
+            {
+              title: "ได้＋動詞",
+              gist: "「ได้＋動詞」は「〜する機会があった・実際に〜した」を表す。",
+              thai: "เมื่อวานฉันได้คุยกับเขา",
+              ja: "昨日、私は彼と話す機会があった。",
+              note: "動詞＋ได้ の「できる」と混同しない。ได้ の位置で意味が変わる。",
+              related: ["動詞＋ได้", "ไม่ได้＋動詞"],
+              tags: ["実際にした", "機会があった", "できた", "経験"]
+            },
+            {
+              title: "動詞＋เป็น",
+              gist: "「動詞＋เป็น」は習得した技能として「〜できる」を表す。",
+              thai: "เขาว่ายน้ำเป็น",
+              ja: "彼は泳げる。",
+              note: "一時的にできるかではなく、技能を身につけているかを表す。",
+              related: ["เป็น", "動詞＋ได้", "動詞＋ไหว"],
+              tags: ["技能", "習得", "できる", "泳げる"]
+            },
+            {
+              title: "動詞＋ไหว",
+              gist: "「動詞＋ไหว」は体力・気力・状況的に「できる」を表す。",
+              thai: "ฉันยังเดินไหว",
+              ja: "私はまだ歩ける。",
+              note: "技能の เป็น ではなく、耐えられるか・続けられるかを表す。",
+              related: ["動詞＋เป็น", "動詞＋ได้"],
+              tags: ["体力", "気力", "耐えられる", "歩ける", "まだできる"]
+            },
+            {
+              title: "ขอ",
+              gist: "ขอ は「ください・〜させてください」を表す依頼表現。",
+              thai: "ขอเมนูหน่อย",
+              ja: "メニューをください。",
+              note: "หน่อย を付けると柔らかい依頼になる。命令ではなく依頼。",
+              related: ["หน่อย", "ช่วย"],
+              tags: ["ください", "させてください", "依頼", "お願い"]
+            },
+            {
+              title: "ช่วย",
+              gist: "ช่วย は「手伝って〜する・〜してください」を表す。依頼でよく使う。",
+              thai: "ช่วยเปิดประตูหน่อย",
+              ja: "ドアを開けてください。",
+              note: "直訳は「助けて」だが、依頼の前置きとして自然に使う。",
+              related: ["ขอ", "หน่อย"],
+              tags: ["してください", "手伝う", "依頼", "お願い"]
+            },
+            {
+              title: "ลอง",
+              gist: "ลอง は「試しに〜する」を表す。動詞の前に置く。",
+              thai: "ลองชิมดู",
+              ja: "ちょっと味見してみて。",
+              note: "ดู と一緒に使うと「〜してみる」の自然な会話表現になる。",
+              related: ["สิ", "หน่อย"],
+              tags: ["してみる", "試す", "試しに", "味見"]
+            },
+            {
+              title: "กล้า",
+              gist: "กล้า は「勇気があって〜する・あえて〜する」を表す。",
+              thai: "เขาไม่กล้าถาม",
+              ja: "彼は聞く勇気がない。",
+              note: "能力の「できる」ではない。心理的にできるかどうかを表す。",
+              related: ["動詞＋ได้", "ไม่"],
+              tags: ["勇気", "あえて", "聞けない", "心理的にできない"]
+            }
+          ]
+        },
+        {
+          id: "c09",
+          title: "数量・程度・比較",
+          desc: "量、程度、十分さ、比較、最上級、近似を扱う章。日本語と語順が異なる程度表現を確認する。",
+          items: [
+            {
+              title: "มาก",
+              gist: "มาก は「とても・多い」を表す。形容詞や動詞の後ろに置くことが多い。",
+              thai: "อาหารอร่อยมาก",
+              ja: "料理がとてもおいしい。",
+              note: "日本語の「とても」のように前に置かず、タイ語では後ろに置く。",
+              related: ["เกินไป", "นิดหน่อย"],
+              tags: ["とても", "多い", "程度", "すごく"]
+            },
+            {
+              title: "นิดหน่อย",
+              gist: "นิดหน่อย は「少し」を表す。量や程度が小さいことを示す。",
+              thai: "ฉันพูดไทยได้นิดหน่อย",
+              ja: "私はタイ語を少し話せる。",
+              note: "控えめに言う表現としても使える。完全にできない意味ではない。",
+              related: ["動詞＋ได้", "ไม่ค่อย"],
+              tags: ["少し", "ちょっと", "少量", "控えめ"]
+            },
+            {
+              title: "ค่อนข้าง",
+              gist: "ค่อนข้าง は「かなり・わりと」を表す。形容詞の前に置く。",
+              thai: "ห้องนี้ค่อนข้างเล็ก",
+              ja: "この部屋はわりと狭い。",
+              note: "มาก より控えめ。語順は ค่อนข้าง＋形容詞。",
+              related: ["มาก", "นิดหน่อย"],
+              tags: ["かなり", "わりと", "まあまあ", "程度"]
+            },
+            {
+              title: "เกินไป",
+              gist: "เกินไป は「〜すぎる」を表す。形容詞や動詞の後ろに置く。",
+              thai: "กาแฟนี้หวานเกินไป",
+              ja: "このコーヒーは甘すぎる。",
+              note: "มาก は単に程度が高いだけ。เกินไป は望ましい範囲を超えている。",
+              related: ["มาก", "พอ"],
+              tags: ["すぎる", "過度", "甘すぎる", "多すぎる"]
+            },
+            {
+              title: "พอ",
+              gist: "พอ は「十分だ・足りる」を表す。単独でも、形容詞や動詞と組み合わせても使う。",
+              thai: "เงินพอไหม",
+              ja: "お金は足りますか。",
+              note: "มาก とは違い、必要な基準を満たすかを表す。",
+              related: ["เกินไป", "ไหม"],
+              tags: ["十分", "足りる", "足りますか", "基準"]
+            },
+            {
+              title: "กว่า",
+              gist: "กว่า は比較で「より〜」を表す。形容詞の後ろに置く。",
+              thai: "ร้านนี้ถูกกว่าร้านนั้น",
+              ja: "この店はあの店より安い。",
+              note: "語順は「形容詞＋กว่า＋比較対象」。日本語の「より」は比較対象の前に来るが、タイ語では形容詞の後ろ。",
+              related: ["ที่สุด", "เท่า"],
+              tags: ["より", "比較", "安い", "高い"]
+            },
+            {
+              title: "ที่สุด",
+              gist: "ที่สุด は「最も〜」を表す。形容詞の後ろに置く。",
+              thai: "อันนี้แพงที่สุด",
+              ja: "これは一番高い。",
+              note: "มากที่สุด と言うと「最も多く・最も強く」の意味になる。",
+              related: ["กว่า", "มาก"],
+              tags: ["一番", "最も", "最上級", "最高"]
+            },
+            {
+              title: "เท่า",
+              gist: "เท่า は「同じくらい・等しい」を表す。比較対象と同程度であることを示す。",
+              thai: "ราคาเท่ากัน",
+              ja: "値段は同じです。",
+              note: "กว่า は差、เท่า は同等を表す。否定は ไม่เท่า で「同じほどではない」。",
+              related: ["กว่า", "กัน"],
+              tags: ["同じ", "同じくらい", "等しい", "同等"]
+            },
+            {
+              title: "ประมาณ",
+              gist: "ประมาณ は「約・だいたい」を表す。数量や時刻の前に置く。",
+              thai: "ฉันจะถึงประมาณบ่ายสามโมง",
+              ja: "私は午後三時ごろ着きます。",
+              note: "正確な数ではなく、おおよその範囲を示す。",
+              related: ["สัก", "เท่าไร・กี่"],
+              tags: ["約", "だいたい", "ごろ", "およそ"]
+            },
+            {
+              title: "เกือบ",
+              gist: "เกือบ は「ほとんど〜・もう少しで〜」を表す。動詞や数量の前に置く。",
+              thai: "ฉันเกือบลืม",
+              ja: "私は忘れるところだった。",
+              note: "実際に完了したとは限らない。日本語の「危うく〜するところだった」に近い場合がある。",
+              related: ["เพิ่ง", "แล้ว"],
+              tags: ["ほとんど", "もう少しで", "危うく", "ところだった"]
+            }
+          ]
+        },
+        {
+          id: "c10",
+          title: "場所・方向・前置詞",
+          desc: "場所、方向、起点、到達点、同伴、手段、基準を扱う章。日本語の助詞「で・に・へ・から・と」に対応する表現を整理する。",
+          items: [
+            {
+              title: "ที่",
+              gist: "ที่ は場所を表す「〜で・〜に」として使う。場所名の前に置く。",
+              thai: "เจอกันที่สถานี",
+              ja: "駅で会いましょう。",
+              note: "ที่ は場所だけでなく関係節にも使う。機能を文脈で区別する。",
+              related: ["อยู่", "ใน", "ที่"],
+              tags: ["場所", "で", "に", "地点", "駅で"]
+            },
+            {
+              title: "ใน",
+              gist: "ใน は「〜の中に」を表す。容器、部屋、範囲の内部に使う。",
+              thai: "โทรศัพท์อยู่ในกระเป๋า",
+              ja: "電話はかばんの中にある。",
+              note: "日本語の「で」に引きずられず、内部を表すときは ใน を使う。",
+              related: ["อยู่", "ที่"],
+              tags: ["中", "中に", "内部", "範囲"]
+            },
+            {
+              title: "บน・ใต้",
+              gist: "บน は「上に」、ใต้ は「下に」を表す。位置関係を示す語。",
+              thai: "แมวอยู่ใต้โต๊ะ",
+              ja: "猫は机の下にいる。",
+              note: "日本語の「上」は接触していない場合もあるが、บน は表面の上にある感じが強い。",
+              related: ["อยู่", "ใน"],
+              tags: ["上", "下", "位置", "机の下"]
+            },
+            {
+              title: "หน้า・หลัง・ข้าง",
+              gist: "หน้า は前、หลัง は後ろ、ข้าง は横を表す。場所名詞として使う。",
+              thai: "ร้านกาแฟอยู่ข้างธนาคาร",
+              ja: "カフェは銀行の隣にある。",
+              note: "位置語の後ろに基準となる名詞を置く。ข้าง は「横・隣」の広い意味。",
+              related: ["อยู่", "ใกล้・ไกล"],
+              tags: ["前", "後ろ", "横", "隣", "位置"]
+            },
+            {
+              title: "ใกล้・ไกล",
+              gist: "ใกล้ は「近い」、ไกล は「遠い」を表す。場所との距離を言う。",
+              thai: "บ้านฉันอยู่ใกล้สถานี",
+              ja: "私の家は駅の近くにある。",
+              note: "形容詞のように述語にもなる。จาก を付けて基準を明確にすることもある。",
+              related: ["อยู่", "จาก"],
+              tags: ["近い", "遠い", "距離", "近く"]
+            },
+            {
+              title: "ไป・มา",
+              gist: "ไป は話し手のいる場所から離れる方向、มา は話し手側へ来る方向を表す。",
+              thai: "เขามาหาฉันที่บ้าน",
+              ja: "彼は私の家に会いに来る。",
+              note: "日本語の「行く・来る」と完全には一致しない。話し手や聞き手の位置を基準にする。",
+              related: ["連続動詞", "ถึง", "จาก"],
+              tags: ["行く", "来る", "方向", "移動", "話し手"]
+            },
+            {
+              title: "จาก",
+              gist: "จาก は「〜から」を表す。起点、出身、原因の出どころを示す。",
+              thai: "ฉันมาจากญี่ปุ่น",
+              ja: "私は日本から来ました。",
+              note: "場所の出発点だけでなく、情報や原因の出どころにも使う。",
+              related: ["ไป・มา", "ถึง"],
+              tags: ["から", "起点", "出身", "日本から"]
+            },
+            {
+              title: "ถึง",
+              gist: "ถึง は「〜に着く・〜まで」を表す。到達点を示す。",
+              thai: "รถไฟถึงกรุงเทพแล้ว",
+              ja: "電車はバンコクに着いた。",
+              note: "到着の動詞としても、範囲の終点としても使う。",
+              related: ["จาก", "แล้ว"],
+              tags: ["着く", "まで", "到着", "到達点"]
+            },
+            {
+              title: "กับ",
+              gist: "กับ は「〜と一緒に・〜と」を表す。同伴や相手を示す。",
+              thai: "ฉันไปกับเพื่อน",
+              ja: "私は友達と行く。",
+              note: "名詞同士をつなぐ「と」にも使えるが、書き言葉では และ が使われやすい。",
+              related: ["ด้วย", "และ"],
+              tags: ["と", "一緒に", "同伴", "友達と"]
+            },
+            {
+              title: "โดย",
+              gist: "โดย は手段、方法、行為者を表す。やや硬い表現。",
+              thai: "ฉันไปทำงานโดยรถไฟ",
+              ja: "私は電車で仕事に行く。",
+              note: "日常会話では ด้วย を使う場面も多い。โดย は説明・文書で自然。",
+              related: ["ด้วย", "ที่"],
+              tags: ["手段", "方法", "で", "電車で", "硬い"]
+            },
+            {
+              title: "ตาม",
+              gist: "ตาม は「〜に従って・〜に沿って」を表す。",
+              thai: "ฉันทำตามคำแนะนำ",
+              ja: "私はアドバイスに従ってやる。",
+              note: "物理的に「後を追う」意味もある。抽象的には基準に従う意味。",
+              related: ["โดย", "เพราะ"],
+              tags: ["従って", "沿って", "基準", "通りに"]
+            }
+          ]
+        },
+        {
+          id: "c11",
+          title: "接続・複文",
+          desc: "文と文をつなぐ語、条件、理由、目的、引用、関係節を扱う章。単文を複文にするための接続構造を整理する。",
+          items: [
+            {
+              title: "และ",
+              gist: "และ は「そして・および」を表す。語や文を並列につなぐ。",
+              thai: "พ่อและแม่อยู่บ้าน",
+              ja: "父と母は家にいる。",
+              note: "会話では名詞同士に กับ を使うことも多い。และ はやや書き言葉寄り。",
+              related: ["กับ", "หรือ"],
+              tags: ["そして", "および", "と", "並列"]
+            },
+            {
+              title: "หรือ",
+              gist: "หรือ は「または・それとも」を表す。選択肢をつなぐ。",
+              thai: "คุณจะกินที่นี่หรือกลับบ้าน",
+              ja: "ここで食べますか、それとも帰りますか。",
+              note: "疑問文でも平叙文でも使う。文末疑問の หรือเปล่า とは別に扱う。",
+              related: ["หรือเปล่า", "และ"],
+              tags: ["または", "それとも", "選択", "接続"]
+            },
+            {
+              title: "แต่",
+              gist: "แต่ は「しかし・でも」を表す。対立する内容をつなぐ。",
+              thai: "ฉันอยากไปแต่ไม่มีเวลา",
+              ja: "行きたいが時間がない。",
+              note: "文頭にも文中にも置ける。日本語の「でも」と同じく会話でよく使う。",
+              related: ["แม้ว่า", "ไม่"],
+              tags: ["しかし", "でも", "けれど", "逆接"]
+            },
+            {
+              title: "เพราะ",
+              gist: "เพราะ は「なぜなら・〜だから」を表す。理由を示す節を導く。",
+              thai: "ฉันกลับเร็วเพราะปวดหัว",
+              ja: "頭が痛いので早く帰る。",
+              note: "理由を述べる語で、結果を述べる ก็เลย・จึง とは役割が違う。",
+              related: ["ทำไม", "ก็เลย・จึง"],
+              tags: ["だから", "なぜなら", "理由", "ので"]
+            },
+            {
+              title: "ก็เลย・จึง",
+              gist: "ก็เลย と จึง は「それで・そのため」を表す。原因の後に結果を述べる。",
+              thai: "ฝนตกฉันก็เลยกลับบ้านเร็ว",
+              ja: "雨が降ったので、私は早く家に帰った。",
+              note: "ก็เลย は口語的、จึง は硬い。เพราะ は理由側、ก็เลย・จึง は結果側に置く。",
+              related: ["เพราะ", "ทำให้"],
+              tags: ["それで", "そのため", "結果", "だから"]
+            },
+            {
+              title: "ถ้า",
+              gist: "ถ้า は「もし〜なら」を表す。条件節を作る。",
+              thai: "ถ้าฝนตกฉันจะอยู่บ้าน",
+              ja: "もし雨が降ったら、私は家にいる。",
+              note: "結果側に ก็ を入れることも多い。未来条件でも動詞は活用しない。",
+              related: ["จะ", "ก็"],
+              tags: ["もし", "なら", "条件", "たら"]
+            },
+            {
+              title: "ตอนที่・เมื่อ",
+              gist: "ตอนที่ と เมื่อ は「〜した時」を表す。時を表す節を作る。",
+              thai: "ตอนที่ฉันมาถึงเขาหลับแล้ว",
+              ja: "私が着いた時、彼はもう寝ていた。",
+              note: "ตอนที่ は会話で自然。เมื่อ はやや硬い、または書き言葉で使いやすい。",
+              related: ["เมื่อไร", "แล้ว"],
+              tags: ["時", "した時", "とき", "時間節"]
+            },
+            {
+              title: "ก่อน・หลังจาก",
+              gist: "ก่อน は「〜の前」、หลังจาก は「〜の後」を表す。",
+              thai: "ก่อนนอนฉันอ่านหนังสือ",
+              ja: "寝る前に私は本を読む。",
+              note: "ก่อน は前後どちらにも置ける。หลังจาก は後に出来事を続ける。",
+              related: ["ตอนที่・เมื่อ", "แล้ว"],
+              tags: ["前", "後", "前に", "後で", "時間"]
+            },
+            {
+              title: "ระหว่างที่",
+              gist: "ระหว่างที่ は「〜している間に」を表す。同時進行の時間を示す。",
+              thai: "ระหว่างที่รอฉันอ่านข่าว",
+              ja: "待っている間、私はニュースを読んだ。",
+              note: "単なる時点ではなく、一定の時間幅を表す。",
+              related: ["กำลัง", "動詞＋อยู่"],
+              tags: ["間に", "している間", "同時", "時間幅"]
+            },
+            {
+              title: "จน",
+              gist: "จน は「〜まで・〜するほど」を表す。到達点や結果を示す。",
+              thai: "ฉันทำงานจนดึก",
+              ja: "私は夜遅くまで働いた。",
+              note: "時間の終点にも、結果の程度にも使う。文脈で訳し分ける。",
+              related: ["ถึง", "เกินไป"],
+              tags: ["まで", "ほど", "結果", "到達点"]
+            },
+            {
+              title: "เพื่อ",
+              gist: "เพื่อ は「〜するために」を表す。目的を示す。",
+              thai: "ฉันเก็บเงินเพื่อซื้อรถ",
+              ja: "私は車を買うためにお金を貯めている。",
+              note: "人のために何かをする場合の「〜してあげる」は 動詞＋ให้ を使うことが多い。",
+              related: ["動詞＋ให้", "連続動詞"],
+              tags: ["ために", "目的", "買うため", "目的節"]
+            },
+            {
+              title: "ว่า",
+              gist: "ว่า は「〜と」を表し、発言・思考・認識の内容を導く。",
+              thai: "เขาบอกว่าจะมาพรุ่งนี้",
+              ja: "彼は明日来ると言った。",
+              note: "日本語の引用の「と」に近い。พูด、บอก、คิด、รู้ などとよく使う。",
+              related: ["คือ", "จะ"],
+              tags: ["引用", "と言う", "と思う", "内容"]
+            },
+            {
+              title: "ที่",
+              gist: "ที่ は名詞を後ろから説明する関係節を作る。「〜する人・〜した物」に近い。",
+              thai: "คนที่ยืนตรงนั้นเป็นเพื่อนฉัน",
+              ja: "あそこに立っている人は私の友達です。",
+              note: "場所の ที่ とは別機能。同じ形でも、名詞の後ろで説明を作る。",
+              related: ["名詞の後ろから修飾", "ที่"],
+              tags: ["関係節", "名詞修飾", "する人", "した物", "後ろから説明"]
+            },
+            {
+              title: "แม้ว่า",
+              gist: "แม้ว่า は「たとえ〜でも・〜にもかかわらず」を表す。逆接条件を作る。",
+              thai: "แม้ว่าฝนตกเขาก็มา",
+              ja: "雨が降っていたのに、彼は来た。",
+              note: "結果側に ก็ を置くことが多い。แต่ より文全体を複文にする働きが強い。",
+              related: ["แต่", "ก็"],
+              tags: ["たとえ", "にもかかわらず", "のに", "逆接条件"]
+            }
+          ]
+        },
+        {
+          id: "c12",
+          title: "語気・焦点",
+          desc: "丁寧さ、依頼の柔らかさ、促し、話題転換、追加、限定など、文末・文中でニュアンスを加える語を扱う章。",
+          items: [
+            {
+              title: "ครับ・ค่ะ",
+              gist: "ครับ・ค่ะ は文末に置く丁寧表現。話し手の性別や発話スタイルで使い分ける。",
+              thai: "ขอบคุณครับ",
+              ja: "ありがとうございます。",
+              note: "意味を変える語ではなく、丁寧さを加える語。男性は ครับ、女性は ค่ะ を使うのが基本。",
+              related: ["คะ・ค่ะ", "นะ"],
+              tags: ["丁寧", "ですます", "男性", "女性", "文末"]
+            },
+            {
+              title: "คะ・ค่ะ",
+              gist: "女性話者は疑問・呼びかけで คะ、平叙・応答で ค่ะ を使う。",
+              thai: "คุณชื่ออะไรคะ",
+              ja: "お名前は何ですか。",
+              note: "ค่ะ と คะ は同じではない。疑問文では คะ、答えや説明では ค่ะ が基本。",
+              related: ["ครับ・ค่ะ", "ไหม"],
+              tags: ["女性", "丁寧", "疑問", "応答", "文末"]
+            },
+            {
+              title: "นะ",
+              gist: "นะ は文末に置き、柔らかさ、確認、念押しを加える。",
+              thai: "รอก่อนนะ",
+              ja: "ちょっと待ってね。",
+              note: "命令や依頼を柔らかくできるが、場面によっては親しい響きになる。",
+              related: ["หน่อย", "อย่า"],
+              tags: ["ね", "柔らかい", "念押し", "確認", "文末"]
+            },
+            {
+              title: "สิ",
+              gist: "สิ は促し、勧め、強調を表す文末語。「〜しなよ」に近い。",
+              thai: "กินสิ",
+              ja: "食べなよ。",
+              note: "強く聞こえることがある。目上の人には使い方に注意が必要。",
+              related: ["เถอะ", "ลอง"],
+              tags: ["しなよ", "促し", "勧め", "強調"]
+            },
+            {
+              title: "เถอะ",
+              gist: "เถอะ は提案、促し、受け入れを表す。「〜しよう・〜したら」に近い。",
+              thai: "กลับบ้านเถอะ",
+              ja: "家に帰ろう。",
+              note: "สิ より柔らかく聞こえることが多い。諦めや妥協の響きが出る場合もある。",
+              related: ["สิ", "นะ"],
+              tags: ["しよう", "促し", "提案", "したら"]
+            },
+            {
+              title: "ล่ะ",
+              gist: "ล่ะ は話題を相手に向ける、または次の話題を促す文末語。",
+              thai: "แล้วคุณล่ะ",
+              ja: "では、あなたは？",
+              note: "คำถาม を作る語ではなく、話の流れを受けて尋ねる語。単独で新しい疑問を作る ไหม とは違う。",
+              related: ["トピック文", "ไหม"],
+              tags: ["あなたは", "では", "話題転換", "文末"]
+            },
+            {
+              title: "ก็",
+              gist: "ก็ は「も・それなら・まあ」など、文脈を受ける焦点語。前の内容とのつながりを示す。",
+              thai: "ฉันก็อยากไป",
+              ja: "私も行きたい。",
+              note: "一語で直訳しにくい。追加、条件の結果、話題の受け直しなどで使う。",
+              related: ["ถ้า", "ก็เลย・จึง", "ด้วย"],
+              tags: ["も", "それなら", "まあ", "焦点", "文脈"]
+            },
+            {
+              title: "ด้วย",
+              gist: "ด้วย は「一緒に・〜も・〜で」を表す。追加や同伴に使う。",
+              thai: "ฉันไปด้วย",
+              ja: "私も一緒に行く。",
+              note: "กับ は相手を示し、ด้วย は追加・同伴の感じが強い。",
+              related: ["กับ", "ก็"],
+              tags: ["一緒に", "も", "で", "同伴", "追加"]
+            },
+            {
+              title: "อีก",
+              gist: "อีก は「もう一つ・さらに・再び」を表す。追加を示す。",
+              thai: "ขออีกแก้ว",
+              ja: "もう一杯ください。",
+              note: "反復の「また」と、数量追加の「もう」をどちらも表せる。",
+              related: ["ขอ", "数＋類別詞"],
+              tags: ["もう", "さらに", "また", "追加", "もう一つ"]
+            },
+            {
+              title: "แค่・เท่านั้น",
+              gist: "แค่ と เท่านั้น は「〜だけ」を表す。限定を示す。",
+              thai: "ฉันมีแค่ร้อยบาท",
+              ja: "私は百バーツしか持っていない。",
+              note: "แค่ は口語的で自然。เท่านั้น はやや硬く、文末に置くことも多い。",
+              related: ["自分の เอง", "เท่า"],
+              tags: ["だけ", "しか", "限定", "それだけ"]
+            },
+            {
+              title: "หน่อย",
+              gist: "หน่อย は「少し」を表し、依頼を柔らかくする文末語としても使う。",
+              thai: "ช่วยรอหน่อย",
+              ja: "少し待ってください。",
+              note: "依頼で使うと「ちょっと〜して」の感じになる。数量の「少し」だけではない。",
+              related: ["ช่วย", "ขอ", "นะ"],
+              tags: ["少し", "ちょっと", "依頼", "柔らかい", "ください"]
+            }
+          ]
+        }
+      ];
+
+      const content = document.getElementById("grammar-content");
+      const chapterNav = document.getElementById("grammar-chapterNav");
+      const search = document.getElementById("grammar-search");
+      const count = document.getElementById("grammar-count");
+      const openAll = document.getElementById("grammar-openAll");
+      const closeAll = document.getElementById("grammar-closeAll");
+      const clearSearch = document.getElementById("grammar-clearSearch");
+
+      const total = DATA.reduce((sum, chapter) => sum + chapter.items.length, 0);
+      const titleIndex = new Map();
+
+      function esc(value) {
+        return String(value).replace(/[&<>"']/g, char => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        }[char]));
+      }
+
+      function firstSentence(text) {
+        const index = text.indexOf("。");
+        return index >= 0 ? text.slice(0, index + 1) : text;
+      }
+
+      function normalize(value) {
+        return String(value || "").toLowerCase().replace(/\s+/g, "");
+      }
+
+      function registerTitle(title, id, chapterId) {
+        if (!titleIndex.has(title)) {
+          titleIndex.set(title, []);
+        }
+        titleIndex.get(title).push({ id, chapterId, title });
+      }
+
+      function render() {
+        count.textContent = `${total}項目`;
+
+        DATA.forEach((chapter, chapterIndex) => {
+          chapterNav.insertAdjacentHTML(
+            "beforeend",
+            `<a class="nav-chip" href="#grammar-${chapter.id}" data-open-target>${esc(chapter.title)}</a>`
+          );
+
+          const section = document.createElement("section");
+          section.className = "chapter";
+          section.id = `grammar-${chapter.id}`;
+
+          const itemNav = chapter.items.map((item, itemIndex) => {
+            const itemId = `grammar-${chapter.id}-i${String(itemIndex + 1).padStart(2, "0")}`;
+            return `<a class="item-chip" href="#${itemId}" data-open-target>${esc(item.title)}</a>`;
+          }).join("");
+
+          const itemsHtml = chapter.items.map((item, itemIndex) => {
+            const itemId = `grammar-${chapter.id}-i${String(itemIndex + 1).padStart(2, "0")}`;
+            registerTitle(item.title, itemId, chapter.id);
+
+            const searchText = [
+              chapter.title, chapter.desc, item.title, item.gist,
+              item.thai, item.ja, item.note, ...(item.related || []), ...(item.tags || [])
+            ].join(" ");
+
+            const relatedHtml = (item.related || []).map(term => {
+              return `<button type="button" class="rel" data-related="${esc(term)}" data-source-chapter="${esc(chapter.id)}">${esc(term)}</button>`;
+            }).join("");
+
+            return `
+              <details class="grammar-item" id="${itemId}" data-search="${esc(searchText)}" data-title="${esc(item.title)}" data-chapter="${esc(chapter.id)}">
+                <summary>
+                  <span class="item-title">${esc(item.title)}</span>
+                  <span class="item-summary">${esc(firstSentence(item.gist))}</span>
+                </summary>
+                <div class="item-body">
+                  <section class="block">
+                    <h3>要点</h3>
+                    <p>${esc(item.gist)}</p>
+                  </section>
+                  <section class="example">
+                    <h3>例文</h3>
+                    <p class="thai" lang="th">${esc(item.thai)}</p>
+                    <p class="translation">${esc(item.ja)}</p>
+                  </section>
+                  <section class="block note">
+                    <h3>ポイント</h3>
+                    <p>${esc(item.note)}</p>
+                  </section>
+                  <section class="block related">
+                    <h3>関連</h3>
+                    <div class="related-list">${relatedHtml}</div>
+                  </section>
+                </div>
+              </details>
+            `;
+          }).join("");
+
+          section.innerHTML = `
+            <details class="chapter-details" ${chapterIndex === 0 ? "open" : ""}>
+              <summary class="chapter-summary">
+                <span class="chapter-title">${esc(chapter.title)}</span>
+                <span class="chapter-count">${chapter.items.length}項目</span>
+                <p class="chapter-lead">${esc(chapter.desc)}</p>
+              </summary>
+              <div class="chapter-body">
+                <nav class="item-nav" aria-label="${esc(chapter.title)}の項目">${itemNav}</nav>
+                ${itemsHtml}
+              </div>
+            </details>
+          `;
+
+          content.appendChild(section);
+        });
+      }
+
+      function updateSearch() {
+        const q = normalize(search.value);
+        let visibleCount = 0;
+
+        const wrapper = document.getElementById("grammar-ref-wrapper");
+
+        wrapper.querySelectorAll(".grammar-item").forEach(item => {
+          const target = normalize(item.dataset.search);
+          const hit = !q || target.includes(q);
+          item.hidden = !hit;
+
+          if (hit) {
+            visibleCount += 1;
+          }
+
+          if (q && hit) {
+            item.open = true;
+            const chapter = item.closest(".chapter-details");
+            if (chapter) chapter.open = true;
+          }
+        });
+
+        wrapper.querySelectorAll(".chapter").forEach(chapter => {
+          const hasVisibleItem = Array.from(chapter.querySelectorAll(".grammar-item")).some(item => !item.hidden);
+          chapter.hidden = !hasVisibleItem;
+        });
+
+        count.textContent = q ? `${visibleCount}件` : `${total}項目`;
+      }
+
+      function resetFilter() {
+        search.value = "";
+        updateSearch();
+      }
+
+      // ==========================================
+      // 🌟 修正：スクロールをボトムシート内だけに閉じ込める
+      // ==========================================
+      function openItem(item) {
+        if (!item) return;
+
+        const chapterDetails = item.closest(".chapter-details");
+        if (chapterDetails) chapterDetails.open = true;
+
+        item.open = true;
+        item.hidden = false;
+
+        const chapter = item.closest(".chapter");
+        if (chapter) chapter.hidden = false;
+
+        setTimeout(() => {
+          // ブラウザ標準の scrollIntoView ではなく、コンテナ内の相対位置を計算してスクロール
+          const scrollContainer = document.getElementById("grammar-content-area");
+          if (scrollContainer) {
+            const containerRect = scrollContainer.getBoundingClientRect();
+            const itemRect = item.getBoundingClientRect();
+            const scrollTop = scrollContainer.scrollTop + (itemRect.top - containerRect.top) - 20; // 20pxの余白
+            scrollContainer.scrollTo({ top: scrollTop, behavior: "smooth" });
+          }
+        }, 40);
+
+        // URLハッシュの変更はアプリの予期せぬ動作を招くため削除（コメントアウト）
+        // try { history.replaceState(null, "", `#${item.id}`); } catch (e) {}
+      }
+
+      function jumpToRelated(term, sourceChapterId) {
+        const matches = titleIndex.get(term) || [];
+
+        if (matches.length > 0) {
+          const preferred =
+            matches.find(match => match.chapterId === sourceChapterId) ||
+            matches[0];
+
+          resetFilter();
+          const item = document.getElementById(preferred.id);
+          openItem(item);
+          return;
+        }
+
+        search.value = term;
+        updateSearch();
+        
+        // 検索窓へのスクロールもコンテナ内でおこなう
+        const scrollContainer = document.getElementById("grammar-content-area");
+        if (scrollContainer) {
+          scrollContainer.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      }
+
+      render();
+
+      search.addEventListener("input", updateSearch);
+
+      openAll.addEventListener("click", () => {
+        const wrapper = document.getElementById("grammar-ref-wrapper");
+        wrapper.querySelectorAll("details").forEach(details => {
+          details.open = true;
+        });
+      });
+
+      closeAll.addEventListener("click", () => {
+        const wrapper = document.getElementById("grammar-ref-wrapper");
+        wrapper.querySelectorAll(".grammar-item, .chapter-details").forEach(details => {
+          details.open = false;
+        });
+      });
+
+      clearSearch.addEventListener("click", () => {
+        resetFilter();
+        search.focus();
+      });
+
+      // ==========================================
+      // 🌟 修正：ブラウザの勝手なジャンプ（ガタつき）を阻止
+      // ==========================================
+      const wrapper = document.getElementById("grammar-ref-wrapper");
+      wrapper.addEventListener("click", event => {
+        const related = event.target.closest("[data-related]");
+        if (related) {
+          event.preventDefault(); // デフォルト動作をブロック
+          jumpToRelated(related.dataset.related, related.dataset.sourceChapter);
+          return;
+        }
+
+        const link = event.target.closest("a[data-open-target]");
+        if (!link) return;
+
+        event.preventDefault(); // ★ここで勝手なページ内ジャンプを完全ブロック！
+
+        const target = document.querySelector(link.getAttribute("href"));
+        if (!target) return;
+
+        if (target.classList.contains("chapter")) {
+          const details = target.querySelector(".chapter-details");
+          if (details) details.open = true;
+          
+          // 章へのジャンプもコンテナ内のスクロールに変換
+          setTimeout(() => {
+            const scrollContainer = document.getElementById("grammar-content-area");
+            if (scrollContainer) {
+              const containerRect = scrollContainer.getBoundingClientRect();
+              const targetRect = target.getBoundingClientRect();
+              const scrollTop = scrollContainer.scrollTop + (targetRect.top - containerRect.top) - 20;
+              scrollContainer.scrollTo({ top: scrollTop, behavior: "smooth" });
+            }
+          }, 40);
+        }
+
+        if (target.classList.contains("grammar-item")) {
+          resetFilter();
+          openItem(target);
+        }
+      });
+
+    })();
+  </script>
+</div>

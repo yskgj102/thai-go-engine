@@ -574,7 +574,23 @@ const ViewController = {
       }
     }
   },
-
+/**
+   * 文法リファレンスシートの開閉
+   */
+  toggleGrammarSheet: function(show) {
+    const sheet = document.getElementById('grammar-sheet');
+    const overlay = document.getElementById('grammar-overlay');
+    
+    if (show) {
+      overlay.style.display = 'block';
+      setTimeout(() => sheet.classList.remove('translate-y-full'), 10);
+      document.body.style.overflow = 'hidden';
+    } else {
+      sheet.classList.add('translate-y-full');
+      setTimeout(() => overlay.style.display = 'none', 300);
+      document.body.style.overflow = '';
+    }
+  },
   /**
    * 単語の忘却・学習間隔統計を画面に反映
    */

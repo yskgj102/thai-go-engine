@@ -34,26 +34,35 @@
   class="sticky top-0 z-50 backdrop-blur-lg px-2 sm:px-4 py-3 flex items-center justify-between border-b border-white/5"
   style="background: var(--header-bg);">
 
-  <div class="flex flex-col gap-0.5 min-w-[55px] sm:min-w-[70px] cursor-pointer group shrink-0" onclick="ViewController.toggleStats()" >
-    <span class="text-[9px] font-bold tracking-[0.1em] opacity-60 uppercase">Activity</span>
-    <div class="flex items-baseline gap-1">
-      <span id="correct-count" class="text-2xl font-mono leading-none font-medium text-blue-500/80">0</span>
-      <span id="total-count" class="hidden">0</span>
-      <span class="text-[9px] opacity-20 font-bold tracking-tighter">WDS</span>
+  <div class="flex items-center gap-0.5 sm:gap-2 shrink-0">
+    <div class="flex flex-col gap-0.5 min-w-[45px] sm:min-w-[60px] cursor-pointer group" onclick="ViewController.toggleStats()" >
+      <span class="text-[9px] font-bold tracking-[0.1em] opacity-60 uppercase">Activity</span>
+      <div class="flex items-baseline gap-1">
+        <span id="correct-count" class="text-2xl font-mono leading-none font-medium text-blue-500/80">0</span>
+        <span id="total-count" class="hidden">0</span>
+        <span class="text-[8px] opacity-20 font-bold tracking-tighter">WDS</span>
+      </div>
     </div>
+
+    <button onclick="ViewController.toggleGrammarSheet(true)" 
+            class="text-blue-500/50 hover:text-blue-500 transition-all active:scale-125 p-1 shrink-0">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18 18.246 18.477 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+      </svg>
+    </button>
+
+    <button id="autoplay-toggle-btn" onclick="AutoPlayEngine.toggle()" 
+            class="text-blue-500/40 hover:text-blue-500 transition-all active:scale-125 p-1 relative z-[10001] shrink-0">
+      <svg id="play-icon" xmlns="http://www.w3.org/2000/svg" class="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span id="autoplay-pulse" class="hidden absolute top-[2px] right-[2px] w-2 h-2 bg-blue-500 rounded-full animate-ping"></span>
+    </button>
   </div>
 
-  <button id="autoplay-toggle-btn" onclick="AutoPlayEngine.toggle()" 
-          class="mx-0 sm:mx-1 text-blue-500/40 hover:text-blue-500 transition-all active:scale-125 p-1 relative z-[10001] shrink-0">
-    <svg id="play-icon" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-    <span id="autoplay-pulse" class="hidden absolute top-[2px] right-[2px] w-2.5 h-2.5 bg-blue-500 rounded-full animate-ping"></span>
-  </button>
-
   <div class="flex-1 flex justify-center px-0.5 sm:px-1 relative h-10 overflow-hidden">
-    <div id="header-input-area" class="relative w-full max-w-[130px] sm:max-w-[150px] transition-all duration-300">
+    <div id="header-input-area" class="relative w-full max-w-[145px] sm:max-w-[180px] transition-all duration-300">
       <input id="quick-input" type="text" 
        placeholder="Search/Add..."
        onfocus="VocabListUI.onQuickInputFocus()"
@@ -73,20 +82,18 @@
         </button>
       </div>
     </div>
-    <div id="header-word-area" class="absolute inset-0 flex flex-col items-center justify-center opacity-0 pointer-events-none translate-y-4 transition-all duration-300 cursor-pointer">
-    <div id="header-display-th" class="thai-font text-[14px] font-bold leading-none text-blue-500/90 mb-1 truncate max-w-full"></div>
     
-    <div class="flex items-center justify-center gap-1.5 w-full px-2">
+    <div id="header-word-area" class="absolute inset-0 flex flex-col items-center justify-center opacity-0 pointer-events-none translate-y-4 transition-all duration-300 cursor-pointer">
+      <div id="header-display-th" class="thai-font text-[14px] font-bold leading-none text-blue-500/90 mb-1 truncate max-w-full"></div>
+      
+      <div class="flex items-center justify-center gap-1.5 w-full px-2">
         <div id="header-display-ja" class="text-[9px] opacity-40 font-bold truncate max-w-[85px] sm:max-w-[110px] text-right"></div>
-        
         <button onclick="event.stopPropagation(); StudyEngine.copyText('header-display-th', this)" 
                 class="opacity-100 shrink-0 flex items-center justify-center w-4 h-4 text-blue-500/60 hover:text-blue-500 transition-all active:scale-125">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-
             </svg></button>
-        </div>
+      </div>
     </div>
   </div>
 
@@ -273,6 +280,25 @@
 
 
 
+
+<div id="grammar-overlay" onclick="ViewController.toggleGrammarSheet(false)" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9998;"></div>
+<div id="grammar-sheet" 
+     class="fixed bottom-0 left-0 right-0 max-w-md mx-auto h-[90vh] rounded-t-3xl shadow-2xl z-[9999] flex flex-col translate-y-full transition-transform duration-300 ease-out border-t"
+     style="background-color: var(--bg-card); border-color: var(--border);">
+  
+  <div class="sheet-handle w-12 h-1.5 rounded-full mx-auto my-3" style="background-color: var(--text-sub); opacity: 0.3;"></div>
+  
+  <div class="flex-shrink-0 px-6 pb-4 border-b flex justify-between items-center" style="border-color: var(--border);">
+    <h3 class="font-bold text-sm tracking-widest uppercase" style="color: var(--text-main);">
+      <span class="text-blue-500">📖</span> Grammar Reference
+    </h3>
+    <button onclick="ViewController.toggleGrammarSheet(false)" class="text-xs font-bold" style="color: var(--text-sub);">Close ×</button>
+  </div>
+
+  <div id="grammar-content-area" class="flex-1 overflow-y-auto p-4 custom-scrollbar bg-transparent">
+     <?!= HtmlService.createHtmlOutputFromFile('GrammarContent').getContent(); ?>
+  </div>
+</div>
 
 
 
@@ -642,6 +668,10 @@ const initSheetSwipe = (sheetId, handleSelector, closeFn) => {
 // これにより、ボタン以外の場所ならどこを触ってもスワイプが反応します
 initSheetSwipe('memo-sheet', '.sheet-handle, .sheet-header', () => {
   ViewController.toggleMemoSheet(false);
+});
+
+initSheetSwipe('grammar-sheet', '.sheet-handle, .flex-shrink-0', () => {
+  ViewController.toggleGrammarSheet(false);
 });
 
 // 🌟 チャット：上部のヘッダー全体
