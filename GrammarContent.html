@@ -1858,7 +1858,7 @@
             const scrollTop = scrollContainer.scrollTop + (itemRect.top - containerRect.top) - 20; // 20pxの余白
             scrollContainer.scrollTo({ top: scrollTop, behavior: "smooth" });
           }
-        }, 40);
+        }, 150);
 
         // URLハッシュの変更はアプリの予期せぬ動作を招くため削除（コメントアウト）
         // try { history.replaceState(null, "", `#${item.id}`); } catch (e) {}
@@ -1944,7 +1944,7 @@
               const scrollTop = scrollContainer.scrollTop + (targetRect.top - containerRect.top) - 20;
               scrollContainer.scrollTo({ top: scrollTop, behavior: "smooth" });
             }
-          }, 40);
+          }, 150);
         }
 
         if (target.classList.contains("grammar-item")) {
