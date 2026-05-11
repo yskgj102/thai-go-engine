@@ -409,10 +409,10 @@
     }
   </style>
 
-  <header class="app-header" id="grammar-top">
+  <!-- <header class="app-header" id="grammar-top">
     <h1>タイ語文法</h1>
     <p>日本語話者向け。必要な文法項目を検索して参照するための一覧。</p>
-  </header>
+  </header> -->
 
   <section class="tools" aria-label="検索と操作">
     <div class="search-row">
@@ -1782,7 +1782,7 @@
           }).join("");
 
           section.innerHTML = `
-            <details class="chapter-details" ${chapterIndex === 0 ? "open" : ""}>
+            <details class="chapter-details">
               <summary class="chapter-summary">
                 <span class="chapter-title">${esc(chapter.title)}</span>
                 <span class="chapter-count">${chapter.items.length}項目</span>
