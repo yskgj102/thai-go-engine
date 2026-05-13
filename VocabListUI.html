@@ -598,4 +598,90 @@ applyLevelFilter: function(level) {
     observer.observe(marker);
   }
 };
+
+// ==========================================
+// 🌟 リストのキーボードナビゲーション（上下矢印 ＆ Enter）
+// ==========================================
+let currentListIndex = -1;
+
+document.addEventListener('keydown', (event) => {
+  // すでに「リスト以外の場所（メモ欄など）」で入力中の場合は無視
+  if (event.target.tagName === 'TEXTAREA' || 
+     (event.target.tagName === 'INPUT' && event.target.id !== 'list-search' && event.target.id !== 'quick-input')) {
+    return;
+  }
+
+  // --- 1. スラッシュ(/)キーで検索窓にフォーカス ---
+  if (event.key === '/') {
+    event.preventDefault(); // 「/」が入力されるのを防ぐ
+    const searchInput = document.getElementById('quick-input'); 
+    if (searchInput) searchInput.focus();
+    return;
+  }
+
+  // --- 2. 上下キーでのリスト移動処理 ---
+  const listContainer = document.getElementById('vocab-list-container');
+  // リストが開いていない場合は何もしない
+  if (!listContainer || listContainer.offsetParent === null) return;
+
+  // 実際に表示されている単語カードだけを抽出
+  const items = Array.from(listContainer.children).filter(el => 
+    !el.hidden && 
+    el.style.display !== 'none' && 
+    el.id !== 'list-end-marker' && // ローディング表記は除外
+    el.tagName === 'DIV' &&        // DIV要素（カード本体）のみ
+    el.hasAttribute('onclick')     // クリック可能な要素のみ
+  );
+
+  if (items.length === 0) return;
+
+  // 👇 下矢印キー
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    currentListIndex = (currentListIndex + 1) % items.length;
+    updateListFocus(items);
+  }
+  // 👆 上矢印キー
+  else if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    currentListIndex = currentListIndex <= 0 ? items.length - 1 : currentListIndex - 1;
+    updateListFocus(items);
+  }
+  // ⏎ Enterキー
+  else if (event.key === 'Enter') {
+    if (currentListIndex >= 0 && currentListIndex < items.length) {
+      event.preventDefault();
+      items[currentListIndex].click(); // 選択中の項目を開く
+    }
+  }
+});
+
+// ⌨️ 文字を入力してリストが絞り込まれたら、選択状態を一番上にリセット
+document.addEventListener('input', (event) => {
+  if (event.target.id === 'list-search' || event.target.id === 'quick-input') {
+    currentListIndex = -1; // リセット
+    const listContainer = document.getElementById('vocab-list-container');
+    if (listContainer) {
+      Array.from(listContainer.children).forEach(item => {
+        item.classList.remove('!bg-blue-500/20', '!border-blue-500', 'scale-[1.02]');
+      });
+    }
+  }
+});
+
+// 🎨 見た目の更新と自動スクロール
+function updateListFocus(items) {
+  items.forEach((item, index) => {
+    if (index === currentListIndex) {
+      // 選択中のスタイル（Tailwindの強制上書きクラスを追加）
+      item.classList.add('!bg-blue-500/20', '!border-blue-500', 'scale-[1.02]', 'transition-all');
+      
+      // 画面外にはみ出ている場合は、自動スクロールして見える位置に合わせる
+      item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    } else {
+      // 選択外のスタイルを解除
+      item.classList.remove('!bg-blue-500/20', '!border-blue-500', 'scale-[1.02]');
+    }
+  });
+}
 </script>
