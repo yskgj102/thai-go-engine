@@ -598,68 +598,106 @@ applyLevelFilter: function(level) {
     observer.observe(marker);
   }
 };
-
 // ==========================================
-// 🌟 リストのキーボードナビゲーション（上下矢印 ＆ Enter）
+// 🌟 全キーボードショートカット統合版
 // ==========================================
 let currentListIndex = -1;
 
 document.addEventListener('keydown', (event) => {
-  // すでに「リスト以外の場所（メモ欄など）」で入力中の場合は無視
-  if (event.target.tagName === 'TEXTAREA' || 
-     (event.target.tagName === 'INPUT' && event.target.id !== 'list-search' && event.target.id !== 'quick-input')) {
-    return;
+  // 現在文字を入力中かどうかを判定
+  const isInputFocused = (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA');
+  
+  const vocabPanel = document.getElementById('vocab-panel');
+  const isPanelOpen = vocabPanel && !vocabPanel.classList.contains('hidden');
+
+  // ------------------------------------------
+  // A. リストが開いている時の上下キー（★入力中でも有効！）
+  // ------------------------------------------
+  if (isPanelOpen) {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter') {
+      const listContainer = document.getElementById('vocab-list-container');
+      if (!listContainer) return;
+
+      const items = Array.from(listContainer.children).filter(el => 
+        !el.hidden && el.style.display !== 'none' && el.tagName === 'DIV' && el.hasAttribute('onclick')
+      );
+
+      if (items.length > 0) {
+        if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          currentListIndex = (currentListIndex + 1) % items.length;
+          updateListFocus(items);
+          return;
+        }
+        if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          currentListIndex = currentListIndex <= 0 ? items.length - 1 : currentListIndex - 1;
+          updateListFocus(items);
+          return;
+        }
+        if (event.key === 'Enter' && currentListIndex >= 0) {
+          event.preventDefault();
+          items[currentListIndex].click();
+          return;
+        }
+      }
+    }
   }
 
-  // --- 1. スラッシュ(/)キーで検索窓にフォーカス ---
+  // ------------------------------------------
+  // B. 以下のショートカットは、文字入力中なら無効化する
+  // ------------------------------------------
+  if (isInputFocused) return;
+
+  // --- 1. スラッシュ(/)キーで検索窓へ ---
   if (event.key === '/') {
-    event.preventDefault(); // 「/」が入力されるのを防ぐ
+    event.preventDefault();
     const searchInput = document.getElementById('quick-input'); 
     if (searchInput) searchInput.focus();
     return;
   }
 
-  // --- 2. 上下キーでのリスト移動処理 ---
-  const listContainer = document.getElementById('vocab-list-container');
-  // リストが開いていない場合は何もしない
-  if (!listContainer || listContainer.offsetParent === null) return;
-
-  // 実際に表示されている単語カードだけを抽出
-  const items = Array.from(listContainer.children).filter(el => 
-    !el.hidden && 
-    el.style.display !== 'none' && 
-    el.id !== 'list-end-marker' && // ローディング表記は除外
-    el.tagName === 'DIV' &&        // DIV要素（カード本体）のみ
-    el.hasAttribute('onclick')     // クリック可能な要素のみ
-  );
-
-  if (items.length === 0) return;
-
-  // 👇 下矢印キー
-  if (event.key === 'ArrowDown') {
-    event.preventDefault();
-    currentListIndex = (currentListIndex + 1) % items.length;
-    updateListFocus(items);
-  }
-  // 👆 上矢印キー
-  else if (event.key === 'ArrowUp') {
-    event.preventDefault();
-    currentListIndex = currentListIndex <= 0 ? items.length - 1 : currentListIndex - 1;
-    updateListFocus(items);
-  }
-  // ⏎ Enterキー
-  else if (event.key === 'Enter') {
-    if (currentListIndex >= 0 && currentListIndex < items.length) {
+  // --- 2. メイン画面のスクロール（リストが閉じていて、入力中でない時） ---
+  if (!isPanelOpen) {
+    if (event.key === 'ArrowDown') {
       event.preventDefault();
-      items[currentListIndex].click(); // 選択中の項目を開く
+      window.scrollBy({ top: window.innerHeight / 3, behavior: 'smooth' }); // 画面の1/3ずつスクロール
+      return;
     }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      window.scrollBy({ top: -(window.innerHeight / 3), behavior: 'smooth' });
+      return;
+    }
+  }
+
+  // --- 3. Spaceキー：カードをめくる / 音声を再生 ---
+  if (event.code === 'Space') {
+    event.preventDefault();
+    const cardContainer = document.getElementById('card-container');
+    // カードが出ていない時や、リストが開いている時は無効
+    if (!cardContainer || cardContainer.classList.contains('hidden') || isPanelOpen) return;
+
+    if (!AppStore.state.revealed) {
+      StudyEngine.revealAll(); // めくる
+    } else {
+      StudyEngine.speak(false); // 読み上げ
+    }
+    return;
+  }
+
+  // --- 4. 数字キー（1, 2, 3）：回答して次へ ---
+  if (AppStore.state.revealed && !isPanelOpen) {
+    if (event.key === '1') { event.preventDefault(); StudyEngine.answer(1); return; }
+    if (event.key === '2') { event.preventDefault(); StudyEngine.answer(2); return; }
+    if (event.key === '3') { event.preventDefault(); StudyEngine.answer(3); return; }
   }
 });
 
-// ⌨️ 文字を入力してリストが絞り込まれたら、選択状態を一番上にリセット
+// ⌨️ 文字が入力されたら選択状態を一番上にリセット
 document.addEventListener('input', (event) => {
   if (event.target.id === 'list-search' || event.target.id === 'quick-input') {
-    currentListIndex = -1; // リセット
+    currentListIndex = -1;
     const listContainer = document.getElementById('vocab-list-container');
     if (listContainer) {
       Array.from(listContainer.children).forEach(item => {
@@ -669,17 +707,14 @@ document.addEventListener('input', (event) => {
   }
 });
 
-// 🎨 見た目の更新と自動スクロール
+// 🎨 見た目の更新と自動スクロール（★追従性を改善！）
 function updateListFocus(items) {
   items.forEach((item, index) => {
     if (index === currentListIndex) {
-      // 選択中のスタイル（Tailwindの強制上書きクラスを追加）
       item.classList.add('!bg-blue-500/20', '!border-blue-500', 'scale-[1.02]', 'transition-all');
-      
-      // 画面外にはみ出ている場合は、自動スクロールして見える位置に合わせる
-      item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      // ★ block: 'center' に変更したことで、選択した項目が画面の中央に来るように気持ちよくスクロールします
+      item.scrollIntoView({ block: 'center', behavior: 'smooth' });
     } else {
-      // 選択外のスタイルを解除
       item.classList.remove('!bg-blue-500/20', '!border-blue-500', 'scale-[1.02]');
     }
   });

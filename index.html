@@ -680,24 +680,6 @@ initSheetSwipe('chat-sheet-container', '.flex-shrink-0', () => {
   document.getElementById('chat-overlay').classList.add('hidden');
   document.body.style.overflow = '';
 });
-document.addEventListener('keydown', (event) => {
-  // すでに検索窓やメモ欄にフォーカスしている時は、普通に文字入力させるので無視
-  if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
-    return;
-  }
-
-  // 「/」キーが押されたら
-  if (event.key === '/') {
-    event.preventDefault(); // 「/」という文字自体が検索窓に入力されてしまうのを防ぐ
-
-    // ★修正：HTML側の正しいID 'quick-input' に合わせる
-    const searchInput = document.getElementById('quick-input'); 
-    
-    if (searchInput) {
-      searchInput.focus(); // これを呼ぶだけで自動的にリストも展開されます
-    }
-  }
-});
 
     };
     
