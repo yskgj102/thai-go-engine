@@ -210,18 +210,19 @@ function searchVocabularyForLine(keyword) {
 }
 
 /**
- * スクロール不要！ 1件目フル表示 ＋ クイックリプライ搭載のテキスト辞書ジェネレーター
+ * スクロール不要！ 1件目ゆったり表示 ＋ 日本語付きクイックリプライ版
  */
 function buildTextDictionaryMessage(results, keyword) {
   if (!results || results.length === 0) {
     return {
       type: "text",
-      text: `「${keyword}」は単語帳に見つかりませんでした😢\n\n💡AIに翻訳や解説を頼みますか？\n以下のボタンをタップするか、コピペして送信してみてください。\n\n訳 ${keyword}\n\n問 ${keyword}について教えて`
+      text: `「${keyword}」は見つかりませんでした😢\n\n💡AIに翻訳や解説を頼みますか？\n以下のボタンをタップして送信してみてください。\n\n訳 ${keyword}\n\n問 ${keyword}について教えて`
     };
   }
 
-  // 🌟 1. 【本命の1件目】をフルボリュームで生成
   const topItem = results[0];
+  
+  // 🌟 1. 1件目の表示を「改行・区切り線あり」の読みやすいレイアウトに戻す
   let mainBlock = `🟩 【 ${topItem.word_th || "不明"} 】\n`;
   mainBlock += `🗣️ ${topItem.phonetic || "---"}\n`;
   mainBlock += `🇯🇵 ${topItem.meaning_ja || "意味未登録"}\n`;
@@ -240,37 +241,37 @@ function buildTextDictionaryMessage(results, keyword) {
     mainBlock += `📝 解説:\n${topItem.explanation}\n`;
   }
 
-  // 🌟 2. 【2件目以降の候補】を簡易リスト化 ＆ クイックリプライボタン生成
+  // 🌟 2. 他の候補＆クイックリプライ（日本語対応版をキープ）
   let othersBlock = "";
   let quickReplyItems = [];
 
   if (results.length > 1) {
     othersBlock += `\n━━━━━━━━━━━━\n🔍 他の候補:\n`;
-    
     for (let i = 1; i < results.length; i++) {
       const item = results[i];
-      // テキスト下部の簡易リスト
       othersBlock += `・${item.word_th} (${item.meaning_ja})\n`;
       
-      // クイックリプライ（画面下のタップ可能ボタン）
+      // ボタンの文字テキスト（タイ語＋日本語）を作成
+      const btnLabel = `${item.word_th} (${item.meaning_ja})`;
+      // LINEの仕様(ラベルは最大20文字)に引っかからないよう安全にカット
+      const safeLabel = btnLabel.length > 20 ? btnLabel.substring(0, 18) + ".." : btnLabel;
+      
       quickReplyItems.push({
         type: "action",
         action: {
           type: "message",
-          label: item.word_th.substring(0, 20), // ボタンの文字数制限対応
-          text: item.word_th // タップ時に発言させるテキスト（再検索される）
+          label: safeLabel,
+          text: item.word_th // タップ時はタイ語のみを送信して再検索させる
         }
       });
     }
   }
 
-  // テキストメッセージオブジェクトの構築
   const replyObj = {
     type: "text",
     text: (mainBlock + othersBlock).trimEnd()
   };
 
-  // 🌟 3. 候補が複数あればクイックリプライを付与
   if (quickReplyItems.length > 0) {
     replyObj.quickReply = {
       items: quickReplyItems
