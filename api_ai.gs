@@ -564,3 +564,29 @@ function askGrammarQuestion(userMessage) {
   // 既存の共通エンジン「callGeminiApi」を呼び出す
   return callGeminiApi(finalPrompt);
 }
+
+/**
+ * 初期ロード用の統合API（ペイロード結合）
+ * 3つの重い処理をサーバー側で一気に済ませて1回で返す
+ */
+function getInitialAppData() {
+  try {
+    // 既存の関数を内部で呼び出してデータをかき集める
+    const masterData = getThaiMasterFull();
+    const todayScore = getTodayScore();
+    const spacedData = getSpacedRepetitionData();
+
+    // 1つのオブジェクトにパッキングして返す
+    return {
+      status: "success",
+      masterData: masterData,
+      todayScore: todayScore,
+      spacedRepetitionData: spacedData
+    };
+  } catch (e) {
+    console.error("Init Error: " + e.message);
+    return { status: "error", message: e.message };
+  }
+}
+
+

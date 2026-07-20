@@ -8,55 +8,49 @@ const CONFIG = {
   POWER: { EASY: 72.0, NORMAL: 24.0, HARD: 12.0 },
   USER_ID: "ryohei_y"
 };
-
 /**
- * 学習データの取得（復習と新規のハイブリッド）
- * フロントエンド（Bridge.html）から呼ばれるメイン関数
+ * 【新仕様】学習データの取得（爆速版）
+ * ログシートは一切見ず、マスタ(m_vocabulary)の列だけでキューを生成する
  */
 function getSpacedRepetitionData() {
   const vocabs = getRawVocabulary() || [];
-  const logs = getRawLogs() || [];
-  
   if (vocabs.length === 0) return [];
 
   const now = new Date().getTime();
-  const stats = analyzeLogs(logs);
-
   let unlearned = [];
   let reviews = [];
 
   vocabs.forEach(function(obj) {
-    const s = stats[obj.id];
-    
-    if (!s) {
+    // 🌟 マスタの値（last_learned_date / last_score）を直接見る
+    const lastLearned = obj.last_learned_date ? new Date(obj.last_learned_date).getTime() : null;
+    const lastScore = obj.last_score !== "" ? Number(obj.last_score) : null;
+
+    if (!lastLearned) {
       // 1. 新規単語の初期化
       obj.last_date = "New";
       obj.interval = 0;
-      obj.priority_score = 2.0; // 新規は最高スコアで「赤」にする
+      obj.priority_score = 2.0; // 新規は最高スコア
       unlearned.push(obj);
     } else {
       // 2. 既習単語のスコア計算
-      const diffHours = (now - s.lastDate) / 3600000;
+      const diffHours = (now - lastLearned) / 3600000;
       obj.interval = Math.floor(diffHours / 24);
-      
+
       // 前回の成績に応じて重みを変える
       let power = CONFIG.POWER.HARD;
-      if (s.lastScore === 3) power = CONFIG.POWER.EASY;
-      else if (s.lastScore === 2) power = CONFIG.POWER.NORMAL;
-      
+      if (lastScore === 3) power = CONFIG.POWER.EASY;
+      else if (lastScore === 2) power = CONFIG.POWER.NORMAL;
+
       // 忘却曲線に基づいたスコアリング
       obj.priority_score = Math.sqrt(diffHours / power);
-      obj.last_date = Utilities.formatDate(new Date(s.lastDate), "JST", "MM/dd HH:mm");
+      obj.last_date = Utilities.formatDate(new Date(lastLearned), "JST", "MM/dd HH:mm");
       reviews.push(obj);
     }
   });
 
-  // スコア順に並び替え
   reviews.sort(function(a, b) { return b.priority_score - a.priority_score; });
-  // 新規はランダムに混ぜる
   unlearned.sort(function() { return Math.random() - 0.5; });
 
-  // 復習と新規をバランスよく混ぜてキューを作成
   return combineQueues(reviews, unlearned);
 }
 
@@ -100,15 +94,15 @@ function combineQueues(reviews, unlearned) {
   
   return result.concat(remainingReviews).concat(remainingUnlearned);
 }
-
 /**
- * 学習ログの保存（Bridge.htmlから呼ばれる）
+ * 【新仕様】学習ログの保存（同時更新版）
+ * ログを記録しつつ、マスタの最新状態も即座にアップデートする
  */
 function saveLearningLog(id, score) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName('t_learning_logs');
   
-  // シートがなければ作成
+  // 1. ログシートへの追記 (ヒートマップ等の分析用)
+  let sheet = ss.getSheetByName('t_learning_logs');
   if (!sheet) {
     sheet = ss.insertSheet('t_learning_logs');
     sheet.appendRow(['log_id', 'user_id', 'vocab_id', 'score', 'answer_time_ms', 'device_info', 'created_at']);
@@ -126,10 +120,29 @@ function saveLearningLog(id, score) {
     "web-app", 
     createdAt
   ]);
-  
+
+  // 🌟 2. 【ここがキモ】マスタ (m_vocabulary) 側の最新状態をピンポイントで更新
+  const vocabSheet = ss.getSheetByName('m_vocabulary');
+  const data = vocabSheet.getDataRange().getValues();
+  const headers = data[0];
+
+  const idIdx = headers.indexOf('id');
+  const lastScoreIdx = headers.indexOf('last_score');
+  const lastDateIdx = headers.indexOf('last_learned_date');
+
+  if (idIdx !== -1 && lastScoreIdx !== -1 && lastDateIdx !== -1) {
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][idIdx] === String(id)) {
+        // スプレッドシートのRangeは1行目スタートなので i + 1
+        vocabSheet.getRange(i + 1, lastScoreIdx + 1).setValue(Number(score));
+        vocabSheet.getRange(i + 1, lastDateIdx + 1).setValue(createdAt);
+        break;
+      }
+    }
+  }
+
   return { status: "success" };
 }
-
 /**
  * 今日の累計正解数を取得
  */

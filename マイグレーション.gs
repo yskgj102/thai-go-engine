@@ -579,3 +579,64 @@ function updateCustomSplitBulk() {
   
   console.log(`完了: ${updateCount}件の単語をアップデートしました。`);
 }
+
+/**
+ * 【1回限りの移行用スクリプト】
+ * 全ログを解析して、m_vocabularyの新しい列に最新状態を書き込む
+ */
+function migrateLogsToMaster() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const vocabSheet = ss.getSheetByName('m_vocabulary');
+  const logSheet = ss.getSheetByName('t_learning_logs');
+
+  if (!logSheet) {
+    console.log("ログシートがないため移行をスキップします");
+    return;
+  }
+
+  const logData = logSheet.getDataRange().getValues();
+  const vocabData = vocabSheet.getDataRange().getValues();
+
+  const logHeaders = logData[0];
+  const vocabHeaders = vocabData[0];
+
+  const logVocabIdIdx = logHeaders.indexOf('vocab_id');
+  const logScoreIdx = logHeaders.indexOf('score');
+  const logCreatedIdx = logHeaders.indexOf('created_at');
+
+  const vocabIdIdx = vocabHeaders.indexOf('id');
+  const vocabScoreIdx = vocabHeaders.indexOf('last_score');
+  const vocabDateIdx = vocabHeaders.indexOf('last_learned_date');
+
+  if (vocabScoreIdx === -1 || vocabDateIdx === -1) {
+    console.error("❌ m_vocabularyに last_score と last_learned_date 列を作ってから実行してください");
+    return;
+  }
+
+  // 1. 最新ログの集計
+  const stats = {};
+  for (let i = 1; i < logData.length; i++) {
+    const vId = String(logData[i][logVocabIdIdx]);
+    const time = new Date(logData[i][logCreatedIdx]).getTime();
+    const score = Number(logData[i][logScoreIdx]);
+
+    if (!stats[vId] || time > stats[vId].time) {
+      stats[vId] = { time: time, dateObj: logData[i][logCreatedIdx], score: score };
+    }
+  }
+
+  // 2. マスタデータへ反映
+  let updateCount = 0;
+  for (let i = 1; i < vocabData.length; i++) {
+    const id = String(vocabData[i][vocabIdIdx]);
+    if (stats[id]) {
+      vocabData[i][vocabScoreIdx] = stats[id].score;
+      vocabData[i][vocabDateIdx] = stats[id].dateObj;
+      updateCount++;
+    }
+  }
+
+  // 3. スプレッドシートに一括書き戻し
+  vocabSheet.getRange(1, 1, vocabData.length, vocabData[0].length).setValues(vocabData);
+  console.log(`✅ マイグレーション完了！ ${updateCount} 件の学習ステータスをマスタに移植しました。`);
+}
