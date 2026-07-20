@@ -5,6 +5,8 @@
   <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/frappe-charts@1.2.4/dist/frappe-charts.min.iife.js"></script>
+  <!-- 🌟 LIFF SDKの読み込み -->
+  <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <?!= include('css_main'); ?>
 
   <meta name="theme-color" content="#000000">
@@ -464,6 +466,14 @@
       ViewController.initTheme(); // テーマを先に適用（画面のチラつき防止）
       // 新 Bridge で初期ロード開始
       Bridge.initialize();
+           // 🌟 LIFFの初期化（※ここに取得したLIFF IDを入力してください）
+     const myLiffId = "2010766066-cUeXqcdG"; 
+     if (typeof liff !== 'undefined') {
+       liff.init({ liffId: myLiffId }).then(() => {
+         console.log("✅ LIFF Init Success");
+         if (liff.isInClient()) console.log("📱 LINEアプリ内で起動中");
+       }).catch(err => console.error("🚨 LIFF Init Error", err));
+     }
 
       // クイック追加などのイベントは新 Bridge へ統合
       const quickInput = document.getElementById('quick-input');
