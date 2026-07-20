@@ -46,10 +46,11 @@ function doPost(e) {
             text: aiReply || "⚠️ AI教師の回答生成に失敗しました。"
           };
 
-        // 【分岐3】それ以外 ➔ 従来の単語帳検索モード (Flex Message)
+// 【分岐3】それ以外 ➔ コピー可能なテキスト辞書モード
         } else {
           const searchResults = searchVocabularyForLine(userMessage);
-          replyMessageObj = buildFlexMessage(searchResults, userMessage);
+          // Flex Messageではなく、テキスト生成関数を呼び出す
+          replyMessageObj = buildTextDictionaryMessage(searchResults, userMessage);
         }
 
         // Reply APIでLINEへ返信
@@ -201,115 +202,44 @@ function searchVocabularyForLine(keyword) {
   const hits = scoredData.filter(v => v.matchScore > 0).sort((a, b) => b.matchScore - a.matchScore);
   return hits.slice(0, 10);
 }
-
 /**
- * Flex Message生成（maxLines撤廃＆最後まで表示版）
+ * Flex Messageの代わりに使用する、コピー可能なテキスト辞書ジェネレーター
  */
-function buildFlexMessage(results, keyword) {
+function buildTextDictionaryMessage(results, keyword) {
   if (!results || results.length === 0) {
     return {
       type: "text",
-      text: `「${keyword}」は見つかりませんでした😢`
+      text: `「${keyword}」は単語帳に見つかりませんでした😢\n\n💡AIに翻訳や解説を頼みますか？\n以下のボタンをタップするか、コピペして送信してみてください。\n\n訳 ${keyword}\n\n問 ${keyword}について教えて`
     };
   }
 
-  const bubbles = results.map(item => {
-    return {
-      type: "bubble",
-      size: "kilo",
-      body: {
-        type: "box",
-        layout: "vertical",
-        spacing: "md",
-        contents: [
-          {
-            type: "box",
-            layout: "vertical",
-            contents: [
-              {
-                type: "text",
-                text: item.word_th || "不明",
-                weight: "bold",
-                size: "xl",
-                color: "#06C755",
-                wrap: true
-              },
-              {
-                type: "text",
-                text: item.phonetic || "---",
-                size: "sm",
-                color: "#888888",
-                wrap: true
-              }
-            ]
-          },
-          {
-            type: "text",
-            text: item.meaning_ja || "意味が登録されていません",
-            weight: "bold",
-            size: "lg",
-            color: "#111111",
-            wrap: true,
-            margin: "md"
-          },
-          {
-            type: "separator",
-            margin: "md"
-          },
-          {
-            type: "box",
-            layout: "vertical",
-            margin: "md",
-            spacing: "sm",
-            contents: [
-              {
-                type: "text",
-                text: item.example_th || "例文がありません",
-                wrap: true,
-                size: "sm",
-                color: "#333333"
-              },
-              {
-                type: "text",
-                text: item.example_ja || "",
-                wrap: true,
-                size: "xs",
-                color: "#666666"
-              }
-            ]
-          },
-          {
-            type: "separator",
-            margin: "md"
-          },
-          {
-            type: "text",
-            text: item.explanation || "解説がありません",
-            wrap: true, // 折り返しを有効化
-            size: "xs",
-            color: "#888888",
-            margin: "md"
-            // ★ maxLines: 6 を削除したため、途切れることなく最後まで表示されます！
-          }
-        ]
-      }
-    };
+  // 検索結果の配列を、1つずつ見やすいテキストブロックに変換
+  const textBlocks = results.map((item, index) => {
+    let block = `🟩 【 ${item.word_th || "不明"} 】\n`;
+    block += `🗣️ ${item.phonetic || "---"}\n`;
+    block += `🇯🇵 ${item.meaning_ja || "意味未登録"}\n`;
+    
+    // 例文があれば追加
+    if (item.example_th || item.example_ja) {
+      block += `┈┈┈┈┈┈┈┈┈┈┈┈\n`;
+      if (item.example_th) block += `🇹🇭 ${item.example_th}\n`;
+      if (item.example_ja) block += `💬 ${item.example_ja}\n`;
+    }
+    
+    // 解説があれば追加
+    if (item.explanation) {
+      block += `┈┈┈┈┈┈┈┈┈┈┈┈\n`;
+      block += `📝 解説:\n${item.explanation}\n`;
+    }
+    
+    return block.trim();
   });
 
-  if (bubbles.length === 1) {
-    return {
-      type: "flex",
-      altText: `【検索結果】${results[0].word_th}`,
-      contents: bubbles[0]
-    };
-  } else {
-    return {
-      type: "flex",
-      altText: `「${keyword}」の検索結果（${bubbles.length}件）`,
-      contents: {
-        type: "carousel",
-        contents: bubbles
-      }
-    };
-  }
+  // 複数ヒットした場合は、ブロック同士を明確な区切り線で繋ぐ
+  const finalText = textBlocks.join("\n\n━━━━━━━━━━━━\n\n");
+
+  return {
+    type: "text",
+    text: finalText
+  };
 }
