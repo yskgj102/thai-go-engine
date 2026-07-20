@@ -6,65 +6,66 @@
  */
 const Bridge = {
   
-/**
-   * アプリ起動時の初期データロード（統合API通信版）
-   * 1回の通信でマスターデータ、スコア、学習キューのすべてを受け取る
+  /**
+   * アプリ起動時の初期データロード
+   * 今日のスコアと全学習データを非同期で取得し、初期描画を開始する。
    */
   initialize: function() {
     console.log("[Bridge] Requesting initial data...");
     
-    // 🌟 1回の通信で全部取ってくる
-    google.script.run
-      .withSuccessHandler(res => {
-        if (!res || res.status !== "success") {
-          console.error("[Bridge] Init Data Error");
-          return;
-        }
 
-        // 1. タイ語マスタの展開
-        initializeThaiMaster(res.masterData); 
-        console.log("[Bridge] Thai Master Data Loaded.");
+    // --- 追加：タイ語解析用マスタの取得 ---
+    google.script.run.withSuccessHandler(masterRes => {
+      // 前の工程で作った「展開関数」をここで実行
+      initializeThaiMaster(masterRes); 
+      console.log("[Bridge] Thai Master Data Loaded.");
+    }).getThaiMasterFull();
+    
+    // 1. 本日の学習済み件数（Activity）を取得
+    google.script.run.withSuccessHandler(count => {
+      AppStore.update('todayScore', count);
+      ViewController.updateScoreUI();
+    }).getTodayScore();
 
-        // 2. 本日のスコア反映
-        AppStore.update('todayScore', res.todayScore);
-        ViewController.updateScoreUI();
+    // 2. 学習メインデータ（忘却曲線アルゴリズム適用済みリスト）を取得
+    google.script.run.withSuccessHandler(res => {
+      if (!res) return;
 
-        // 3. 学習メインデータの反映
-        const allData = res.spacedRepetitionData;
-        AppStore.update('allVocab', allData);
-        this._refreshQueue(allData);
+      // 新基盤 (AppStore) に全2万件のマスターデータをセット
+      AppStore.update('allVocab', res);
 
-        // UIと画面の初回描画
-        StudyEngine.render();
-        ViewController.updateTotalCount(allData.length);
-        if (typeof VocabListUI !== 'undefined') {
-          VocabListUI.update();
-          VocabListUI.renderCategoryBar();
-        }
+      // 初期出題キュー（queue）を構築
+      this._refreshQueue(res);
 
-        // --- スプラッシュ画面を消す演出 ---
-        document.getElementById('loader')?.classList.add('hidden');
-        const container = document.getElementById('card-container');
-        if (container) {
-          container.classList.remove('hidden');
-          container.style.opacity = '1';
-        }
+      // 学習画面の初回描画
+      StudyEngine.render();
 
-        const splash = document.getElementById('splash-screen');
-        if (splash) {
-          setTimeout(() => {
-            splash.classList.add('splash-fade-out');
-            setTimeout(() => splash.remove(), 800);
-            console.log("[Bridge] Splash cleared. Application Ready.");
-          }, 800); 
-        }
-        
-        console.log("[Bridge] Sync Complete.");
-      })
-      .withFailureHandler(err => {
-        console.error("[Bridge] Network Error:", err);
-      })
-      .getInitialAppData(); // 🌟 先ほど作った統合関数を呼び出す
+      // UI部品（総件数表示、辞書リスト）を最新状態に更新
+      ViewController.updateTotalCount(res.length);
+      VocabListUI.update();
+VocabListUI.renderCategoryBar()
+// --- ★ ここからスプラッシュ画面を消す演出 ---
+      
+      // データが届いたので、スピナーを隠す
+      document.getElementById('loader')?.classList.add('hidden');
+      const container = document.getElementById('card-container');
+      if (container) {
+        container.classList.remove('hidden');
+        container.style.opacity = '1';
+      }
+
+      // スプラッシュ画面を「いけてる感じ」にフェードアウトさせる
+      const splash = document.getElementById('splash-screen');
+      if (splash) {
+        // データ読み込み後、一瞬「タメ」を作ると高級感が出ます
+        setTimeout(() => {
+          splash.classList.add('splash-fade-out');
+          setTimeout(() => splash.remove(), 800); // アニメーション終了後にDOM削除
+          console.log("[Bridge] Splash cleared. Application Ready.");
+        }, 800); 
+      }
+      console.log("[Bridge] Sync Complete.");
+    }).getSpacedRepetitionData();
   },
 /**
    * Cloud TTSの音声を取得（キャッシュ対応版）
