@@ -16,6 +16,42 @@ function doPost(e) {
     const json = JSON.parse(e.postData.contents);
 
     json.events.forEach(event => {
+      // 🌟 クイズの解答（Postback）を受け取った時の処理
+  if (event.type === 'postback') {
+    const data = event.postback.data;
+    
+    if (data.startsWith('action=quiz')) {
+      let res = "", word = "", vocabId = "";
+      
+      // 隠しデータから情報を取り出す
+      data.split('&').forEach(part => {
+        if (part.startsWith('res=')) res = part.split('=')[1];
+        if (part.startsWith('word=')) word = decodeURIComponent(part.split('=')[1]);
+        if (part.startsWith('id=')) vocabId = part.split('=')[1];
+      });
+
+      // キャッシュからAI生成の解説を引き出す
+      const explanation = CacheService.getScriptCache().get(`quiz_${word}`) || "解説の有効期限が切れました。単語帳で詳細を確認してください。";
+
+      const isCorrect = (res === "1");
+      
+      // ★ ここが要！解答結果を忘却曲線エンジンに流し込む
+      // 正解ならスコア3(簡単)、不正解ならスコア1(難しい)として学習ログを保存
+      if (vocabId) {
+        const score = isCorrect ? 3 : 1;
+        saveLearningLog(vocabId, score);
+      }
+
+      // 判定結果のメッセージを作成
+      const header = isCorrect ? "⭕️ 大正解！素晴らしいです🎉" : "❌ 残念！惜しい...！";
+      const replyText = `${header}\n\n🟩 【 ${word} 】\n📝 AI解説:\n${explanation}\n\n※この結果は学習記録に反映されました！`;
+
+      // Botから返信
+      sendLineReply(replyToken, { type: 'text', text: replyText });
+      
+      return ContentService.createTextOutput(JSON.stringify({'content': 'postback handled'})).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
       if (event.type === 'message' && event.message.type === 'text') {
         const userMessage = event.message.text.trim();
         const replyToken = event.replyToken;
@@ -322,73 +358,93 @@ function formatMarkdownForLine(text) {
     .trim();
 }
 
-
 /**
- * 毎朝実行する：特化型プッシュ通知クイズ
+ * 忘却曲線 × AI連動型：プッシュ通知クイズ
  */
 function sendDailyQuiz() {
   const LINE_ACCESS_TOKEN = PropertiesService.getScriptProperties().getProperty('LINE_ACCESS_TOKEN');
   const MY_USER_ID = PropertiesService.getScriptProperties().getProperty('MY_USER_ID');
   
-  if (!MY_USER_ID) {
-    console.error("MY_USER_IDが設定されていません");
+  if (!MY_USER_ID || !LINE_ACCESS_TOKEN) return;
+
+  // 1. 忘却曲線エンジンを使って、今一番「復習すべき単語」を取得
+  const reviewQueue = getSpacedRepetitionData();
+  if (!reviewQueue || reviewQueue.length === 0) return;
+
+  // キューの先頭（最も優先度が高い単語）を取得
+  const targetItem = reviewQueue[0];
+  const word_th = targetItem.word_th;
+  const meaning_ja = targetItem.meaning_ja;
+
+  // 2. AIエンジンで、その単語の「弱点」を突くクイズを動的生成
+  const prompt = `あなたはプロのタイ語教師です。タイ語学習中の日本人に向けた2択クイズを作ってください。
+  お題の単語: ${word_th} (意味: ${meaning_ja})
+
+  【条件】
+  日本人が間違えやすいポイント（不規則な発音、黙字、声調、直訳しがちな意味の誤解、似た単語との違いなど）を突く問題にしてください。
+
+  【出力形式】（以下のJSONのみを出力）
+  {
+    "question": "問題文 (例: この単語の正しい発音は？)",
+    "correct": "正解の選択肢 (20文字以内)",
+    "wrong": "不正解の選択肢 (20文字以内)",
+    "explanation": "解説文。引っかけポイントや正しい覚え方を簡潔に。"
+  }`;
+
+  let aiResultText = callGeminiApi(prompt);
+  if (!aiResultText) return;
+
+  let quiz;
+  try {
+    quiz = JSON.parse(aiResultText.replace(/```json/g, "").replace(/```/g, "").trim());
+  } catch(e) {
+    console.error("クイズJSONパース失敗", e);
     return;
   }
 
-  // 💡 ここにイレギュラーな単語群を定義（将来的にスプレッドシートから取得してもOK）
-  const quizData = [
+  // 3. AIの解説文をキャッシュに一時保存（Postbackの300文字制限を回避）
+  CacheService.getScriptCache().put(`quiz_${word_th}`, quiz.explanation, 60 * 60 * 24); // 24時間保持
+
+  // 4. Postbackアクションを使った選択肢の生成
+  const quickReplyItems = [
     {
-      word: "สามารถ",
-      question: "この単語の正しい発音はどれ？",
-      correct: "sa-maat",
-      wrong: "sa-ma-rot",
-      note: "※黙字（ร）のトラップ。sa-ma-rotとは読みません。"
+      type: "action",
+      action: {
+        type: "postback",
+        label: quiz.correct.substring(0, 20),
+        // res=1(正解), word=対象単語, id=学習ログ記録用の単語ID
+        data: `action=quiz&res=1&word=${encodeURIComponent(word_th)}&id=${targetItem.id}`,
+        displayText: quiz.correct
+      }
     },
     {
-      word: "พรหม",
-      question: "この単語（意味: カーペット/梵天）の正しい発音はどれ？",
-      correct: "phrom",
-      wrong: "phro-hom",
-      note: "※ห は発音しない黙字マーカーとして機能します。"
-    },
-    {
-      word: "อยาก",
-      question: "この単語の正しい発音と声調ルールは？",
-      correct: "yaak (低声)",
-      wrong: "yaak (降声)",
-      note: "※「อ」が中子音として機能し、後ろの低子音「ย」のトーンを支配します。"
+      type: "action",
+      action: {
+        type: "postback",
+        label: quiz.wrong.substring(0, 20),
+        data: `action=quiz&res=0&word=${encodeURIComponent(word_th)}&id=${targetItem.id}`,
+        displayText: quiz.wrong
+      }
     }
   ];
-
-  // ランダムに1問選ぶ
-  const quiz = quizData[Math.floor(Math.random() * quizData.length)];
   
-  // 選択肢のボタン（クイックリプライ）を作成
-  // ※どっちをタップしてもLINEの画面に文字として送信されるので、後で正誤判定も作れます
-  const quickReplyItems = [
-    { type: "action", action: { type: "message", label: quiz.correct, text: `正解: ${quiz.correct}` } },
-    { type: "action", action: { type: "message", label: quiz.wrong, text: `回答: ${quiz.wrong}` } }
-  ];
-  
-  // 選択肢をシャッフル（正解がいつも左にこないようにする）
+  // 選択肢をシャッフル（正解が必ず左にならないように）
   quickReplyItems.sort(() => Math.random() - 0.5);
 
   const payload = {
     to: MY_USER_ID,
     messages: [{
       type: "text",
-      text: `🔔 本日のタイ語クイズ\n\n【 ${quiz.word} 】\n\n${quiz.question}`,
+      text: `🧠 今日のAIタイ語クイズ\n\nお題：【 ${word_th} 】\n\n${quiz.question}`,
       quickReply: { items: quickReplyItems }
     }]
   };
 
-  const options = {
+  UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
     method: 'post',
     contentType: 'application/json',
     headers: { 'Authorization': 'Bearer ' + LINE_ACCESS_TOKEN.trim() },
     payload: JSON.stringify(payload),
     muteHttpExceptions: true
-  };
-
-  UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', options);
+  });
 }
