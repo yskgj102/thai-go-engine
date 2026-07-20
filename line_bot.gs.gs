@@ -22,6 +22,15 @@ function doPost(e) {
 
         let replyMessageObj = null;
 
+// 🌟 【隠しコマンド】自分のユーザーIDを取得する
+        if (userMessage === "ID教えて") {
+          replyMessageObj = {
+            type: "text",
+            text: `あなたのユーザーIDは以下です👇\n\n${event.source.userId}\n\nこれをGASのスクリプトプロパティ「MY_USER_ID」に登録してください。`
+          };
+          sendLineReply(replyToken, replyMessageObj);
+          return; // ここで処理を終了
+        }
 // 【分岐1】「訳 」または「翻訳 」で始まる場合 ➔ AI翻訳モード
         if (userMessage.startsWith("訳 ") || userMessage.startsWith("翻訳 ") || userMessage.startsWith("訳\n") || userMessage.startsWith("翻訳\n")) {
           const query = userMessage.replace(/^(訳|翻訳)[\s \n]+/, "");
@@ -311,4 +320,75 @@ function formatMarkdownForLine(text) {
     // 4. 連続する改行を綺麗に整える（最大2行まで）
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+
+/**
+ * 毎朝実行する：特化型プッシュ通知クイズ
+ */
+function sendDailyQuiz() {
+  const LINE_ACCESS_TOKEN = PropertiesService.getScriptProperties().getProperty('LINE_ACCESS_TOKEN');
+  const MY_USER_ID = PropertiesService.getScriptProperties().getProperty('MY_USER_ID');
+  
+  if (!MY_USER_ID) {
+    console.error("MY_USER_IDが設定されていません");
+    return;
+  }
+
+  // 💡 ここにイレギュラーな単語群を定義（将来的にスプレッドシートから取得してもOK）
+  const quizData = [
+    {
+      word: "สามารถ",
+      question: "この単語の正しい発音はどれ？",
+      correct: "sa-maat",
+      wrong: "sa-ma-rot",
+      note: "※黙字（ร）のトラップ。sa-ma-rotとは読みません。"
+    },
+    {
+      word: "พรหม",
+      question: "この単語（意味: カーペット/梵天）の正しい発音はどれ？",
+      correct: "phrom",
+      wrong: "phro-hom",
+      note: "※ห は発音しない黙字マーカーとして機能します。"
+    },
+    {
+      word: "อยาก",
+      question: "この単語の正しい発音と声調ルールは？",
+      correct: "yaak (低声)",
+      wrong: "yaak (降声)",
+      note: "※「อ」が中子音として機能し、後ろの低子音「ย」のトーンを支配します。"
+    }
+  ];
+
+  // ランダムに1問選ぶ
+  const quiz = quizData[Math.floor(Math.random() * quizData.length)];
+  
+  // 選択肢のボタン（クイックリプライ）を作成
+  // ※どっちをタップしてもLINEの画面に文字として送信されるので、後で正誤判定も作れます
+  const quickReplyItems = [
+    { type: "action", action: { type: "message", label: quiz.correct, text: `正解: ${quiz.correct}` } },
+    { type: "action", action: { type: "message", label: quiz.wrong, text: `回答: ${quiz.wrong}` } }
+  ];
+  
+  // 選択肢をシャッフル（正解がいつも左にこないようにする）
+  quickReplyItems.sort(() => Math.random() - 0.5);
+
+  const payload = {
+    to: MY_USER_ID,
+    messages: [{
+      type: "text",
+      text: `🔔 本日のタイ語クイズ\n\n【 ${quiz.word} 】\n\n${quiz.question}`,
+      quickReply: { items: quickReplyItems }
+    }]
+  };
+
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { 'Authorization': 'Bearer ' + LINE_ACCESS_TOKEN.trim() },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', options);
 }
