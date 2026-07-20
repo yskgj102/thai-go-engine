@@ -22,28 +22,26 @@ function doPost(e) {
 
         let replyMessageObj = null;
 
-        // 【分岐1】「訳 」または「翻訳 」で始まる場合 ➔ AI翻訳モード
+// 【分岐1】「訳 」または「翻訳 」で始まる場合 ➔ AI翻訳モード
         if (userMessage.startsWith("訳 ") || userMessage.startsWith("翻訳 ") || userMessage.startsWith("訳\n") || userMessage.startsWith("翻訳\n")) {
           const query = userMessage.replace(/^(訳|翻訳)[\s \n]+/, "");
-          
-          // api_ai.gs の askTranslationTeacher を直接実行
           const aiReply = askTranslationTeacher(query);
           
           replyMessageObj = {
             type: "text",
-            text: aiReply || "⚠️ AI翻訳の生成に失敗しました。少し時間をおいてお試しください。"
+            // 🌟 修正: AIの返答を formatMarkdownForLine に通す
+            text: formatMarkdownForLine(aiReply) || "⚠️ AI翻訳の生成に失敗しました。少し時間をおいてお試しください。"
           };
 
         // 【分岐2】「問 」または「質問 」で始まる場合 ➔ AI教師質問モード
         } else if (userMessage.startsWith("問 ") || userMessage.startsWith("質問 ") || userMessage.startsWith("問\n") || userMessage.startsWith("質問\n")) {
           const query = userMessage.replace(/^(問|質問)[\s \n]+/, "");
-          
-          // api_ai.gs の askGrammarQuestion を直接実行
           const aiReply = askGrammarQuestion(query);
           
           replyMessageObj = {
             type: "text",
-            text: aiReply || "⚠️ AI教師の回答生成に失敗しました。"
+            // 🌟 修正: AIの返答を formatMarkdownForLine に通す
+            text: formatMarkdownForLine(aiReply) || "⚠️ AI教師の回答生成に失敗しました。"
           };
 
 // 【分岐3】それ以外 ➔ コピー可能なテキスト辞書モード
@@ -250,4 +248,36 @@ function buildTextDictionaryMessage(results, keyword) {
     type: "text",
     text: finalText
   };
+}
+
+/**
+ * AIからのMarkdownテキストをLINEで見やすいテキストレイアウトに変換する
+ */
+function formatMarkdownForLine(text) {
+  if (!text) return "";
+
+  return text
+    // 1. 見出しの変換
+    .replace(/^###\s+(.+)$/gm, "\n🟩 【 $1 】") // ### 見出し
+    .replace(/^##\s+(.+)$/gm, "\n━━━ $1 ━━━") // ## 見出し
+    .replace(/^#\s+(.+)$/gm, "👑 $1") // # 見出し
+
+    // 2. 太字の変換（**太字** -> 「太字」）
+    .replace(/\*\*(.*?)\*\*/g, "「$1」")
+    .replace(/\*(.*?)\*/g, "「$1」")
+
+    // 3. Markdownの表（テーブル）をテキストリストに変換
+    // 区切り線（|---|---|）の行を削除
+    .replace(/^\|[-:\s]+\|.*$/gm, "")
+    // テーブルのヘッダー行（| タイ語 | 発音記号 | 日本語 |）を削除
+    .replace(/^\|\s*タイ語\s*\|\s*発音記号\s*\|\s*日本語\s*\|$/gm, "")
+    // データ行（| ไป | pai | 行く |）を絵文字付きのカード風テキストに変換
+    .replace(/^\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|$/gm, (match, th, ph, ja) => {
+       if (!th || !ph || !ja) return "";
+       return `┈┈┈┈┈┈┈┈┈┈┈┈\n🇹🇭 ${th}\n🗣️ ${ph}\n🇯🇵 ${ja}`;
+    })
+
+    // 4. 連続する改行を綺麗に整える（最大2行まで）
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
