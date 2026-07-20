@@ -1,4 +1,94 @@
 /**
+ * ファイル名: line_bot.gs
+ * 役割: LINE Messaging APIとの通信、およびFlex MessageのUI生成
+ */
+
+// LINE Developersで取得したチャネルアクセストークンをスクリプトプロパティに設定してください
+const LINE_ACCESS_TOKEN = PropertiesService.getScriptProperties().getProperty('LINE_ACCESS_TOKEN');
+
+/**
+ * 1. Webhookの処理 (doPost) - AI機能マルチ分岐対応版
+ */
+function doPost(e) {
+  if (!e || !e.postData || !e.postData.contents) return ContentService.createTextOutput("OK");
+
+  try {
+    const json = JSON.parse(e.postData.contents);
+
+    json.events.forEach(event => {
+      if (event.type === 'message' && event.message.type === 'text') {
+        const userMessage = event.message.text.trim();
+        const replyToken = event.replyToken;
+
+        let replyMessageObj = null;
+
+        // 【分岐1】「訳 」または「翻訳 」で始まる場合 ➔ AI翻訳モード
+        if (userMessage.startsWith("訳 ") || userMessage.startsWith("翻訳 ") || userMessage.startsWith("訳\n") || userMessage.startsWith("翻訳\n")) {
+          const query = userMessage.replace(/^(訳|翻訳)[\s \n]+/, "");
+          
+          // api_ai.gs の askTranslationTeacher を直接実行
+          const aiReply = askTranslationTeacher(query);
+          
+          replyMessageObj = {
+            type: "text",
+            text: aiReply || "⚠️ AI翻訳の生成に失敗しました。少し時間をおいてお試しください。"
+          };
+
+        // 【分岐2】「問 」または「質問 」で始まる場合 ➔ AI教師質問モード
+        } else if (userMessage.startsWith("問 ") || userMessage.startsWith("質問 ") || userMessage.startsWith("問\n") || userMessage.startsWith("質問\n")) {
+          const query = userMessage.replace(/^(問|質問)[\s \n]+/, "");
+          
+          // api_ai.gs の askGrammarQuestion を直接実行
+          const aiReply = askGrammarQuestion(query);
+          
+          replyMessageObj = {
+            type: "text",
+            text: aiReply || "⚠️ AI教師の回答生成に失敗しました。"
+          };
+
+        // 【分岐3】それ以外 ➔ 従来の単語帳検索モード (Flex Message)
+        } else {
+          const searchResults = searchVocabularyForLine(userMessage);
+          replyMessageObj = buildFlexMessage(searchResults, userMessage);
+        }
+
+        // Reply APIでLINEへ返信
+        if (replyMessageObj) {
+          sendLineReply(replyToken, replyMessageObj);
+        }
+      }
+    });
+  } catch (error) {
+    console.error("LINE Webhook Error:", error);
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({ content: "ok" })).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * LINE Reply APIへPOSTリクエストを送信する共通関数
+ */
+function sendLineReply(replyToken, messageObj) {
+  const url = 'https://api.line.me/v2/bot/message/reply';
+  
+  const payload = {
+    replyToken: replyToken,
+    messages: [messageObj]
+  };
+
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {
+      'Authorization': 'Bearer ' + LINE_ACCESS_TOKEN
+    },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  UrlFetchApp.fetch(url, options);
+}
+/**
  * 山岡流・発音記号正規化エンジン (GAS移植版)
  */
 function normalizePhonetic_GAS(str) {
