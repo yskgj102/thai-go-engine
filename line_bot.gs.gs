@@ -208,8 +208,9 @@ function searchVocabularyForLine(keyword) {
   const hits = scoredData.filter(v => v.matchScore > 0).sort((a, b) => b.matchScore - a.matchScore);
   return hits.slice(0, 5);
 }
+
 /**
- * Flex Messageの代わりに使用する、コピー可能なテキスト辞書ジェネレーター
+ * スクロール不要！ 1件目フル表示 ＋ クイックリプライ搭載のテキスト辞書ジェネレーター
  */
 function buildTextDictionaryMessage(results, keyword) {
   if (!results || results.length === 0) {
@@ -219,36 +220,64 @@ function buildTextDictionaryMessage(results, keyword) {
     };
   }
 
-  // 検索結果の配列を、1つずつ見やすいテキストブロックに変換
-  const textBlocks = results.map((item, index) => {
-    let block = `🟩 【 ${item.word_th || "不明"} 】\n`;
-    block += `🗣️ ${item.phonetic || "---"}\n`;
-    block += `🇯🇵 ${item.meaning_ja || "意味未登録"}\n`;
-    
-    // 🌟 修正: 例文の発音記号（example_phonetic）を復活！
-    if (item.example_th || item.example_ja) {
-      block += `┈┈┈┈┈┈┈┈┈┈┈┈\n`;
-      if (item.example_th) block += `🇹🇭 ${item.example_th}\n`;
-      if (item.example_phonetic && item.example_phonetic !== "---") block += `🗣️ ${item.example_phonetic}\n`;
-      if (item.example_ja) block += `💬 ${item.example_ja}\n`;
-    }
-    
-    // 解説があれば追加
-    if (item.explanation) {
-      block += `┈┈┈┈┈┈┈┈┈┈┈┈\n`;
-      block += `📝 解説:\n${item.explanation}\n`;
-    }
-    
-    return block.trim();
-  });
+  // 🌟 1. 【本命の1件目】をフルボリュームで生成
+  const topItem = results[0];
+  let mainBlock = `🟩 【 ${topItem.word_th || "不明"} 】\n`;
+  mainBlock += `🗣️ ${topItem.phonetic || "---"}\n`;
+  mainBlock += `🇯🇵 ${topItem.meaning_ja || "意味未登録"}\n`;
+  
+  // 例文
+  if (topItem.example_th || topItem.example_ja) {
+    mainBlock += `┈┈┈┈┈┈┈┈┈┈┈┈\n`;
+    if (topItem.example_th) mainBlock += `🇹🇭 ${topItem.example_th}\n`;
+    if (topItem.example_phonetic && topItem.example_phonetic !== "---") mainBlock += `🗣️ ${topItem.example_phonetic}\n`;
+    if (topItem.example_ja) mainBlock += `💬 ${topItem.example_ja}\n`;
+  }
+  
+  // 解説
+  if (topItem.explanation) {
+    mainBlock += `┈┈┈┈┈┈┈┈┈┈┈┈\n`;
+    mainBlock += `📝 解説:\n${topItem.explanation}\n`;
+  }
 
-  // 複数ヒットした場合は、ブロック同士を明確な区切り線で繋ぐ
-  const finalText = textBlocks.join("\n\n━━━━━━━━━━━━\n\n");
+  // 🌟 2. 【2件目以降の候補】を簡易リスト化 ＆ クイックリプライボタン生成
+  let othersBlock = "";
+  let quickReplyItems = [];
 
-  return {
+  if (results.length > 1) {
+    othersBlock += `\n━━━━━━━━━━━━\n🔍 他の候補:\n`;
+    
+    for (let i = 1; i < results.length; i++) {
+      const item = results[i];
+      // テキスト下部の簡易リスト
+      othersBlock += `・${item.word_th} (${item.meaning_ja})\n`;
+      
+      // クイックリプライ（画面下のタップ可能ボタン）
+      quickReplyItems.push({
+        type: "action",
+        action: {
+          type: "message",
+          label: item.word_th.substring(0, 20), // ボタンの文字数制限対応
+          text: item.word_th // タップ時に発言させるテキスト（再検索される）
+        }
+      });
+    }
+  }
+
+  // テキストメッセージオブジェクトの構築
+  const replyObj = {
     type: "text",
-    text: finalText
+    text: (mainBlock + othersBlock).trimEnd()
   };
+
+  // 🌟 3. 候補が複数あればクイックリプライを付与
+  if (quickReplyItems.length > 0) {
+    replyObj.quickReply = {
+      items: quickReplyItems
+    };
+  }
+
+  return replyObj;
 }
 
 /**
