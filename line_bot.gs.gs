@@ -71,9 +71,9 @@ function doPost(e) {
 function sendLineReply(replyToken, messageObj) {
   const url = 'https://api.line.me/v2/bot/message/reply';
   
-  // 🌟 安全装置: LINEの文字数制限(5000文字)を超過しないようにカット
+  // 🌟 修正: 4980文字 + 15文字 = 4995文字 (確実に5000文字以内に収める)
   if (messageObj.type === 'text' && messageObj.text.length > 5000) {
-    messageObj.text = messageObj.text.substring(0, 4995) + "...(文字数上限)";
+    messageObj.text = messageObj.text.substring(0, 4980) + "\n\n...（文字数上限）";
   }
 
   const payload = {
@@ -85,22 +85,17 @@ function sendLineReply(replyToken, messageObj) {
     method: 'post',
     contentType: 'application/json',
     headers: {
-      // 🌟 安全装置: トークン前後の見えない空白文字（ノイズ）を削除
       'Authorization': 'Bearer ' + (LINE_ACCESS_TOKEN ? LINE_ACCESS_TOKEN.trim() : "")
     },
     payload: JSON.stringify(payload),
-    muteHttpExceptions: true // エラーでスクリプトを止めず、レスポンスの中身を取得する
+    muteHttpExceptions: true
   };
 
   const response = UrlFetchApp.fetch(url, options);
-  const responseCode = response.getResponseCode();
-  const responseBody = response.getContentText();
-
-  // 🌟 デバッグ出力: LINE APIからの返答をログに記録
-  if (responseCode !== 200) {
-    console.error(`🚨 LINE API Error: [${responseCode}] ${responseBody}`);
-  } else {
-    console.log(`✅ LINE 送信成功`);
+  
+  // 🌟 万が一エラーが起きた場合は、ログに詳細を刻む
+  if (response.getResponseCode() !== 200) {
+    console.error(`🚨 LINE API Error: [${response.getResponseCode()}] ${response.getContentText()}`);
   }
 }
 /**
@@ -134,10 +129,10 @@ function normalizeJapanese_GAS(str) {
       return String.fromCharCode(s.charCodeAt(0) - 0x60);
     })
     .replace(/ー/g, "")
-    .replace(/[する|した|したこと]$/, "")
+    // 🌟 修正: 正規表現のミスを修正（|で区切る場合は[]ではなく()）
+    .replace(/(する|した|したこと)$/, "")
     .trim();
 }
-
 /**
  * 検索エンジン（スコアリング＆完全一致ボーナス搭載版）
  */
@@ -185,7 +180,6 @@ function searchVocabularyForLine(keyword) {
       const matchPh = normPh.includes(nKw);
       const matchEx = exTh.includes(kw) || exJa.includes(kw);
 
-      // 短い単語の「完全一致」を最優先で拾う山岡流ボーナス
       if (matchTh) {
         score += 500;
         if (th.length === kw.length) score += 5000;
@@ -212,9 +206,9 @@ function searchVocabularyForLine(keyword) {
     return { ...v, matchScore: isMatch ? score : 0 };
   });
 
-  // スコア順にソートし、上位10件を返す
+  // 🌟 修正: スコア順にソートし、テキスト表示に最適な上位「5件」を返す
   const hits = scoredData.filter(v => v.matchScore > 0).sort((a, b) => b.matchScore - a.matchScore);
-  return hits.slice(0, 10);
+  return hits.slice(0, 5);
 }
 /**
  * Flex Messageの代わりに使用する、コピー可能なテキスト辞書ジェネレーター
