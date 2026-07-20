@@ -610,6 +610,20 @@ document.addEventListener('keydown', (event) => {
   const vocabPanel = document.getElementById('vocab-panel');
   const isPanelOpen = vocabPanel && !vocabPanel.classList.contains('hidden');
 
+// ------------------------------------------
+  // ★ 追加：Escapeキーでリストをパタンと閉じる
+  // ------------------------------------------
+  if (event.key === 'Escape' || event.key === 'F2') {
+    if (isPanelOpen) {
+      event.preventDefault();
+      // 検索窓にカーソルが残ったままにならないよう、フォーカスを強制解除
+      if (document.activeElement) document.activeElement.blur(); 
+      // アプリの標準機能を使ってリストを閉じる
+      if (typeof ViewController !== 'undefined') ViewController.toggleVocabPanel(false);
+      return;
+    }
+  }
+
   // ------------------------------------------
   // A. リストが開いている時の上下キー（★入力中でも有効！）
   // ------------------------------------------
@@ -688,9 +702,9 @@ document.addEventListener('keydown', (event) => {
 
   // --- 4. 数字キー（1, 2, 3）：回答して次へ ---
   if (AppStore.state.revealed && !isPanelOpen) {
-    if (event.key === '1') { event.preventDefault(); StudyEngine.answer(1); return; }
+    if (event.key === '3') { event.preventDefault(); StudyEngine.answer(1); return; }
     if (event.key === '2') { event.preventDefault(); StudyEngine.answer(2); return; }
-    if (event.key === '3') { event.preventDefault(); StudyEngine.answer(3); return; }
+    if (event.key === '1') { event.preventDefault(); StudyEngine.answer(3); return; }
   }
 });
 
@@ -707,13 +721,13 @@ document.addEventListener('input', (event) => {
   }
 });
 
-// 🎨 見た目の更新と自動スクロール（★追従性を改善！）
 function updateListFocus(items) {
   items.forEach((item, index) => {
     if (index === currentListIndex) {
       item.classList.add('!bg-blue-500/20', '!border-blue-500', 'scale-[1.02]', 'transition-all');
-      // ★ block: 'center' に変更したことで、選択した項目が画面の中央に来るように気持ちよくスクロールします
-      item.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      
+      // ★ここを修正：ヌルッと動くのをやめ、「画面外にはみ出た時だけ最小限スクロール」する普通のOS標準の挙動に変更
+      item.scrollIntoView({ block: 'nearest' });
     } else {
       item.classList.remove('!bg-blue-500/20', '!border-blue-500', 'scale-[1.02]');
     }
