@@ -65,13 +65,17 @@ function doPost(e) {
 
   return ContentService.createTextOutput(JSON.stringify({ content: "ok" })).setMimeType(ContentService.MimeType.JSON);
 }
-
 /**
- * LINE Reply APIへPOSTリクエストを送信する共通関数
+ * LINE Reply APIへPOSTリクエストを送信する共通関数（デバッグ＆安全強化版）
  */
 function sendLineReply(replyToken, messageObj) {
   const url = 'https://api.line.me/v2/bot/message/reply';
   
+  // 🌟 安全装置: LINEの文字数制限(5000文字)を超過しないようにカット
+  if (messageObj.type === 'text' && messageObj.text.length > 5000) {
+    messageObj.text = messageObj.text.substring(0, 4995) + "...(文字数上限)";
+  }
+
   const payload = {
     replyToken: replyToken,
     messages: [messageObj]
@@ -81,13 +85,23 @@ function sendLineReply(replyToken, messageObj) {
     method: 'post',
     contentType: 'application/json',
     headers: {
-      'Authorization': 'Bearer ' + LINE_ACCESS_TOKEN
+      // 🌟 安全装置: トークン前後の見えない空白文字（ノイズ）を削除
+      'Authorization': 'Bearer ' + (LINE_ACCESS_TOKEN ? LINE_ACCESS_TOKEN.trim() : "")
     },
     payload: JSON.stringify(payload),
-    muteHttpExceptions: true
+    muteHttpExceptions: true // エラーでスクリプトを止めず、レスポンスの中身を取得する
   };
 
-  UrlFetchApp.fetch(url, options);
+  const response = UrlFetchApp.fetch(url, options);
+  const responseCode = response.getResponseCode();
+  const responseBody = response.getContentText();
+
+  // 🌟 デバッグ出力: LINE APIからの返答をログに記録
+  if (responseCode !== 200) {
+    console.error(`🚨 LINE API Error: [${responseCode}] ${responseBody}`);
+  } else {
+    console.log(`✅ LINE 送信成功`);
+  }
 }
 /**
  * 山岡流・発音記号正規化エンジン (GAS移植版)
