@@ -225,10 +225,11 @@ function buildTextDictionaryMessage(results, keyword) {
     block += `🗣️ ${item.phonetic || "---"}\n`;
     block += `🇯🇵 ${item.meaning_ja || "意味未登録"}\n`;
     
-    // 例文があれば追加
+    // 🌟 修正: 例文の発音記号（example_phonetic）を復活！
     if (item.example_th || item.example_ja) {
       block += `┈┈┈┈┈┈┈┈┈┈┈┈\n`;
       if (item.example_th) block += `🇹🇭 ${item.example_th}\n`;
+      if (item.example_phonetic && item.example_phonetic !== "---") block += `🗣️ ${item.example_phonetic}\n`;
       if (item.example_ja) block += `💬 ${item.example_ja}\n`;
     }
     
