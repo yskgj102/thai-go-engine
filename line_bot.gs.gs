@@ -69,32 +69,37 @@ function doPost(e) {
           sendLineReply(replyToken, replyMessageObj);
           return; // ここで処理を終了
         }
-// 【分岐1】「訳 」または「翻訳 」で始まる場合 ➔ AI翻訳モード
-        if (userMessage.startsWith("訳 ") || userMessage.startsWith("翻訳 ") || userMessage.startsWith("訳\n") || userMessage.startsWith("翻訳\n")) {
-          const query = userMessage.replace(/^(訳|翻訳)[\s \n]+/, "");
-          const aiReply = askTranslationTeacher(query);
+// 🌟 【分岐1】AI翻訳モード ("t " や "t\n" のように、直後に空白や改行がある場合のみ発動)
+        if (/^(t|訳|翻訳)[\s \n]+/i.test(userMessage)) {
+          const query = userMessage.replace(/^(t|訳|翻訳)[\s \n]+/i, "").trim();
           
-          replyMessageObj = {
-            type: "text",
-            // 🌟 修正: AIの返答を formatMarkdownForLine に通す
-            text: formatMarkdownForLine(aiReply) || "⚠️ AI翻訳の生成に失敗しました。少し時間をおいてお試しください。"
-          };
+          if (!query) {
+            replyMessageObj = { type: "text", text: "⚠️ 翻訳したい文章を入力してください。\n（例: t 私はタイ語を勉強しています）" };
+          } else {
+            const aiReply = askTranslationTeacher(query);
+            replyMessageObj = {
+              type: "text",
+              text: formatMarkdownForLine(aiReply) || "⚠️ AI翻訳の生成に失敗しました。"
+            };
+          }
 
-        // 【分岐2】「問 」または「質問 」で始まる場合 ➔ AI教師質問モード
-        } else if (userMessage.startsWith("問 ") || userMessage.startsWith("質問 ") || userMessage.startsWith("問\n") || userMessage.startsWith("質問\n")) {
-          const query = userMessage.replace(/^(問|質問)[\s \n]+/, "");
-          const aiReply = askGrammarQuestion(query);
+        // 🌟 【分岐2】AI教師質問モード ("q " や "q\n" のように、直後に空白や改行がある場合のみ発動)
+        } else if (/^(q|問|質問)[\s \n]+/i.test(userMessage)) {
+          const query = userMessage.replace(/^(q|問|質問)[\s \n]+/i, "").trim();
           
-          replyMessageObj = {
-            type: "text",
-            // 🌟 修正: AIの返答を formatMarkdownForLine に通す
-            text: formatMarkdownForLine(aiReply) || "⚠️ AI教師の回答生成に失敗しました。"
-          };
+          if (!query) {
+            replyMessageObj = { type: "text", text: "⚠️ 先生に質問したい内容を入力してください。\n（例: q 文法について教えて）" };
+          } else {
+            const aiReply = askGrammarQuestion(query);
+            replyMessageObj = {
+              type: "text",
+              text: formatMarkdownForLine(aiReply) || "⚠️ AI教師の回答生成に失敗しました。"
+            };
+          }
 
-// 【分岐3】それ以外 ➔ コピー可能なテキスト辞書モード
+        // 🌟 【分岐3】それ以外 ➔ 「t」で始まる単語も含め、すべて通常のテキスト辞書検索へ！
         } else {
           const searchResults = searchVocabularyForLine(userMessage);
-          // Flex Messageではなく、テキスト生成関数を呼び出す
           replyMessageObj = buildTextDictionaryMessage(searchResults, userMessage);
         }
 
