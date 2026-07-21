@@ -521,8 +521,8 @@ const bodyContents = [
 function sendJapaneseQuizToFriend() {
   const LINE_ACCESS_TOKEN = PropertiesService.getScriptProperties().getProperty('LINE_ACCESS_TOKEN');
   // 🌟 指定された友人のLINEユーザーID
-  const FRIEND_USER_ID = "U6aa745d2e458755714ac5d158cad624d";//me
-  // const FRIEND_USER_ID = "U229c57ca5f6954a61d20837fba0a53a3";//อิโยะ
+  // const FRIEND_USER_ID = "U6aa745d2e458755714ac5d158cad624d";//me
+  const FRIEND_USER_ID = "U229c57ca5f6954a61d20837fba0a53a3";//อิโยะ
   
   if (!LINE_ACCESS_TOKEN) return;
 
