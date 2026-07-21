@@ -454,9 +454,9 @@ function sendDailyQuiz() {
   const choiceLabels = ["A", "B", "C"];
   
   // 🌟 Flex Message 本文（お題と、長い選択肢テキストをここに書く）
-  const bodyContents = [
-    { type: "text", text: "🧠 今日のAIタイ語クイズ", weight: "bold", color: "#1DB446", size: "sm" },
-    { type: "text", text: `お題：【 ${meaning_ja} 】`, weight: "bold", size: "md", margin: "md" },
+const bodyContents = [
+    { type: "text", text: "🧠AIタイ語クイズ", weight: "bold", color: "#1DB446", size: "sm" },
+    { type: "text", text: `お題：【 ${meaning_ja} 】`, weight: "bold", size: "md", margin: "md", wrap: true }, // 🌟 ここに「, wrap: true」を追加！
     { type: "text", text: quiz.question, wrap: true, margin: "md", size: "sm", color: "#333333" },
     { type: "separator", margin: "md" }
   ];
@@ -544,25 +544,27 @@ function sendJapaneseQuizToFriend() {
   const word_th = targetItem.word_th;
   const meaning_ja = targetItem.meaning_ja;
 
-  // 2. AIへ「タイ人向けの日本語クイズ」を作成するよう指示
-  const prompt = `あなたはプロの日本語教師です。タイ人の学習者に向けて、日本語のクイズを作成してください。
-  お題となるタイ語の単語は「${word_th}」、その日本語の意味は「${meaning_ja}」です。
+// 2. AIへ「タイ人向けの日本語クイズ」を作成するよう指示（難易度MAX・問題文ふりがな無し・選択肢難読漢字対応版）
+  const prompt = `あなたはプロの日本語教師です。タイ人の中級〜上級の学習者に向けて、手応えのある「JLPT N3〜N2レベル」の日本語クイズを作成してください。
+  お題となる単語のタイ語は「${word_th}」、日本語の意味は「${meaning_ja}」です。
 
   【🚨重要・厳守ルール】
-  1. 問題文や解説は「すべて自然なタイ語」で記述してください。
-  2. お題や問題文の中に正解となる日本語（${meaning_ja}）を絶対に書かず、「${word_th}」を日本語で自然に言うとどれ？といった形式にしてください。
-  3. 選択肢（text）は「日本語 (ひらがな/ローマ字)」の形式にし、「(正解)」「〇」などのヒントは一切含めないこと。
-  4. タイ人が日本語を学ぶ際によく間違える表現や、似ている単語（例：かわいい/こわい）を不正解のダミーにしてください。
+  1. 問題文（question）はタイ語を使わず、「すべて日本語」で作成してください。（例：「タイ語の『${word_th}』と同じ意味になるように、（  ）に最も良い言葉を入れてください。」のような穴埋め形式など）
+  2. 問題文にはふりがなを一切振らないでください。通常の日本語で記述してください。
+  3. 選択肢（text）の日本語に難しい漢字が含まれる場合のみ、「漢字（ふりがな）」の形式でふりがなを振ってください。（例: 荷物（にもつ）を預ける）
+  4. 選択肢内に「(正解)」などのヒントは一切含めないこと。
+  5. タイ人が非常に間違いやすい「助詞（に・で・を・が）の罠」「自動詞・他動詞の引っかけ」「類義語（似ている言葉）の使い分け」などの巧妙なダミーを用意してください。
+  6. クイズの解説（explanation）は、タイ人がしっかり理解できるように「自然なタイ語」で記述してください。
 
   【出力形式】（以下のJSON形式のみを出力すること）
   {
-    "question": "タイ語での問題文 (例: คำว่า「...」ในภาษาญี่ปุ่นพูดว่าอย่างไร?)",
+    "question": "日本語の問題文",
     "choices": [
-      { "text": "日本語 (ひらがな/ローマ字)", "isCorrect": true },
-      { "text": "日本語 (ひらがな/ローマ字)", "isCorrect": false },
-      { "text": "日本語 (ひらがな/ローマ字)", "isCorrect": false }
+      { "text": "選択肢の日本語（難読漢字のみふりがな）", "isCorrect": true },
+      { "text": "選択肢の日本語（難読漢字のみふりがな）", "isCorrect": false },
+      { "text": "選択肢の日本語（難読漢字のみふりがな）", "isCorrect": false }
     ],
-    "explanation": "なぜその表現になるのか、タイ人が間違えやすいポイントをタイ語で解説してください。\\nで改行を含めること。"
+    "explanation": "なぜその正解になるのか、タイ人が間違えやすいポイントを詳しい『タイ語』で解説してください。\\nで改行を含めること。"
   }`;
 
   let aiResultText = callGeminiApi(prompt);
@@ -587,7 +589,7 @@ function sendJapaneseQuizToFriend() {
   
   // 🌟 見分けがつくように、ヘッダーを「青色（#1D4ED8）」に変更
   const bodyContents = [
-    { type: "text", text: "🇯🇵 ควิซภาษาญี่ปุ่นวันนี้ (今日の日本語クイズ)", weight: "bold", color: "#1D4ED8", size: "sm" },
+    { type: "text", text: "🇯🇵日本語クイズ", weight: "bold", color: "#1D4ED8", size: "sm" },
     { type: "text", text: `โจทย์：【 ${word_th} 】`, weight: "bold", size: "md", margin: "md" },
     { type: "text", text: quiz.question, wrap: true, margin: "md", size: "sm", color: "#333333" },
     { type: "separator", margin: "md" }
