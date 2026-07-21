@@ -5,9 +5,8 @@
 
 // LINE Developersで取得したチャネルアクセストークンをスクリプトプロパティに設定してください
 const LINE_ACCESS_TOKEN = PropertiesService.getScriptProperties().getProperty('LINE_ACCESS_TOKEN');
-
 /**
- * 1. Webhookの処理 (doPost) - AI機能マルチ分岐対応版
+ * 1. Webhookの処理 (doPost) - 完全修復版
  */
 function doPost(e) {
   if (!e || !e.postData || !e.postData.contents) return ContentService.createTextOutput("OK");
@@ -16,73 +15,95 @@ function doPost(e) {
     const json = JSON.parse(e.postData.contents);
 
     json.events.forEach(event => {
-      // 🌟 【ここに追加】どの処理に飛んでも共通で使えるように、最初に replyToken を取り出しておく
       const replyToken = event.replyToken;
-      // 🌟 クイズの解答（Postback）を受け取った時の処理
-  if (event.type === 'postback') {
-    const data = event.postback.data;
-    // 🌟 クイズの解答（Postback）を受け取った時の処理
-// 🌟 クイズの解答（Postback）を受け取った時の処理
-      if (data.startsWith('action=quiz')) {
-        let res = "", word = "", vocabId = "";
-        
-        data.split('&').forEach(part => {
-          if (part.startsWith('res=')) res = part.split('=')[1];
-          if (part.startsWith('word=')) word = decodeURIComponent(part.split('=')[1]);
-          if (part.startsWith('id=')) vocabId = part.split('=')[1];
-        });
 
-        // 🌟 修正：タイ語テキストではなく、安全な「単語ID」でプロパティを指定する
-        const propKey = `quiz_${vocabId}`;
-        const props = PropertiesService.getScriptProperties();
-        const explanation = props.getProperty(propKey);
+      // 🌟 1. ボタンタップ時（Postbackイベント）の処理
+      if (event.type === 'postback') {
+        const data = event.postback.data;
 
-        // 1. すでにプロパティが消されている（解答済み）場合のブロック
-        if (!explanation) {
-          sendLineReply(replyToken, { 
-            type: 'text', 
-            text: '⚠️ このクイズは既に解答済みです！（もしくは期限切れ）\n単語帳で詳細を確認してください。' 
+        // 🇹🇭 自分の「タイ語クイズ」の解答処理
+        if (data.startsWith('action=quiz')) {
+          let res = "", word = "", vocabId = "";
+          
+          data.split('&').forEach(part => {
+            if (part.startsWith('res=')) res = part.split('=')[1];
+            if (part.startsWith('word=')) word = decodeURIComponent(part.split('=')[1]);
+            if (part.startsWith('id=')) vocabId = part.split('=')[1];
           });
-          return ContentService.createTextOutput(JSON.stringify({'content': 'already answered'})).setMimeType(ContentService.MimeType.JSON);
+
+          const propKey = `quiz_${vocabId}`;
+          const props = PropertiesService.getScriptProperties();
+          const explanation = props.getProperty(propKey);
+
+          if (!explanation) {
+            sendLineReply(replyToken, { 
+              type: 'text', 
+              text: '⚠️ このクイズは既に解答済みです！（もしくは期限切れ）\n単語帳で詳細を確認してください。' 
+            });
+            return;
+          }
+
+          props.deleteProperty(propKey);
+          const isCorrect = (res === "1");
+          
+          if (vocabId && vocabId !== "undefined") {
+            saveLearningLog(vocabId, isCorrect ? 3 : 1);
+          }
+
+          const header = isCorrect ? "⭕️ 大正解！素晴らしいです🎉" : "❌ 残念！惜しい...！";
+          const replyText = `${header}\n\n🟩 【 ${word} 】\n📝 AI解説:\n${explanation}\n\n※この結果は学習記録に反映されました！`;
+          sendLineReply(replyToken, { type: 'text', text: replyText });
+          return;
         }
 
-        // 2. 答えた直後にプロパティを確実に削除する（2回押し防止）
-        props.deleteProperty(propKey);
+        // 🇯🇵 友人向け「日本語クイズ」の解答処理
+        if (data.startsWith('action=ja_quiz')) {
+          let res = "", word = "";
+          
+          data.split('&').forEach(part => {
+            if (part.startsWith('res=')) res = part.split('=')[1];
+            if (part.startsWith('word=')) word = decodeURIComponent(part.split('=')[1]);
+          });
 
-        const isCorrect = (res === "1");
-        
-        // 解答結果を忘却曲線エンジンに流し込む
-        if (vocabId) {
-          const score = isCorrect ? 3 : 1;
-          saveLearningLog(vocabId, score);
+          const propKey = `ja_quiz_${encodeURIComponent(word)}`;
+          const props = PropertiesService.getScriptProperties();
+          const explanation = props.getProperty(propKey);
+
+          if (!explanation) {
+            sendLineReply(replyToken, { 
+              type: 'text', 
+              text: '⚠️ ตอบคำถามนี้ไปแล้วครับ!\n(このクイズは既に解答済みです)' 
+            });
+            return;
+          }
+
+          props.deleteProperty(propKey);
+          const isCorrect = (res === "1");
+          const header = isCorrect ? "⭕️ ถูกต้องครับ! เก่งมาก🎉 (大正解！)" : "❌ น่าเสียดาย... (惜しい！)";
+          const replyText = `${header}\n\n🟩 【 ${word} 】\n📝 คำอธิบาย (解説):\n${explanation}`;
+
+          sendLineReply(replyToken, { type: 'text', text: replyText });
+          return;
         }
-
-        // 判定結果のメッセージを作成
-        const header = isCorrect ? "⭕️ 大正解！素晴らしいです🎉" : "❌ 残念！惜しい...！";
-        const replyText = `${header}\n\n🟩 【 ${word} 】\n📝 AI解説:\n${explanation}\n\n※この結果は学習記録に反映されました！`;
-
-        // Botから返信
-        sendLineReply(replyToken, { type: 'text', text: replyText });
-        
-        return ContentService.createTextOutput(JSON.stringify({'content': 'postback handled'})).setMimeType(ContentService.MimeType.JSON);
       }
-  }
+
+      // 🌟 2. テキストメッセージ受信時の処理（postbackと並列に配置）
       if (event.type === 'message' && event.message.type === 'text') {
         const userMessage = event.message.text.trim();
-        const replyToken = event.replyToken;
 
         let replyMessageObj = null;
 
-// 🌟 【隠しコマンド】自分のユーザーIDを取得する
+        // 【隠しコマンド】自分のユーザーIDを取得
         if (userMessage === "ID教えて") {
           replyMessageObj = {
             type: "text",
             text: `あなたのユーザーIDは以下です👇\n\n${event.source.userId}\n\nこれをGASのスクリプトプロパティ「MY_USER_ID」に登録してください。`
           };
           sendLineReply(replyToken, replyMessageObj);
-          return; // ここで処理を終了
+          return;
         }
-// 🌟 【分岐1】AI翻訳モード ("t " や "t\n" のように、直後に空白や改行がある場合のみ発動)
+
+        // 【分岐1】AI翻訳モード ("t " または "t\n" など)
         if (/^(t|訳|翻訳)[\s \n]+/i.test(userMessage)) {
           const query = userMessage.replace(/^(t|訳|翻訳)[\s \n]+/i, "").trim();
           
@@ -96,7 +117,7 @@ function doPost(e) {
             };
           }
 
-        // 🌟 【分岐2】AI教師質問モード ("q " や "q\n" のように、直後に空白や改行がある場合のみ発動)
+        // 【分岐2】AI教師質問モード ("q " または "q\n" など)
         } else if (/^(q|問|質問)[\s \n]+/i.test(userMessage)) {
           const query = userMessage.replace(/^(q|問|質問)[\s \n]+/i, "").trim();
           
@@ -110,7 +131,7 @@ function doPost(e) {
             };
           }
 
-        // 🌟 【分岐3】それ以外 ➔ 「t」で始まる単語も含め、すべて通常のテキスト辞書検索へ！
+        // 【分岐3】それ以外 ➔ 通常のテキスト辞書検索
         } else {
           const searchResults = searchVocabularyForLine(userMessage);
           replyMessageObj = buildTextDictionaryMessage(searchResults, userMessage);
@@ -451,6 +472,133 @@ function sendDailyQuiz() {
 
   const payload = {
     to: MY_USER_ID,
+    messages: [flexMessage]
+  };
+
+  UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { 'Authorization': 'Bearer ' + LINE_ACCESS_TOKEN.trim() },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+}
+
+/**
+ * 🇹🇭 タイ人の友人向け：日本語クイズ自動配信（忘却曲線なし / レベル2〜4 / ログなし）
+ */
+function sendJapaneseQuizToFriend() {
+  const LINE_ACCESS_TOKEN = PropertiesService.getScriptProperties().getProperty('LINE_ACCESS_TOKEN');
+  // 🌟 指定された友人のLINEユーザーID
+  // const FRIEND_USER_ID = "U6aa745d2e458755714ac5d158cad624d";//me
+  const FRIEND_USER_ID = "U229c57ca5f6954a61d20837fba0a53a3";//อิโยะ
+  
+  if (!LINE_ACCESS_TOKEN) return;
+
+  // 1. 辞書データから全件取得
+  const allData = getRawVocabulary();
+  if (!allData || allData.length === 0) return;
+
+  // 🌟 レベル2, 3, 4 の単語だけに絞り込む（もしlevel列がなければ全体から選ぶ安全設計）
+  let targetList = allData.filter(item => {
+    const lvl = parseInt(item.level, 10);
+    return lvl >= 2 && lvl <= 4;
+  });
+  if (targetList.length === 0) targetList = allData;
+
+  // ランダムに1件ピックアップ（忘却曲線は無視）
+  const randomIndex = Math.floor(Math.random() * targetList.length);
+  const targetItem = targetList[randomIndex];
+  
+  const word_th = targetItem.word_th;
+  const meaning_ja = targetItem.meaning_ja;
+
+  // 2. AIへ「タイ人向けの日本語クイズ」を作成するよう指示
+  const prompt = `あなたはプロの日本語教師です。タイ人の学習者に向けて、日本語のクイズを作成してください。
+  お題となるタイ語の単語は「${word_th}」、その日本語の意味は「${meaning_ja}」です。
+
+  【🚨重要・厳守ルール】
+  1. 問題文や解説は「すべて自然なタイ語」で記述してください。
+  2. お題や問題文の中に正解となる日本語（${meaning_ja}）を絶対に書かず、「${word_th}」を日本語で自然に言うとどれ？といった形式にしてください。
+  3. 選択肢（text）は「日本語 (ひらがな/ローマ字)」の形式にし、「(正解)」「〇」などのヒントは一切含めないこと。
+  4. タイ人が日本語を学ぶ際によく間違える表現や、似ている単語（例：かわいい/こわい）を不正解のダミーにしてください。
+
+  【出力形式】（以下のJSON形式のみを出力すること）
+  {
+    "question": "タイ語での問題文 (例: คำว่า「...」ในภาษาญี่ปุ่นพูดว่าอย่างไร?)",
+    "choices": [
+      { "text": "日本語 (ひらがな/ローマ字)", "isCorrect": true },
+      { "text": "日本語 (ひらがな/ローマ字)", "isCorrect": false },
+      { "text": "日本語 (ひらがな/ローマ字)", "isCorrect": false }
+    ],
+    "explanation": "なぜその表現になるのか、タイ人が間違えやすいポイントをタイ語で解説してください。\\nで改行を含めること。"
+  }`;
+
+  let aiResultText = callGeminiApi(prompt);
+  if (!aiResultText) return;
+
+  let quiz;
+  try {
+    quiz = JSON.parse(aiResultText.replace(/```json/g, "").replace(/```/g, "").trim());
+  } catch(e) {
+    console.error("日本語クイズJSONパース失敗", e);
+    return;
+  }
+
+  // 3. 自分のタイ語クイズと競合しないよう、「ja_quiz_」というキーで解説を保存
+  const propKey = `ja_quiz_${encodeURIComponent(word_th)}`;
+  PropertiesService.getScriptProperties().setProperty(propKey, quiz.explanation);
+
+  // 選択肢をシャッフル
+  quiz.choices.sort(() => Math.random() - 0.5);
+
+  const choiceLabels = ["A", "B", "C"];
+  
+  // 🌟 見分けがつくように、ヘッダーを「青色（#1D4ED8）」に変更
+  const bodyContents = [
+    { type: "text", text: "🇯🇵 ควิซภาษาญี่ปุ่นวันนี้ (今日の日本語クイズ)", weight: "bold", color: "#1D4ED8", size: "sm" },
+    { type: "text", text: `โจทย์：【 ${word_th} 】`, weight: "bold", size: "md", margin: "md" },
+    { type: "text", text: quiz.question, wrap: true, margin: "md", size: "sm", color: "#333333" },
+    { type: "separator", margin: "md" }
+  ];
+
+  const buttons = [];
+
+  quiz.choices.forEach((choice, index) => {
+    const label = choiceLabels[index];
+    
+    bodyContents.push({
+      type: "text", text: `${label} : ${choice.text}`, wrap: true, size: "sm", margin: "md", weight: "bold"
+    });
+
+    const resVal = choice.isCorrect ? 1 : 0;
+    
+    // 🌟 action=ja_quiz に設定（自分のクイズと処理を分離）
+    buttons.push({
+      type: "button",
+      style: "secondary",
+      margin: "sm",
+      action: {
+        type: "postback",
+        label: `${label}`,
+        data: `action=ja_quiz&res=${resVal}&word=${encodeURIComponent(word_th)}`,
+        displayText: `เลือก ${label}` // "Aを選びました"のタイ語
+      }
+    });
+  });
+
+  const flexMessage = {
+    type: "flex",
+    altText: `ควิซภาษาญี่ปุ่น: ${word_th}`,
+    contents: {
+      type: "bubble",
+      body: { type: "box", layout: "vertical", contents: bodyContents },
+      footer: { type: "box", layout: "horizontal", spacing: "sm", contents: buttons }
+    }
+  };
+
+  const payload = {
+    to: FRIEND_USER_ID,
     messages: [flexMessage]
   };
 
