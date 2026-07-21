@@ -413,8 +413,8 @@ function sendDailyQuiz() {
   const word_th = targetItem.word_th;
   const meaning_ja = targetItem.meaning_ja;
   const vocabId = targetItem.id; // 🌟 安全なIDを使用
-
-  // 🌟 AIへの指示：お題を「日本語」にし、タイ語の答えを問題文から隠す
+  
+// 🌟 AIへの指示：お題を「日本語」にし、タイ語の答えを問題文から隠す（シャッフル対策＆3択固定版）
   const prompt = `あなたはプロのタイ語教師です。
   日本語の「${meaning_ja}」（タイ語の正解: ${word_th}）をテーマにして、日本人が最も引っかかりやすい「3択クイズ」を作成してください。
 
@@ -422,6 +422,8 @@ function sendDailyQuiz() {
   1. 問題文やお題にはタイ語（${word_th}）を絶対に書かず、「${meaning_ja}と言いたい時の自然な表現はどれ？」といった形式にすること。
   2. 選択肢のテキスト（text）内に「(正解)」「〇」などのヒントは一切含めないこと。純粋な「タイ語と発音記号のみ」を出力してください。
   3. 不正解のダミーは、日本人学習者が間違えやすい声調違い、類義語、直訳の罠などにしてください。
+  4. 【絶対厳守】選択肢（choices）は「必ず3つのみ（正解1つ、不正解2つ）」出力してください。絶対に4つ以上作らないでください。
+  5. 🌟【解説の書き方・超重要】LINE上で選択肢をランダムにシャッフルするため、解説（explanation）の中で「選択肢1」「A」「B」「C」のような【順番や記号による言及】は絶対に禁止です。必ず「『〇〇（タイ語）』の場合は〜」のように、【具体的な選択肢のタイ語】をそのまま引用して解説してください。
 
   【出力形式】（以下のJSON形式のみを出力すること）
   {
@@ -431,7 +433,7 @@ function sendDailyQuiz() {
       { "text": "タイ語 (発音記号)", "isCorrect": false },
       { "text": "タイ語 (発音記号)", "isCorrect": false }
     ],
-    "explanation": "なぜ間違えやすいのか解説してください。\\nで改行を入れ、最後に褒め言葉を入れてください。"
+    "explanation": "なぜ間違えやすいのか解説してください。（※A,Bなどの記号は使わず、単語そのものを引用すること）\\nで改行を入れ、最後に褒め言葉を入れてください。"
   }`;
 
   let aiResultText = callGeminiApi(prompt);
@@ -447,6 +449,13 @@ function sendDailyQuiz() {
 
   // 🌟 保存キーをタイ語ではなく「単語ID」に変更（文字化けによる削除失敗を防ぐ）
   PropertiesService.getScriptProperties().setProperty(`quiz_${vocabId}`, quiz.explanation);
+
+  // 🌟 【安全装置】万が一AIが4つ以上の選択肢を出してきた場合、強制的に3つ（正解1＋不正解2）にカットする
+  if (quiz.choices && quiz.choices.length > 3) {
+    const correctChoice = quiz.choices.find(c => c.isCorrect) || quiz.choices[0];
+    const wrongChoices = quiz.choices.filter(c => !c.isCorrect).slice(0, 2);
+    quiz.choices = [correctChoice, ...wrongChoices];
+  }
 
   // 選択肢をランダムにシャッフル
   quiz.choices.sort(() => Math.random() - 0.5);
@@ -543,7 +552,7 @@ function sendJapaneseQuizToFriend() {
   
   const word_th = targetItem.word_th;
   const meaning_ja = targetItem.meaning_ja;
-// 2. AIへ「タイ人向けの日本語クイズ」を作成するよう指示（難易度MAX・問題文ふりがな無し・選択肢難読漢字対応版）
+// 2. AIへ「タイ人向けの日本語クイズ」を作成するよう指示（難易度MAX・シャッフル対策版）
   const prompt = `あなたはプロの日本語教師です。タイ人の中級〜上級の学習者に向けて、手応えのある「JLPT N3〜N2レベル」の日本語クイズを作成してください。
   お題となる単語のタイ語は「${word_th}」、日本語の意味は「${meaning_ja}」です。
 
@@ -555,6 +564,7 @@ function sendJapaneseQuizToFriend() {
   5. タイ人が非常に間違いやすい「助詞（に・で・を・が）の罠」「自動詞・他動詞の引っかけ」「類義語（似ている言葉）の使い分け」などの巧妙なダミーを用意してください。
   6. クイズの解説（explanation）は、タイ人がしっかり理解できるように「自然なタイ語」で記述してください。
   7. 【絶対厳守】選択肢（choices）は「必ず3つのみ（正解1つ、不正解2つ）」出力してください。絶対に4つ以上作らないでください。
+  8. 🌟【解説の書き方・超重要】LINE上で選択肢をランダムにシャッフルするため、解説（explanation）の中で「選択肢1」「A」「B」「C」のような【順番や記号による言及】は絶対に禁止です。必ず「『預（あず）ける』の場合は〜」のように、【具体的な選択肢のテキスト】をそのまま引用して解説してください。
 
   【出力形式】（以下のJSON形式のみを出力すること）
   {
@@ -564,7 +574,7 @@ function sendJapaneseQuizToFriend() {
       { "text": "選択肢の日本語（難読漢字のみふりがな）", "isCorrect": false },
       { "text": "選択肢の日本語（難読漢字のみふりがな）", "isCorrect": false }
     ],
-    "explanation": "なぜその正解になるのか、タイ人が間違えやすいポイントを詳しい『タイ語』で解説してください。\\nで改行を含めること。"
+    "explanation": "なぜその正解になるのか、タイ人が間違えやすいポイントを詳しい『タイ語』で解説してください。（※A,Bなどの記号は使わず、言葉そのものを引用すること）\\nで改行を含めること。"
   }`;
 
   let aiResultText = callGeminiApi(prompt);
