@@ -521,8 +521,8 @@ const bodyContents = [
 function sendJapaneseQuizToFriend() {
   const LINE_ACCESS_TOKEN = PropertiesService.getScriptProperties().getProperty('LINE_ACCESS_TOKEN');
   // 🌟 指定された友人のLINEユーザーID
-  // const FRIEND_USER_ID = "U6aa745d2e458755714ac5d158cad624d";//me
-  const FRIEND_USER_ID = "U229c57ca5f6954a61d20837fba0a53a3";//อิโยะ
+  const FRIEND_USER_ID = "U6aa745d2e458755714ac5d158cad624d";//me
+  // const FRIEND_USER_ID = "U229c57ca5f6954a61d20837fba0a53a3";//อิโยะ
   
   if (!LINE_ACCESS_TOKEN) return;
 
@@ -543,7 +543,6 @@ function sendJapaneseQuizToFriend() {
   
   const word_th = targetItem.word_th;
   const meaning_ja = targetItem.meaning_ja;
-
 // 2. AIへ「タイ人向けの日本語クイズ」を作成するよう指示（難易度MAX・問題文ふりがな無し・選択肢難読漢字対応版）
   const prompt = `あなたはプロの日本語教師です。タイ人の中級〜上級の学習者に向けて、手応えのある「JLPT N3〜N2レベル」の日本語クイズを作成してください。
   お題となる単語のタイ語は「${word_th}」、日本語の意味は「${meaning_ja}」です。
@@ -551,10 +550,11 @@ function sendJapaneseQuizToFriend() {
   【🚨重要・厳守ルール】
   1. 問題文（question）はタイ語を使わず、「すべて日本語」で作成してください。（例：「タイ語の『${word_th}』と同じ意味になるように、（  ）に最も良い言葉を入れてください。」のような穴埋め形式など）
   2. 問題文にはふりがなを一切振らないでください。通常の日本語で記述してください。
-  3. 選択肢（text）の日本語に難しい漢字が含まれる場合のみ、「漢字（ふりがな）」の形式でふりがなを振ってください。（例: 荷物（にもつ）を預ける）
+  3. 選択肢（text）の日本語に難しい漢字が含まれる場合のみ、「漢字（ふりがな）」の形式でふりがなを振ってください。
   4. 選択肢内に「(正解)」などのヒントは一切含めないこと。
   5. タイ人が非常に間違いやすい「助詞（に・で・を・が）の罠」「自動詞・他動詞の引っかけ」「類義語（似ている言葉）の使い分け」などの巧妙なダミーを用意してください。
   6. クイズの解説（explanation）は、タイ人がしっかり理解できるように「自然なタイ語」で記述してください。
+  7. 【絶対厳守】選択肢（choices）は「必ず3つのみ（正解1つ、不正解2つ）」出力してください。絶対に4つ以上作らないでください。
 
   【出力形式】（以下のJSON形式のみを出力すること）
   {
@@ -581,6 +581,13 @@ function sendJapaneseQuizToFriend() {
   // 3. 自分のタイ語クイズと競合しないよう、「ja_quiz_」というキーで解説を保存
   const propKey = `ja_quiz_${encodeURIComponent(word_th)}`;
   PropertiesService.getScriptProperties().setProperty(propKey, quiz.explanation);
+
+  // 🌟 【安全装置】万が一AIが4つ以上の選択肢を出してきた場合、強制的に3つ（正解1＋不正解2）にカットする
+  if (quiz.choices && quiz.choices.length > 3) {
+    const correctChoice = quiz.choices.find(c => c.isCorrect) || quiz.choices[0]; // 正解を確保
+    const wrongChoices = quiz.choices.filter(c => !c.isCorrect).slice(0, 2); // ダミーを2つに絞る
+    quiz.choices = [correctChoice, ...wrongChoices]; // 3つに再構築
+  }
 
   // 選択肢をシャッフル
   quiz.choices.sort(() => Math.random() - 0.5);
