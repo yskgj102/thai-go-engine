@@ -21,38 +21,51 @@ function doPost(e) {
       // 🌟 クイズの解答（Postback）を受け取った時の処理
   if (event.type === 'postback') {
     const data = event.postback.data;
-    
-    if (data.startsWith('action=quiz')) {
-      let res = "", word = "", vocabId = "";
-      
-      // 隠しデータから情報を取り出す
-      data.split('&').forEach(part => {
-        if (part.startsWith('res=')) res = part.split('=')[1];
-        if (part.startsWith('word=')) word = decodeURIComponent(part.split('=')[1]);
-        if (part.startsWith('id=')) vocabId = part.split('=')[1];
-      });
+    // 🌟 クイズの解答（Postback）を受け取った時の処理
+// 🌟 クイズの解答（Postback）を受け取った時の処理
+      if (data.startsWith('action=quiz')) {
+        let res = "", word = "", vocabId = "";
+        
+        data.split('&').forEach(part => {
+          if (part.startsWith('res=')) res = part.split('=')[1];
+          if (part.startsWith('word=')) word = decodeURIComponent(part.split('=')[1]);
+          if (part.startsWith('id=')) vocabId = part.split('=')[1];
+        });
 
-      // キャッシュからAI生成の解説を引き出す
-      const explanation = CacheService.getScriptCache().get(`quiz_${word}`) || "解説の有効期限が切れました。単語帳で詳細を確認してください。";
+        // 🌟 修正：タイ語テキストではなく、安全な「単語ID」でプロパティを指定する
+        const propKey = `quiz_${vocabId}`;
+        const props = PropertiesService.getScriptProperties();
+        const explanation = props.getProperty(propKey);
 
-      const isCorrect = (res === "1");
-      
-      // ★ ここが要！解答結果を忘却曲線エンジンに流し込む
-      // 正解ならスコア3(簡単)、不正解ならスコア1(難しい)として学習ログを保存
-      if (vocabId) {
-        const score = isCorrect ? 3 : 1;
-        saveLearningLog(vocabId, score);
+        // 1. すでにプロパティが消されている（解答済み）場合のブロック
+        if (!explanation) {
+          sendLineReply(replyToken, { 
+            type: 'text', 
+            text: '⚠️ このクイズは既に解答済みです！（もしくは期限切れ）\n単語帳で詳細を確認してください。' 
+          });
+          return ContentService.createTextOutput(JSON.stringify({'content': 'already answered'})).setMimeType(ContentService.MimeType.JSON);
+        }
+
+        // 2. 答えた直後にプロパティを確実に削除する（2回押し防止）
+        props.deleteProperty(propKey);
+
+        const isCorrect = (res === "1");
+        
+        // 解答結果を忘却曲線エンジンに流し込む
+        if (vocabId) {
+          const score = isCorrect ? 3 : 1;
+          saveLearningLog(vocabId, score);
+        }
+
+        // 判定結果のメッセージを作成
+        const header = isCorrect ? "⭕️ 大正解！素晴らしいです🎉" : "❌ 残念！惜しい...！";
+        const replyText = `${header}\n\n🟩 【 ${word} 】\n📝 AI解説:\n${explanation}\n\n※この結果は学習記録に反映されました！`;
+
+        // Botから返信
+        sendLineReply(replyToken, { type: 'text', text: replyText });
+        
+        return ContentService.createTextOutput(JSON.stringify({'content': 'postback handled'})).setMimeType(ContentService.MimeType.JSON);
       }
-
-      // 判定結果のメッセージを作成
-      const header = isCorrect ? "⭕️ 大正解！素晴らしいです🎉" : "❌ 残念！惜しい...！";
-      const replyText = `${header}\n\n🟩 【 ${word} 】\n📝 AI解説:\n${explanation}\n\n※この結果は学習記録に反映されました！`;
-
-      // Botから返信
-      sendLineReply(replyToken, { type: 'text', text: replyText });
-      
-      return ContentService.createTextOutput(JSON.stringify({'content': 'postback handled'})).setMimeType(ContentService.MimeType.JSON);
-    }
   }
       if (event.type === 'message' && event.message.type === 'text') {
         const userMessage = event.message.text.trim();
@@ -332,41 +345,8 @@ function buildTextDictionaryMessage(results, keyword) {
 
   return replyObj;
 }
-
 /**
- * AIからのMarkdownテキストをLINEで見やすいテキストレイアウトに変換する
- */
-function formatMarkdownForLine(text) {
-  if (!text) return "";
-
-  return text
-    // 1. 見出しの変換
-    .replace(/^###\s+(.+)$/gm, "\n🟩 【 $1 】") // ### 見出し
-    .replace(/^##\s+(.+)$/gm, "\n━━━ $1 ━━━") // ## 見出し
-    .replace(/^#\s+(.+)$/gm, "👑 $1") // # 見出し
-
-    // 2. 太字の変換（**太字** -> 「太字」）
-    .replace(/\*\*(.*?)\*\*/g, "「$1」")
-    .replace(/\*(.*?)\*/g, "「$1」")
-
-    // 3. Markdownの表（テーブル）をテキストリストに変換
-    // 区切り線（|---|---|）の行を削除
-    .replace(/^\|[-:\s]+\|.*$/gm, "")
-    // テーブルのヘッダー行（| タイ語 | 発音記号 | 日本語 |）を削除
-    .replace(/^\|\s*タイ語\s*\|\s*発音記号\s*\|\s*日本語\s*\|$/gm, "")
-    // データ行（| ไป | pai | 行く |）を絵文字付きのカード風テキストに変換
-    .replace(/^\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|$/gm, (match, th, ph, ja) => {
-       if (!th || !ph || !ja) return "";
-       return `┈┈┈┈┈┈┈┈┈┈┈┈\n🇹🇭 ${th}\n🗣️ ${ph}\n🇯🇵 ${ja}`;
-    })
-
-    // 4. 連続する改行を綺麗に整える（最大2行まで）
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-/**
- * 忘却曲線 × AI連動型：プッシュ通知クイズ
+ * 忘却曲線 × AI連動型：プッシュ通知クイズ (UI・お題・データ保持 完璧版)
  */
 function sendDailyQuiz() {
   const LINE_ACCESS_TOKEN = PropertiesService.getScriptProperties().getProperty('LINE_ACCESS_TOKEN');
@@ -374,44 +354,32 @@ function sendDailyQuiz() {
   
   if (!MY_USER_ID || !LINE_ACCESS_TOKEN) return;
 
-  // 1. 忘却曲線エンジンを使って、今一番「復習すべき単語」を取得
   const reviewQueue = getSpacedRepetitionData();
   if (!reviewQueue || reviewQueue.length === 0) return;
 
-  // キューの先頭（最も優先度が高い単語）を取得
   const targetItem = reviewQueue[0];
   const word_th = targetItem.word_th;
   const meaning_ja = targetItem.meaning_ja;
+  const vocabId = targetItem.id; // 🌟 安全なIDを使用
 
-// 2. AIエンジンで、その単語の「弱点」を突くクイズを動的生成
-  const prompt = `あなたは、タイ語学習者を優しく励まし、確実にステップアップさせてくれるプロのタイ語教師です。
-  お題の単語「${word_th}」（意味: ${meaning_ja}）を使って、日本人が思わず引っかかりやすい「2択クイズ」を作成してください。
+  // 🌟 AIへの指示：お題を「日本語」にし、タイ語の答えを問題文から隠す
+  const prompt = `あなたはプロのタイ語教師です。
+  日本語の「${meaning_ja}」（タイ語の正解: ${word_th}）をテーマにして、日本人が最も引っかかりやすい「3択クイズ」を作成してください。
 
-  【問題作成の条件】
-  単語の性質に合わせて、発音問題ばかりに偏らないよう、以下の4つのテーマから最も適したものを1つ選んで出題してください。（※特に動詞や形容詞の場合は3や4を優先すること）
-  1. 不規則なスペルや発音（黙字、特殊な母音変化など）
-  2. 声調（トーン）の落とし穴
-  3. 似た単語や類義語とのニュアンスの使い分け（直訳の罠など）
-  4. 実際の会話での自然な言い回し・法助動詞の構文
+  【🚨重要・厳守ルール】
+  1. 問題文やお題にはタイ語（${word_th}）を絶対に書かず、「${meaning_ja}と言いたい時の自然な表現はどれ？」といった形式にすること。
+  2. 選択肢のテキスト（text）内に「(正解)」「〇」などのヒントは一切含めないこと。純粋な「タイ語と発音記号のみ」を出力してください。
+  3. 不正解のダミーは、日本人学習者が間違えやすい声調違い、類義語、直訳の罠などにしてください。
 
-  【発音記号の厳守ルール（※テーマ1, 2の音声系クイズを選んだ場合）】
-  発音や声調に関するクイズの場合、選択肢や解説には必ず以下のルールで「発音記号」を併記してください。
-  - 音節ごとに「-（ハイフン）」で繋ぐこと。
-  - 母音の上に5つの声調記号（á, à, â, ǎ, a ※平声は記号なし）を必ず付与すること。
-  - 特殊母音記号（ɛ, ɔ, ɯ）を積極的に使用すること。
-  - 表記例 : khɔ̀ɔp-khun, phûut, mɯɯ
-
-  【解説（explanation）の条件】
-  ・単なる正解の提示ではなく、「なぜ日本人がこの間違いをしやすいのか」に寄り添って親切に解説してください。
-  ・「素晴らしいですね！」「この調子でいきましょう！」など、学習者のモチベーションを上げる温かい声かけを必ず文末に入れてください。
-  ・LINEの画面で読みやすいよう、適宜「\\n」を使って改行を入れてください。
-
-  【出力形式】（以下のJSON形式のみを出力し、マークダウンの装飾などは含めないこと）
+  【出力形式】（以下のJSON形式のみを出力すること）
   {
-    "question": "問題文 (例: 会話で「〜」と言いたい時、より自然な表現はどちら？)",
-    "correct": "正解の選択肢 (タイ語と、必要なら発音記号や日本語を20文字以内で)",
-    "wrong": "不正解の選択肢 (タイ語と、必要なら発音記号や日本語を20文字以内で)",
-    "explanation": "解説文。（必ず\\nで改行を含めること）"
+    "question": "問題文 (例: 友達と「〜」と言いたい時、より自然な表現はどれ？)",
+    "choices": [
+      { "text": "タイ語 (発音記号)", "isCorrect": true },
+      { "text": "タイ語 (発音記号)", "isCorrect": false },
+      { "text": "タイ語 (発音記号)", "isCorrect": false }
+    ],
+    "explanation": "なぜ間違えやすいのか解説してください。\\nで改行を入れ、最後に褒め言葉を入れてください。"
   }`;
 
   let aiResultText = callGeminiApi(prompt);
@@ -425,42 +393,65 @@ function sendDailyQuiz() {
     return;
   }
 
-  // 3. AIの解説文をキャッシュに一時保存（Postbackの300文字制限を回避）
-  CacheService.getScriptCache().put(`quiz_${word_th}`, quiz.explanation, 60 * 60 * 24); // 24時間保持
+  // 🌟 保存キーをタイ語ではなく「単語ID」に変更（文字化けによる削除失敗を防ぐ）
+  PropertiesService.getScriptProperties().setProperty(`quiz_${vocabId}`, quiz.explanation);
 
-  // 4. Postbackアクションを使った選択肢の生成
-  const quickReplyItems = [
-    {
-      type: "action",
-      action: {
-        type: "postback",
-        label: quiz.correct.substring(0, 20),
-        // res=1(正解), word=対象単語, id=学習ログ記録用の単語ID
-        data: `action=quiz&res=1&word=${encodeURIComponent(word_th)}&id=${targetItem.id}`,
-        displayText: quiz.correct
-      }
-    },
-    {
-      type: "action",
-      action: {
-        type: "postback",
-        label: quiz.wrong.substring(0, 20),
-        data: `action=quiz&res=0&word=${encodeURIComponent(word_th)}&id=${targetItem.id}`,
-        displayText: quiz.wrong
-      }
-    }
-  ];
+  // 選択肢をランダムにシャッフル
+  quiz.choices.sort(() => Math.random() - 0.5);
+
+  const choiceLabels = ["A", "B", "C"];
   
-  // 選択肢をシャッフル（正解が必ず左にならないように）
-  quickReplyItems.sort(() => Math.random() - 0.5);
+  // 🌟 Flex Message 本文（お題と、長い選択肢テキストをここに書く）
+  const bodyContents = [
+    { type: "text", text: "🧠 今日のAIタイ語クイズ", weight: "bold", color: "#1DB446", size: "sm" },
+    { type: "text", text: `お題：【 ${meaning_ja} 】`, weight: "bold", size: "md", margin: "md" },
+    { type: "text", text: quiz.question, wrap: true, margin: "md", size: "sm", color: "#333333" },
+    { type: "separator", margin: "md" }
+  ];
+
+  const buttons = [];
+
+  quiz.choices.forEach((choice, index) => {
+    const label = choiceLabels[index];
+    
+    // 本文に選択肢を追加 (文字数制限なしでゆったり表示)
+    bodyContents.push({
+      type: "text",
+      text: `${label} : ${choice.text}`,
+      wrap: true,
+      size: "sm",
+      margin: "md",
+      weight: "bold"
+    });
+
+    // 🌟 ボタン側はシンプルに「Aを選ぶ」等にする（20文字制限を完全回避）
+    const resVal = choice.isCorrect ? 1 : 0;
+    buttons.push({
+      type: "button",
+      style: "secondary",
+      margin: "sm",
+      action: {
+        type: "postback",
+        label: `${label}`,
+        data: `action=quiz&res=${resVal}&id=${vocabId}&word=${encodeURIComponent(word_th)}`,
+        displayText: `${label} を選択しました`
+      }
+    });
+  });
+
+  const flexMessage = {
+    type: "flex",
+    altText: `AIタイ語クイズ: ${meaning_ja}`,
+    contents: {
+      type: "bubble",
+      body: { type: "box", layout: "vertical", contents: bodyContents },
+      footer: { type: "box", layout: "horizontal", spacing: "sm", contents: buttons } // 横並びボタン
+    }
+  };
 
   const payload = {
     to: MY_USER_ID,
-    messages: [{
-      type: "text",
-      text: `🧠 今日のAIタイ語クイズ\n\nお題：【 ${word_th} 】\n\n${quiz.question}`,
-      quickReply: { items: quickReplyItems }
-    }]
+    messages: [flexMessage]
   };
 
   UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
