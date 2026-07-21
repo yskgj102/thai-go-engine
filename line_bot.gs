@@ -87,54 +87,58 @@ function doPost(e) {
         }
       }
 
-      // 🌟 2. テキストメッセージ受信時の処理（postbackと並列に配置）
+// 🌟 2. テキストメッセージ受信時の処理
       if (event.type === 'message' && event.message.type === 'text') {
         const userMessage = event.message.text.trim();
-
         let replyMessageObj = null;
 
         // 【隠しコマンド】自分のユーザーIDを取得
         if (userMessage === "ID教えて") {
-          replyMessageObj = {
-            type: "text",
-            text: `あなたのユーザーIDは以下です👇\n\n${event.source.userId}\n\nこれをGASのスクリプトプロパティ「MY_USER_ID」に登録してください。`
-          };
+          replyMessageObj = { type: "text", text: `あなたのユーザーID👇\n${event.source.userId}` };
           sendLineReply(replyToken, replyMessageObj);
           return;
         }
 
-        // 【分岐1】AI翻訳モード ("t " または "t\n" など)
-        if (/^(t|訳|翻訳)[\s \n]+/i.test(userMessage)) {
-          const query = userMessage.replace(/^(t|訳|翻訳)[\s \n]+/i, "").trim();
+        // 🌟 【分岐1】AI翻訳モード (先頭が t でも、末尾が t でも両方発動！)
+        if (/^(t|訳|翻訳)[\s \n]+/i.test(userMessage) || /[\s \n]+(t|訳|翻訳)$/i.test(userMessage)) {
+          // どっちのパターンで入力されても、邪魔なコマンド文字を消す
+          const query = userMessage.replace(/^(t|訳|翻訳)[\s \n]+/i, "").replace(/[\s \n]+(t|訳|翻訳)$/i, "").trim();
           
           if (!query) {
-            replyMessageObj = { type: "text", text: "⚠️ 翻訳したい文章を入力してください。\n（例: t 私はタイ語を勉強しています）" };
+            replyMessageObj = { type: "text", text: "⚠️ 翻訳したい文章を入力してください。" };
           } else {
-            const aiReply = askTranslationTeacher(query);
-            replyMessageObj = {
-              type: "text",
-              text: formatMarkdownForLine(aiReply) || "⚠️ AI翻訳の生成に失敗しました。"
-            };
+            try {
+              const aiReply = askTranslationTeacher(query);
+              replyMessageObj = { type: "text", text: formatMarkdownForLine(aiReply) || "⚠️ 翻訳の生成に失敗しました。" };
+            } catch (err) {
+              // 🚨 クラッシュした場合は既読スルーせず、原因をLINEに送信する
+              replyMessageObj = { type: "text", text: `🚨 翻訳AIエラー発生:\n${err.message}` };
+            }
           }
 
-        // 【分岐2】AI教師質問モード ("q " または "q\n" など)
-        } else if (/^(q|問|質問)[\s \n]+/i.test(userMessage)) {
-          const query = userMessage.replace(/^(q|問|質問)[\s \n]+/i, "").trim();
+        // 🌟 【分岐2】AI教師質問モード (先頭が q でも、末尾が q でも両方発動！)
+        } else if (/^(q|問|質問)[\s \n]+/i.test(userMessage) || /[\s \n]+(q|問|質問)$/i.test(userMessage)) {
+          const query = userMessage.replace(/^(q|問|質問)[\s \n]+/i, "").replace(/[\s \n]+(q|問|質問)$/i, "").trim();
           
           if (!query) {
-            replyMessageObj = { type: "text", text: "⚠️ 先生に質問したい内容を入力してください。\n（例: q 文法について教えて）" };
+            replyMessageObj = { type: "text", text: "⚠️ 質問内容を入力してください。" };
           } else {
-            const aiReply = askGrammarQuestion(query);
-            replyMessageObj = {
-              type: "text",
-              text: formatMarkdownForLine(aiReply) || "⚠️ AI教師の回答生成に失敗しました。"
-            };
+            try {
+              const aiReply = askGrammarQuestion(query);
+              replyMessageObj = { type: "text", text: formatMarkdownForLine(aiReply) || "⚠️ 回答の生成に失敗しました。" };
+            } catch (err) {
+              replyMessageObj = { type: "text", text: `🚨 質問AIエラー発生:\n${err.message}` };
+            }
           }
 
-        // 【分岐3】それ以外 ➔ 通常のテキスト辞書検索
+        // 🌟 【分岐3】通常のテキスト辞書検索
         } else {
-          const searchResults = searchVocabularyForLine(userMessage);
-          replyMessageObj = buildTextDictionaryMessage(searchResults, userMessage);
+          try {
+            const searchResults = searchVocabularyForLine(userMessage);
+            replyMessageObj = buildTextDictionaryMessage(searchResults, userMessage);
+          } catch (err) {
+            replyMessageObj = { type: "text", text: `🚨 辞書検索エラー発生:\n${err.message}` };
+          }
         }
 
         // Reply APIでLINEへ返信
@@ -294,7 +298,34 @@ function searchVocabularyForLine(keyword) {
   const hits = scoredData.filter(v => v.matchScore > 0).sort((a, b) => b.matchScore - a.matchScore);
   return hits.slice(0, 5);
 }
+/**
+ * AIからのMarkdownテキストをLINEで見やすいテキストレイアウトに変換する
+ */
+function formatMarkdownForLine(text) {
+  if (!text) return "";
 
+  return text
+    // 1. 見出しの変換
+    .replace(/^###\s+(.+)$/gm, "\n🟩 【 $1 】") // ### 見出し
+    .replace(/^##\s+(.+)$/gm, "\n━━━ $1 ━━━") // ## 見出し
+    .replace(/^#\s+(.+)$/gm, "👑 $1") // # 見出し
+
+    // 2. 太字の変換（**太字** -> 「太字」）
+    .replace(/\*\*(.*?)\*\*/g, "「$1」")
+    .replace(/\*(.*?)\*/g, "「$1」")
+
+    // 3. Markdownの表（テーブル）をテキストリストに変換
+    .replace(/^\|[-:\s]+\|.*$/gm, "")
+    .replace(/^\|\s*タイ語\s*\|\s*発音記号\s*\|\s*日本語\s*\|$/gm, "")
+    .replace(/^\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|$/gm, (match, th, ph, ja) => {
+       if (!th || !ph || !ja) return "";
+       return `┈┈┈┈┈┈┈┈┈┈┈┈\n🇹🇭 ${th}\n🗣️ ${ph}\n🇯🇵 ${ja}`;
+    })
+
+    // 4. 連続する改行を綺麗に整える（最大2行まで）
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 /**
  * スクロール不要！ 1件目ゆったり表示 ＋ 日本語付きクイックリプライ版
  */
