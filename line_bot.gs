@@ -397,9 +397,6 @@ function buildTextDictionaryMessage(results, keyword) {
 
   return replyObj;
 }
-/**
- * 忘却曲線 × AI連動型：プッシュ通知クイズ (UI・お題・データ保持 完璧版)
- */
 function sendDailyQuiz() {
   const LINE_ACCESS_TOKEN = PropertiesService.getScriptProperties().getProperty('LINE_ACCESS_TOKEN');
   const MY_USER_ID = PropertiesService.getScriptProperties().getProperty('MY_USER_ID');
@@ -409,10 +406,37 @@ function sendDailyQuiz() {
   const reviewQueue = getSpacedRepetitionData();
   if (!reviewQueue || reviewQueue.length === 0) return;
 
-  const targetItem = reviewQueue[0];
+  const props = PropertiesService.getScriptProperties();
+  
+  // 🌟 【回避ロジック】直近で出題した単語の履歴（最新5件）を取得
+  const recentIdsStr = props.getProperty('RECENT_QUIZ_IDS') || "";
+  let recentIds = recentIdsStr.split(',').filter(id => id !== "");
+
+  let targetItem = null;
+
+  // 忘却曲線の順位を上から見て、最近出題していない単語を探す
+  for (let i = 0; i < reviewQueue.length; i++) {
+    if (!recentIds.includes(reviewQueue[i].id)) {
+      targetItem = reviewQueue[i];
+      break;
+    }
+  }
+
+  // 万が一キューの単語がすべて履歴と被っていたら、一番上の単語を妥協して使う
+  if (!targetItem) {
+    targetItem = reviewQueue[0];
+  }
+
+  // 今回出題する単語を履歴に追加し、一番古い履歴を捨てる（最新5件を維持）
+  recentIds.push(targetItem.id);
+  if (recentIds.length > 5) {
+    recentIds.shift();
+  }
+  props.setProperty('RECENT_QUIZ_IDS', recentIds.join(','));
+
   const word_th = targetItem.word_th;
   const meaning_ja = targetItem.meaning_ja;
-  const vocabId = targetItem.id; // 🌟 安全なIDを使用
+  const vocabId = targetItem.id;
   
 // 🌟 AIへの指示：お題を「日本語」にし、タイ語の答えを問題文から隠す（シャッフル対策＆3択固定版）
   const prompt = `あなたはプロのタイ語教師です。
