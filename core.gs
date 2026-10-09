@@ -1,18 +1,41 @@
 /**
  * ファイル名: core.gs
  * 役割: 画面表示と共通ヘルパー（ウィジェット対応版・日本語/英語GAS共通）
+ * 追加: ?mode=bookmark（お気に入り設定） / ?mode=tts（クラウド音声）
  */
 
 function doGet(e) {
   const p = (e && e.parameter) || {};
 
-  // 🌟 ウィジェット用API（?mode=json / ?mode=log）
-  if (p.mode === 'json' || p.mode === 'log') {
+  // 🌟 ウィジェット用API（?mode=json / log / bookmark / tts）
+  if (['json', 'log', 'bookmark', 'tts'].indexOf(p.mode) !== -1) {
     // 任意：スクリプトプロパティ WIDGET_TOKEN を設定した場合のみ照合
     const token = PropertiesService.getScriptProperties().getProperty('WIDGET_TOKEN');
     if (token && p.token !== token) return jsonOut_({ status: 'forbidden' });
 
     if (p.mode === 'json') return jsonOut_(widgetWords_());
+
+    // お気に入り設定（value=1: ON / 0: OFF）※冪等
+    if (p.mode === 'bookmark') {
+      if (!p.id) return jsonOut_({ status: 'error' });
+      try {
+        return jsonOut_(setBookmark_(p.id, p.value === '1'));
+      } catch (err) {
+        return jsonOut_({ status: 'error', message: String(err) });
+      }
+    }
+
+    // クラウド音声（base64 MP3 を JSON で返す）
+    if (p.mode === 'tts') {
+      const text = String(p.text || '').trim();
+      if (!text || text.length > 300) return jsonOut_({ status: 'error' });
+      try {
+        const audio = ttsForWidget_(text, p.lang || 'th-TH');
+        return jsonOut_(audio ? { status: 'success', audio: audio } : { status: 'error' });
+      } catch (err) {
+        return jsonOut_({ status: 'error', message: String(err) });
+      }
+    }
 
     // 学習ログ記録（score: 3=簡単 / 2=普通 / 1=難しい）
     const score = Number(p.score);
@@ -67,7 +90,8 @@ function widgetWords_() {
           exampleJa: first(v.example_ja),
           level: Number(v.level) || 0,
           category: cat(v.category),
-          status: status(v)
+          status: status(v),
+          bookmark: (v.is_bookmark === true || String(v.is_bookmark).toLowerCase() === 'true')
         };
       })
       .filter(function(w) { return w.id && w.thai; });
