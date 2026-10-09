@@ -42,6 +42,17 @@ function widgetWords_() {
   const first = function(s) {
     return String(s || '').split('\n')[0].replace(/^1\.\s*/, '');
   };
+  // 品詞：「1. 動詞 2. 名詞」「名詞（類別詞: …）」→ 先頭の日本語だけ
+  const cat = function(s) {
+    return String(s || '').replace(/\d+\.\s*/g, '')
+      .replace(/[^\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF].*$/, '').trim();
+  };
+  // 忘却度の色区分（本アプリの getColor と同じ基準）
+  const status = function(v) {
+    if (v.last_date === 'New') return 'new';
+    const sc = parseFloat(v.priority_score) || 0;
+    return sc > 1.2 ? 'red' : (sc > 0.8 ? 'yellow' : 'green');
+  };
   try {
     return (getSpacedRepetitionData() || [])
       .slice(0, 50)
@@ -53,7 +64,10 @@ function widgetWords_() {
           meaning: first(v.meaning_ja),
           example: first(v.example_th || v.example_en || v.example),
           examplePhonetic: first(v.example_phonetic),
-          exampleJa: first(v.example_ja)
+          exampleJa: first(v.example_ja),
+          level: Number(v.level) || 0,
+          category: cat(v.category),
+          status: status(v)
         };
       })
       .filter(function(w) { return w.id && w.thai; });
